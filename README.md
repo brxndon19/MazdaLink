@@ -6,14 +6,14 @@ Open-source ROM reading, data logging and offline ROM editing for Mazdaspeed and
 
 **[Download v0.7.0-alpha.5](https://github.com/mrphyslaw/SpeedLink/releases/tag/v0.7.0-alpha.5)** — a single Windows EXE, with no installer or .NET installation required.
 
-**[Watch the 4-minute SpeedLink demo (4:11)](https://github.com/mrphyslaw/SpeedLink/releases/download/v0.7.0-alpha.5/SpeedLink-Getting-Started-Demo.mp4)**
+**Watch the 4-minute SpeedLink demo (4:11)**
 
-[![Watch the SpeedLink getting-started demo: read, edit and log](docs/demo/images/getting-started-demo.png)](https://github.com/mrphyslaw/SpeedLink/releases/download/v0.7.0-alpha.5/SpeedLink-Getting-Started-Demo.mp4)
+https://github.com/user-attachments/assets/91f3d616-09c2-4cf5-926d-4642d296aaaa
 
 See verified backups, real-ROM editing, 2D/3D views, saving and ROM checks,
 logging and recorded-log review, definitions and built-in help.
 **Real-ROM editing shown; ECU reading and logging simulated.**
-The video is a separate MP4 download (1080p, approximately 56 MB).
+[Download the 1080p MP4](https://github.com/mrphyslaw/SpeedLink/releases/download/v0.7.0-alpha.5/SpeedLink-Getting-Started-Demo.mp4) (approximately 56 MB).
 
 Use the permanent File, Edit, View, Tools and Help menus throughout the app. Sidebar icons show their workspace names by default; collapse them when you want more map space. Open several maps in independently resizable panes or separate Windows windows. Auto fit preserves readable text and uses available cell spacing. Replace the EXE and keep your existing `data` folder. See [changes](CHANGELOG.md), the [editor guide](docs/EDITOR.md) and [reporting problems](docs/TROUBLESHOOTING.md).
 
