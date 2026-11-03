@@ -345,3 +345,41 @@ L3CGEE000,fan_duty_cycle,Fan duty cycle,,,False,False,not_offered_by_this_profil
 L3CGEE000,maf_sensor_voltage,Mass airflow sensor voltage,,,False,False,not_offered_by_this_profile,"Gen2 identifier, conversion or producer not established in this release; not inferred from other ROMs.",
 L3CGEE000,neutral_switch,Neutral gear status,,,False,False,not_offered_by_this_profile,"Gen2 identifier, conversion or producer not established in this release; not inferred from other ROMs.",
 L3CGEE000,knock_retard,Knock retard,,,False,False,not_offered_by_this_profile,"Gen2 identifier, conversion or producer not established in this release; not inferred from other ROMs.",
+L3M6EG000,boost_air_temperature,Boost air temperature,degC,1723,True,True,pending,,Temperature of the charge air entering the engine.
+L3M6EG000,boost_pressure,Boost pressure,kPa,calculated,True,True,pending,,Manifold pressure above or below atmospheric pressure. Vacuum is negative.
+L3M6EG000,manifold_absolute_pressure,Intake manifold absolute pressure,kPa,0900,True,True,pending,,"Manifold pressure relative to vacuum, using the selected MAP calibration."
+L3M6EG000,map_sensor_voltage,MAP sensor voltage,V,0900,True,True,pending,,Voltage reported for the MAP sensor.
+L3M6EG000,wastegate_duty_cycle,Wastegate control solenoid duty cycle,percent,16E1,True,True,pending,,Wastegate control command reported by the ECU.
+L3M6EG000,actual_lambda,Actual equivalence/air to fuel ratio,lambda,0034,True,True,pending,,Measured mixture relative to stoichiometric. Set your fuel stoichiometry for AFR display.
+L3M6EG000,desired_lambda,Desired equivalence/air to fuel ratio,lambda,0044,True,True,pending,,"Mixture requested by the ECU, relative to stoichiometric."
+L3M6EG000,injection_pulsewidth,Fuel injection pulse width,ms,1410,True,True,pending,,"Injection pulsewidth reported by the ECU, in milliseconds."
+L3M6EG000,fuel_pressure_sensor_voltage,Fuel pressure sensor voltage,V,168B,True,True,pending,,Voltage reported for the fuel pressure sensor.
+L3M6EG000,fuel_rail_pressure,Fuel rail pressure,kPa,0023,True,True,pending,,Fuel rail pressure reported by the ECU.
+L3M6EG000,injector_duty_cycle,Injector duty cycle,percent,calculated,True,True,pending,,Calculated injection time as a percentage of a 360-degree engine revolution.
+L3M6EG000,long_term_fuel_trim,Long term fuel trim,percent,0007,True,True,pending,,Learned fuel correction. Positive values add fuel.
+L3M6EG000,narrowband_oxygen_voltage,Narrow band oxygen sensor voltage,V,0015,True,True,pending,,Voltage from the narrowband oxygen sensor.
+L3M6EG000,short_term_fuel_trim_primary,Short term fuel trim (primary sensor),percent,0006,True,True,pending,,Current fuel correction from the primary sensor.
+L3M6EG000,short_term_fuel_trim_secondary,Short term fuel trim (secondary sensor),percent,163E,True,True,pending,,"Secondary-sensor fuel correction, displayed as a percentage."
+L3M6EG000,absolute_load,Absolute load,ratio,0043,True,True,pending,,Calculated engine load. A value of 1.0 represents 100 percent.
+L3M6EG000,accelerator_pedal_position,Accelerator pedal position,percent,1340,True,True,pending,,Accelerator pedal position reported by the ECU.
+L3M6EG000,actual_valve_timing,Actual valve timing,deg,16CD,True,True,pending,,Intake cam timing reported by the ECU.
+L3M6EG000,barometric_pressure,Barometric pressure,kPa,0033,True,True,pending,,Atmospheric pressure reported by the ECU.
+L3M6EG000,clutch_switch,Clutch pedal position,state,A211,True,True,pending,,Clutch switch state reported by the ECU.
+L3M6EG000,module_voltage,Control module voltage,V,0042,True,True,pending,,Supply voltage reported by the ECU.
+L3M6EG000,desired_engine_rpm,Desired engine RPM,rpm,096E,True,True,pending,,Engine speed requested by the ECU.
+L3M6EG000,desired_throttle_position,Desired throttle position,percent,004C,True,True,pending,,Throttle command reported by the ECU.
+L3M6EG000,coolant_temperature,Engine coolant temperature,degC,0005,True,True,pending,,Engine coolant temperature reported by the ECU.
+L3M6EG000,engine_rpm,Engine RPM,rpm,000C,True,True,pending,,Current engine speed.
+L3M6EG000,fan_duty_cycle,Fan duty cycle,percent,091F,True,True,pending,,Radiator fan command reported by the ECU.
+L3M6EG000,intake_air_temperature,Intake air temperature,degC,000F,True,True,pending,,Intake air temperature reported by the ECU.
+L3M6EG000,mass_airflow,Mass airflow,g/s,0010,True,True,pending,,Airflow measured by the ECU.
+L3M6EG000,maf_sensor_voltage,Mass airflow sensor voltage,V,1177,True,True,pending,,Voltage reported for the mass airflow sensor.
+L3M6EG000,relative_throttle_position,Relative throttle position,percent,0045,True,True,pending,,Throttle position relative to the learned closed position.
+L3M6EG000,vehicle_speed,Vehicle speed,km/h,000D,True,True,pending,,Vehicle speed reported by the ECU.
+L3M6EG000,ignition_timing,Ignition timing advance,deg,000E,True,True,pending,,Ignition advance reported by the ECU.
+L3M6EG000,knock_retard,Knock retard,deg,1746,True,True,pending,,Ignition timing removed by knock control.
+L3M6EG000,desired_fuel_rail_pressure,Desired fuel rail pressure,,,False,True,not_offered_by_this_profile,Identifier absent from this ROM,
+L3M6EG000,fuel_injection_amount,Fuel injection amount,,,False,True,not_offered_by_this_profile,Identifier absent from this ROM,
+L3M6EG000,ambient_air_temperature,Ambient air temperature,,,False,True,not_offered_by_this_profile,Inactive native lookup; no active encoder established,
+L3M6EG000,catalyst_temperature,Catalyst temperature,,,False,True,not_offered_by_this_profile,Inactive native lookup; no active encoder established,
+L3M6EG000,neutral_switch,Neutral switch,,,False,True,not_offered_by_this_profile,The native stock status encoder does not populate the neutral-switch bit,

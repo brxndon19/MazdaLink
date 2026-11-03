@@ -214,5 +214,14 @@
   },
   {
     "test": "SpeedLink.Tests.VehicleIdentityTests.chassis_id_does_not_bypass_logger_calibration_binding"
+  },
+  {
+    "test": "SpeedLink.Tests.BootFingerprintTests.per_ecu_data_changes_keep_recognition_but_adjacent_code_changes_are_rejected"
+  },
+  {
+    "test": "SpeedLink.Tests.BootFingerprintTests.hashing_and_all_editor_saves_preserve_the_complete_opaque_record"
+  },
+  {
+    "test": "SpeedLink.Tests.BootFingerprintTests.l3m6_profile_excludes_only_its_native_identification_record"
   }
 ]

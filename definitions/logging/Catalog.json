@@ -109,6 +109,18 @@
       "romSha256": "9cde1caebbf1335053dfa8229ab682e82d3d6d4ddadb6027a8e01bab9f6c26bc",
       "definitionSha256": "7c23fd17340c3288c914543e0ce0c3e820be27da9a9550dd3f77e57a999d2ddd",
       "realEcuTested": false
+    },
+    {
+      "calibration": "L3M6EG000",
+      "vehicle": "Mazdaspeed6 / Mazda 6 MPS / Mazdaspeed Atenza",
+      "profileFile": "L3M6EG000.logger.json",
+      "channels": 33,
+      "queries": 30,
+      "unavailable": 5,
+      "vectors": 247,
+      "romSha256": "c1820a3dee0c5a935a401d97647a6d21a05527adca456be8b093787b0c516b0b",
+      "definitionSha256": "f8cb55a60175221acf1a316c00bbd2a67cd7ff5fd60708973ef543f34c3e0e18",
+      "realEcuTested": false
     }
   ]
 }

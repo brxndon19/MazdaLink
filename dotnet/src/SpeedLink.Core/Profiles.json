@@ -310,5 +310,49 @@
         "Value": 42330
       }
     ]
+  },
+  {
+    "Calibration": "L3M6EG000",
+    "Model": "Mazdaspeed6 / Mazda 6 MPS / Mazdaspeed Atenza",
+    "IdentityOffset": 172236,
+    "Identity": "L3M6EG000L3T60A1",
+    "BootSha256": "ec551ada10d6b21d3c7d540d8382944472d886fa69838a567fc33b5a3a9ab698",
+    "BootDataRanges": [
+      {
+        "Address": 28800,
+        "Length": 128
+      }
+    ],
+    "ChecksumStart": 258048,
+    "CorrectionAddress": 1048564,
+    "LayoutWords": [
+      {
+        "Address": 661764,
+        "Value": 258048
+      },
+      {
+        "Address": 661752,
+        "Value": 1048576
+      },
+      {
+        "Address": 661700,
+        "Value": 1520786085
+      },
+      {
+        "Address": 1048560,
+        "Value": 4294967295
+      },
+      {
+        "Address": 1048568,
+        "Value": 2857740885
+      },
+      {
+        "Address": 1048572,
+        "Value": 42330
+      }
+    ],
+    "LoopAddress": 660932,
+    "LoopSize": 64,
+    "LoopSha256": "905e31471b165c156c9d7bffbbe1789256e8bf0ade616dc6c11204784297274c"
   }
 ]

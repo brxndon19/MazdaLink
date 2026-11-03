@@ -16,7 +16,7 @@ public sealed class RomSaveIntegrityTests
         int first = profile.Calibration switch
         {
             "L3CGEE000" => 0x4000,
-            "L3M7EF000" => 0x3F000,
+            "L3M6EG000" or "L3M7EF000" => 0x3F000,
             "L33XEH000" or "L35HEH000" or "L38KEH000" or "L39SED000" or "L39SEE000" or "L39SEF000" or "L3P4EM000" => 0x48000,
             _ => throw new InvalidDataException("Establish an independent checksum range for the new ROM profile.")
         };

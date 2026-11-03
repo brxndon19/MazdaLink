@@ -1,0 +1,1782 @@
+{
+  "schemaVersion": 1,
+  "source": "Synthetic inputs executed through this ROM's original instructions",
+  "romSHA256": "c1820a3dee0c5a935a401d97647a6d21a05527adca456be8b093787b0c516b0b",
+  "calibration": {
+    "map_gain_kpa_per_v": 54.117647260427475,
+    "map_offset_kpa": 1.6469999551773071
+  },
+  "vectors": [
+    {
+      "type": "decode",
+      "case": "native_1",
+      "channel": "boost_air_temperature",
+      "responseHex": "62172300",
+      "expected": -40.0
+    },
+    {
+      "type": "calculate",
+      "case": "native_1",
+      "channel": "boost_pressure",
+      "inputs": {
+        "manifold_absolute_pressure": -1.6469999551773071,
+        "barometric_pressure": 0
+      },
+      "expected": -1.6469999551773071
+    },
+    {
+      "type": "decode",
+      "case": "native_1",
+      "channel": "manifold_absolute_pressure",
+      "responseHex": "6209000000",
+      "expected": -1.6469999551773071
+    },
+    {
+      "type": "decode",
+      "case": "native_1",
+      "channel": "map_sensor_voltage",
+      "responseHex": "6209000000",
+      "expected": 0.0
+    },
+    {
+      "type": "decode",
+      "case": "native_1",
+      "channel": "wastegate_duty_cycle",
+      "responseHex": "6216E10000",
+      "expected": 0.0
+    },
+    {
+      "type": "decode",
+      "case": "native_1",
+      "channel": "actual_lambda",
+      "responseHex": "620034599A8000",
+      "expected": 0.70001220703125
+    },
+    {
+      "type": "decode",
+      "case": "native_1",
+      "channel": "desired_lambda",
+      "responseHex": "6200445333",
+      "expected": 0.649993896484375
+    },
+    {
+      "type": "decode",
+      "case": "native_1",
+      "channel": "injection_pulsewidth",
+      "responseHex": "6214100000",
+      "expected": 0.0
+    },
+    {
+      "type": "decode",
+      "case": "native_1",
+      "channel": "fuel_pressure_sensor_voltage",
+      "responseHex": "62168B0000",
+      "expected": 0.0
+    },
+    {
+      "type": "decode",
+      "case": "native_1",
+      "channel": "fuel_rail_pressure",
+      "responseHex": "6200230000",
+      "expected": 0
+    },
+    {
+      "type": "calculate",
+      "case": "native_1",
+      "channel": "injector_duty_cycle",
+      "inputs": {
+        "injection_pulsewidth": 0.0,
+        "engine_rpm": 0.0
+      },
+      "expected": 0.0
+    },
+    {
+      "type": "decode",
+      "case": "native_1",
+      "channel": "long_term_fuel_trim",
+      "responseHex": "62000740",
+      "expected": -50.0
+    },
+    {
+      "type": "decode",
+      "case": "native_1",
+      "channel": "narrowband_oxygen_voltage",
+      "responseHex": "62001500FF",
+      "expected": 0.0
+    },
+    {
+      "type": "decode",
+      "case": "native_1",
+      "channel": "short_term_fuel_trim_primary",
+      "responseHex": "62000660",
+      "expected": -25.0
+    },
+    {
+      "type": "decode",
+      "case": "native_1",
+      "channel": "short_term_fuel_trim_secondary",
+      "responseHex": "62163EF000",
+      "expected": -50.0
+    },
+    {
+      "type": "decode",
+      "case": "native_1",
+      "channel": "absolute_load",
+      "responseHex": "6200430000",
+      "expected": 0.0
+    },
+    {
+      "type": "decode",
+      "case": "native_1",
+      "channel": "accelerator_pedal_position",
+      "responseHex": "62134000",
+      "expected": 0.0
+    },
+    {
+      "type": "decode",
+      "case": "native_1",
+      "channel": "actual_valve_timing",
+      "responseHex": "6216CDFD80",
+      "expected": -40.0
+    },
+    {
+      "type": "decode",
+      "case": "native_1",
+      "channel": "barometric_pressure",
+      "responseHex": "62003300",
+      "expected": 0
+    },
+    {
+      "type": "decode",
+      "case": "native_1",
+      "channel": "clutch_switch",
+      "responseHex": "62A2110000",
+      "expected": 0
+    },
+    {
+      "type": "decode",
+      "case": "native_1",
+      "channel": "module_voltage",
+      "responseHex": "6200420000",
+      "expected": 0.0
+    },
+    {
+      "type": "decode",
+      "case": "native_1",
+      "channel": "desired_engine_rpm",
+      "responseHex": "62096E0000",
+      "expected": 0.0
+    },
+    {
+      "type": "decode",
+      "case": "native_1",
+      "channel": "desired_throttle_position",
+      "responseHex": "62004C00",
+      "expected": 0.0
+    },
+    {
+      "type": "decode",
+      "case": "native_1",
+      "channel": "coolant_temperature",
+      "responseHex": "62000501",
+      "expected": -39
+    },
+    {
+      "type": "decode",
+      "case": "native_1",
+      "channel": "engine_rpm",
+      "responseHex": "62000C0000",
+      "expected": 0.0
+    },
+    {
+      "type": "decode",
+      "case": "native_1",
+      "channel": "fan_duty_cycle",
+      "responseHex": "62091F0000",
+      "expected": 0.0
+    },
+    {
+      "type": "decode",
+      "case": "native_1",
+      "channel": "intake_air_temperature",
+      "responseHex": "62000F8F",
+      "expected": 103
+    },
+    {
+      "type": "decode",
+      "case": "native_1",
+      "channel": "mass_airflow",
+      "responseHex": "6200100000",
+      "expected": 0.0
+    },
+    {
+      "type": "decode",
+      "case": "native_1",
+      "channel": "maf_sensor_voltage",
+      "responseHex": "6211770000",
+      "expected": 0.0
+    },
+    {
+      "type": "decode",
+      "case": "native_1",
+      "channel": "relative_throttle_position",
+      "responseHex": "62004500",
+      "expected": 0.0
+    },
+    {
+      "type": "decode",
+      "case": "native_1",
+      "channel": "vehicle_speed",
+      "responseHex": "62000D00",
+      "expected": 0
+    },
+    {
+      "type": "decode",
+      "case": "native_1",
+      "channel": "ignition_timing",
+      "responseHex": "62000E00",
+      "expected": -64.0
+    },
+    {
+      "type": "decode",
+      "case": "native_1",
+      "channel": "knock_retard",
+      "responseHex": "62174600",
+      "expected": 0.0
+    },
+    {
+      "type": "decode",
+      "case": "native_2",
+      "channel": "boost_air_temperature",
+      "responseHex": "62172320",
+      "expected": -20.0
+    },
+    {
+      "type": "calculate",
+      "case": "native_2",
+      "channel": "boost_pressure",
+      "inputs": {
+        "manifold_absolute_pressure": 52.47064730525017,
+        "barometric_pressure": 32
+      },
+      "expected": 20.470647305250168
+    },
+    {
+      "type": "decode",
+      "case": "native_2",
+      "channel": "manifold_absolute_pressure",
+      "responseHex": "6209000400",
+      "expected": 52.47064730525017
+    },
+    {
+      "type": "decode",
+      "case": "native_2",
+      "channel": "map_sensor_voltage",
+      "responseHex": "6209000400",
+      "expected": 1.0
+    },
+    {
+      "type": "decode",
+      "case": "native_2",
+      "channel": "wastegate_duty_cycle",
+      "responseHex": "6216E10CCD",
+      "expected": 5.00030517578125
+    },
+    {
+      "type": "decode",
+      "case": "native_2",
+      "channel": "actual_lambda",
+      "responseHex": "62003466668000",
+      "expected": 0.79998779296875
+    },
+    {
+      "type": "decode",
+      "case": "native_2",
+      "channel": "desired_lambda",
+      "responseHex": "62004463D7",
+      "expected": 0.779998779296875
+    },
+    {
+      "type": "decode",
+      "case": "native_2",
+      "channel": "injection_pulsewidth",
+      "responseHex": "621410007D",
+      "expected": 1.0
+    },
+    {
+      "type": "decode",
+      "case": "native_2",
+      "channel": "fuel_pressure_sensor_voltage",
+      "responseHex": "62168B0040",
+      "expected": 0.004882887006942855
+    },
+    {
+      "type": "decode",
+      "case": "native_2",
+      "channel": "fuel_rail_pressure",
+      "responseHex": "6200230000",
+      "expected": 0
+    },
+    {
+      "type": "calculate",
+      "case": "native_2",
+      "channel": "injector_duty_cycle",
+      "inputs": {
+        "injection_pulsewidth": 1.0,
+        "engine_rpm": 750.0
+      },
+      "expected": 1.25
+    },
+    {
+      "type": "decode",
+      "case": "native_2",
+      "channel": "long_term_fuel_trim",
+      "responseHex": "62000760",
+      "expected": -25.0
+    },
+    {
+      "type": "decode",
+      "case": "native_2",
+      "channel": "narrowband_oxygen_voltage",
+      "responseHex": "62001514FF",
+      "expected": 0.1
+    },
+    {
+      "type": "decode",
+      "case": "native_2",
+      "channel": "short_term_fuel_trim_primary",
+      "responseHex": "62000673",
+      "expected": -10.15625
+    },
+    {
+      "type": "decode",
+      "case": "native_2",
+      "channel": "short_term_fuel_trim_secondary",
+      "responseHex": "62163EFCCD",
+      "expected": -9.99755859375
+    },
+    {
+      "type": "decode",
+      "case": "native_2",
+      "channel": "absolute_load",
+      "responseHex": "6200430040",
+      "expected": 0.25098039215686274
+    },
+    {
+      "type": "decode",
+      "case": "native_2",
+      "channel": "accelerator_pedal_position",
+      "responseHex": "62134001",
+      "expected": 0.39369473279507883
+    },
+    {
+      "type": "decode",
+      "case": "native_2",
+      "channel": "actual_valve_timing",
+      "responseHex": "6216CDFF60",
+      "expected": -10.0
+    },
+    {
+      "type": "decode",
+      "case": "native_2",
+      "channel": "barometric_pressure",
+      "responseHex": "62003320",
+      "expected": 32
+    },
+    {
+      "type": "decode",
+      "case": "native_2",
+      "channel": "clutch_switch",
+      "responseHex": "62A2110001",
+      "expected": 1
+    },
+    {
+      "type": "decode",
+      "case": "native_2",
+      "channel": "module_voltage",
+      "responseHex": "6200421F40",
+      "expected": 8.0
+    },
+    {
+      "type": "decode",
+      "case": "native_2",
+      "channel": "desired_engine_rpm",
+      "responseHex": "62096E07D0",
+      "expected": 500.0
+    },
+    {
+      "type": "decode",
+      "case": "native_2",
+      "channel": "desired_throttle_position",
+      "responseHex": "62004C19",
+      "expected": 9.803921568627452
+    },
+    {
+      "type": "decode",
+      "case": "native_2",
+      "channel": "coolant_temperature",
+      "responseHex": "6200059F",
+      "expected": 119
+    },
+    {
+      "type": "decode",
+      "case": "native_2",
+      "channel": "engine_rpm",
+      "responseHex": "62000C0BB8",
+      "expected": 750.0
+    },
+    {
+      "type": "decode",
+      "case": "native_2",
+      "channel": "fan_duty_cycle",
+      "responseHex": "62091F0CCD",
+      "expected": 10.0006103515625
+    },
+    {
+      "type": "decode",
+      "case": "native_2",
+      "channel": "intake_air_temperature",
+      "responseHex": "62000F92",
+      "expected": 106
+    },
+    {
+      "type": "decode",
+      "case": "native_2",
+      "channel": "mass_airflow",
+      "responseHex": "6200100064",
+      "expected": 1.0
+    },
+    {
+      "type": "decode",
+      "case": "native_2",
+      "channel": "maf_sensor_voltage",
+      "responseHex": "6211770A00",
+      "expected": 0.625
+    },
+    {
+      "type": "decode",
+      "case": "native_2",
+      "channel": "relative_throttle_position",
+      "responseHex": "6200450B",
+      "expected": 4.313725490196078
+    },
+    {
+      "type": "decode",
+      "case": "native_2",
+      "channel": "vehicle_speed",
+      "responseHex": "62000D01",
+      "expected": 1
+    },
+    {
+      "type": "decode",
+      "case": "native_2",
+      "channel": "ignition_timing",
+      "responseHex": "62000E6C",
+      "expected": -10.0
+    },
+    {
+      "type": "decode",
+      "case": "native_2",
+      "channel": "knock_retard",
+      "responseHex": "62174600",
+      "expected": 0.0
+    },
+    {
+      "type": "decode",
+      "case": "native_3",
+      "channel": "boost_air_temperature",
+      "responseHex": "62172340",
+      "expected": 0.0
+    },
+    {
+      "type": "calculate",
+      "case": "native_3",
+      "channel": "boost_pressure",
+      "inputs": {
+        "manifold_absolute_pressure": 80.95640108783846,
+        "barometric_pressure": 63
+      },
+      "expected": 17.956401087838458
+    },
+    {
+      "type": "decode",
+      "case": "native_3",
+      "channel": "manifold_absolute_pressure",
+      "responseHex": "620900061B",
+      "expected": 80.95640108783846
+    },
+    {
+      "type": "decode",
+      "case": "native_3",
+      "channel": "map_sensor_voltage",
+      "responseHex": "620900061B",
+      "expected": 1.5263671875
+    },
+    {
+      "type": "decode",
+      "case": "native_3",
+      "channel": "wastegate_duty_cycle",
+      "responseHex": "6216E13333",
+      "expected": 19.99969482421875
+    },
+    {
+      "type": "decode",
+      "case": "native_3",
+      "channel": "actual_lambda",
+      "responseHex": "620034799A8000",
+      "expected": 0.95001220703125
+    },
+    {
+      "type": "decode",
+      "case": "native_3",
+      "channel": "desired_lambda",
+      "responseHex": "6200447333",
+      "expected": 0.899993896484375
+    },
+    {
+      "type": "decode",
+      "case": "native_3",
+      "channel": "injection_pulsewidth",
+      "responseHex": "62141000FA",
+      "expected": 2.0
+    },
+    {
+      "type": "decode",
+      "case": "native_3",
+      "channel": "fuel_pressure_sensor_voltage",
+      "responseHex": "62168B2000",
+      "expected": 0.6250095368886854
+    },
+    {
+      "type": "decode",
+      "case": "native_3",
+      "channel": "fuel_rail_pressure",
+      "responseHex": "62002302BC",
+      "expected": 7000
+    },
+    {
+      "type": "calculate",
+      "case": "native_3",
+      "channel": "injector_duty_cycle",
+      "inputs": {
+        "injection_pulsewidth": 2.0,
+        "engine_rpm": 1500.0
+      },
+      "expected": 5.0
+    },
+    {
+      "type": "decode",
+      "case": "native_3",
+      "channel": "long_term_fuel_trim",
+      "responseHex": "62000773",
+      "expected": -10.15625
+    },
+    {
+      "type": "decode",
+      "case": "native_3",
+      "channel": "narrowband_oxygen_voltage",
+      "responseHex": "62001528FF",
+      "expected": 0.2
+    },
+    {
+      "type": "decode",
+      "case": "native_3",
+      "channel": "short_term_fuel_trim_primary",
+      "responseHex": "6200067F",
+      "expected": -0.78125
+    },
+    {
+      "type": "decode",
+      "case": "native_3",
+      "channel": "short_term_fuel_trim_secondary",
+      "responseHex": "62163EFFAE",
+      "expected": -1.0009765625
+    },
+    {
+      "type": "decode",
+      "case": "native_3",
+      "channel": "absolute_load",
+      "responseHex": "6200430080",
+      "expected": 0.5019607843137255
+    },
+    {
+      "type": "decode",
+      "case": "native_3",
+      "channel": "accelerator_pedal_position",
+      "responseHex": "62134040",
+      "expected": 25.196462898885045
+    },
+    {
+      "type": "decode",
+      "case": "native_3",
+      "channel": "actual_valve_timing",
+      "responseHex": "6216CDFFFF",
+      "expected": -0.0625
+    },
+    {
+      "type": "decode",
+      "case": "native_3",
+      "channel": "barometric_pressure",
+      "responseHex": "6200333F",
+      "expected": 63
+    },
+    {
+      "type": "decode",
+      "case": "native_3",
+      "channel": "clutch_switch",
+      "responseHex": "62A2110400",
+      "expected": 0
+    },
+    {
+      "type": "decode",
+      "case": "native_3",
+      "channel": "module_voltage",
+      "responseHex": "6200422EE0",
+      "expected": 12.0
+    },
+    {
+      "type": "decode",
+      "case": "native_3",
+      "channel": "desired_engine_rpm",
+      "responseHex": "62096E0BB8",
+      "expected": 750.0
+    },
+    {
+      "type": "decode",
+      "case": "native_3",
+      "channel": "desired_throttle_position",
+      "responseHex": "62004C40",
+      "expected": 25.098039215686274
+    },
+    {
+      "type": "decode",
+      "case": "native_3",
+      "channel": "coolant_temperature",
+      "responseHex": "6200059F",
+      "expected": 119
+    },
+    {
+      "type": "decode",
+      "case": "native_3",
+      "channel": "engine_rpm",
+      "responseHex": "62000C1770",
+      "expected": 1500.0
+    },
+    {
+      "type": "decode",
+      "case": "native_3",
+      "channel": "fan_duty_cycle",
+      "responseHex": "62091F2000",
+      "expected": 25.0
+    },
+    {
+      "type": "decode",
+      "case": "native_3",
+      "channel": "intake_air_temperature",
+      "responseHex": "62000F95",
+      "expected": 109
+    },
+    {
+      "type": "decode",
+      "case": "native_3",
+      "channel": "mass_airflow",
+      "responseHex": "62001003E8",
+      "expected": 10.0
+    },
+    {
+      "type": "decode",
+      "case": "native_3",
+      "channel": "maf_sensor_voltage",
+      "responseHex": "6211771400",
+      "expected": 1.25
+    },
+    {
+      "type": "decode",
+      "case": "native_3",
+      "channel": "relative_throttle_position",
+      "responseHex": "6200453B",
+      "expected": 23.137254901960784
+    },
+    {
+      "type": "decode",
+      "case": "native_3",
+      "channel": "vehicle_speed",
+      "responseHex": "62000D1E",
+      "expected": 30
+    },
+    {
+      "type": "decode",
+      "case": "native_3",
+      "channel": "ignition_timing",
+      "responseHex": "62000E80",
+      "expected": 0.0
+    },
+    {
+      "type": "decode",
+      "case": "native_3",
+      "channel": "knock_retard",
+      "responseHex": "62174601",
+      "expected": 0.3515625
+    },
+    {
+      "type": "decode",
+      "case": "native_4",
+      "channel": "boost_air_temperature",
+      "responseHex": "62172360",
+      "expected": 20.0
+    },
+    {
+      "type": "calculate",
+      "case": "native_4",
+      "channel": "boost_pressure",
+      "inputs": {
+        "manifold_absolute_pressure": 133.64711819589138,
+        "barometric_pressure": 95
+      },
+      "expected": 38.64711819589138
+    },
+    {
+      "type": "decode",
+      "case": "native_4",
+      "channel": "manifold_absolute_pressure",
+      "responseHex": "6209000A00",
+      "expected": 133.64711819589138
+    },
+    {
+      "type": "decode",
+      "case": "native_4",
+      "channel": "map_sensor_voltage",
+      "responseHex": "6209000A00",
+      "expected": 2.5
+    },
+    {
+      "type": "decode",
+      "case": "native_4",
+      "channel": "wastegate_duty_cycle",
+      "responseHex": "6216E16666",
+      "expected": 39.9993896484375
+    },
+    {
+      "type": "decode",
+      "case": "native_4",
+      "channel": "actual_lambda",
+      "responseHex": "62003480008000",
+      "expected": 1.0
+    },
+    {
+      "type": "decode",
+      "case": "native_4",
+      "channel": "desired_lambda",
+      "responseHex": "6200448000",
+      "expected": 1.0
+    },
+    {
+      "type": "decode",
+      "case": "native_4",
+      "channel": "injection_pulsewidth",
+      "responseHex": "62141001F4",
+      "expected": 4.0
+    },
+    {
+      "type": "decode",
+      "case": "native_4",
+      "channel": "fuel_pressure_sensor_voltage",
+      "responseHex": "62168B4000",
+      "expected": 1.2500190737773709
+    },
+    {
+      "type": "decode",
+      "case": "native_4",
+      "channel": "fuel_rail_pressure",
+      "responseHex": "62002303FD",
+      "expected": 10210
+    },
+    {
+      "type": "calculate",
+      "case": "native_4",
+      "channel": "injector_duty_cycle",
+      "inputs": {
+        "injection_pulsewidth": 4.0,
+        "engine_rpm": 3000.0
+      },
+      "expected": 20.0
+    },
+    {
+      "type": "decode",
+      "case": "native_4",
+      "channel": "long_term_fuel_trim",
+      "responseHex": "62000780",
+      "expected": 0.0
+    },
+    {
+      "type": "decode",
+      "case": "native_4",
+      "channel": "narrowband_oxygen_voltage",
+      "responseHex": "6200155AFF",
+      "expected": 0.45
+    },
+    {
+      "type": "decode",
+      "case": "native_4",
+      "channel": "short_term_fuel_trim_primary",
+      "responseHex": "62000680",
+      "expected": 0.0
+    },
+    {
+      "type": "decode",
+      "case": "native_4",
+      "channel": "short_term_fuel_trim_secondary",
+      "responseHex": "62163E0000",
+      "expected": 0.0
+    },
+    {
+      "type": "decode",
+      "case": "native_4",
+      "channel": "absolute_load",
+      "responseHex": "62004300FF",
+      "expected": 1.0
+    },
+    {
+      "type": "decode",
+      "case": "native_4",
+      "channel": "accelerator_pedal_position",
+      "responseHex": "62134080",
+      "expected": 50.39292579777009
+    },
+    {
+      "type": "decode",
+      "case": "native_4",
+      "channel": "actual_valve_timing",
+      "responseHex": "6216CD0000",
+      "expected": 0.0
+    },
+    {
+      "type": "decode",
+      "case": "native_4",
+      "channel": "barometric_pressure",
+      "responseHex": "6200335F",
+      "expected": 95
+    },
+    {
+      "type": "decode",
+      "case": "native_4",
+      "channel": "clutch_switch",
+      "responseHex": "62A2110401",
+      "expected": 1
+    },
+    {
+      "type": "decode",
+      "case": "native_4",
+      "channel": "module_voltage",
+      "responseHex": "62004235E8",
+      "expected": 13.8
+    },
+    {
+      "type": "decode",
+      "case": "native_4",
+      "channel": "desired_engine_rpm",
+      "responseHex": "62096E0FA0",
+      "expected": 1000.0
+    },
+    {
+      "type": "decode",
+      "case": "native_4",
+      "channel": "desired_throttle_position",
+      "responseHex": "62004C80",
+      "expected": 50.19607843137255
+    },
+    {
+      "type": "decode",
+      "case": "native_4",
+      "channel": "coolant_temperature",
+      "responseHex": "6200059E",
+      "expected": 118
+    },
+    {
+      "type": "decode",
+      "case": "native_4",
+      "channel": "engine_rpm",
+      "responseHex": "62000C2EE0",
+      "expected": 3000.0
+    },
+    {
+      "type": "decode",
+      "case": "native_4",
+      "channel": "fan_duty_cycle",
+      "responseHex": "62091F4000",
+      "expected": 50.0
+    },
+    {
+      "type": "decode",
+      "case": "native_4",
+      "channel": "intake_air_temperature",
+      "responseHex": "62000F97",
+      "expected": 111
+    },
+    {
+      "type": "decode",
+      "case": "native_4",
+      "channel": "mass_airflow",
+      "responseHex": "6200101388",
+      "expected": 50.0
+    },
+    {
+      "type": "decode",
+      "case": "native_4",
+      "channel": "maf_sensor_voltage",
+      "responseHex": "6211772800",
+      "expected": 2.5
+    },
+    {
+      "type": "decode",
+      "case": "native_4",
+      "channel": "relative_throttle_position",
+      "responseHex": "6200457A",
+      "expected": 47.84313725490196
+    },
+    {
+      "type": "decode",
+      "case": "native_4",
+      "channel": "vehicle_speed",
+      "responseHex": "62000D3C",
+      "expected": 60
+    },
+    {
+      "type": "decode",
+      "case": "native_4",
+      "channel": "ignition_timing",
+      "responseHex": "62000E94",
+      "expected": 10.0
+    },
+    {
+      "type": "decode",
+      "case": "native_4",
+      "channel": "knock_retard",
+      "responseHex": "62174602",
+      "expected": 0.703125
+    },
+    {
+      "type": "decode",
+      "case": "native_5",
+      "channel": "boost_air_temperature",
+      "responseHex": "62172390",
+      "expected": 50.0
+    },
+    {
+      "type": "calculate",
+      "case": "native_5",
+      "channel": "boost_pressure",
+      "inputs": {
+        "manifold_absolute_pressure": 184.1710154429311,
+        "barometric_pressure": 116
+      },
+      "expected": 68.1710154429311
+    },
+    {
+      "type": "decode",
+      "case": "native_5",
+      "channel": "manifold_absolute_pressure",
+      "responseHex": "6209000DBC",
+      "expected": 184.1710154429311
+    },
+    {
+      "type": "decode",
+      "case": "native_5",
+      "channel": "map_sensor_voltage",
+      "responseHex": "6209000DBC",
+      "expected": 3.43359375
+    },
+    {
+      "type": "decode",
+      "case": "native_5",
+      "channel": "wastegate_duty_cycle",
+      "responseHex": "6216E1999A",
+      "expected": 60.0006103515625
+    },
+    {
+      "type": "decode",
+      "case": "native_5",
+      "channel": "actual_lambda",
+      "responseHex": "62003486668000",
+      "expected": 1.04998779296875
+    },
+    {
+      "type": "decode",
+      "case": "native_5",
+      "channel": "desired_lambda",
+      "responseHex": "6200448CCD",
+      "expected": 1.100006103515625
+    },
+    {
+      "type": "decode",
+      "case": "native_5",
+      "channel": "injection_pulsewidth",
+      "responseHex": "62141003E8",
+      "expected": 8.0
+    },
+    {
+      "type": "decode",
+      "case": "native_5",
+      "channel": "fuel_pressure_sensor_voltage",
+      "responseHex": "62168B8000",
+      "expected": 2.5000381475547417
+    },
+    {
+      "type": "decode",
+      "case": "native_5",
+      "channel": "fuel_rail_pressure",
+      "responseHex": "6200230553",
+      "expected": 13630
+    },
+    {
+      "type": "calculate",
+      "case": "native_5",
+      "channel": "injector_duty_cycle",
+      "inputs": {
+        "injection_pulsewidth": 8.0,
+        "engine_rpm": 6500.0
+      },
+      "expected": 86.66666666666667
+    },
+    {
+      "type": "decode",
+      "case": "native_5",
+      "channel": "long_term_fuel_trim",
+      "responseHex": "6200078D",
+      "expected": 10.15625
+    },
+    {
+      "type": "decode",
+      "case": "native_5",
+      "channel": "narrowband_oxygen_voltage",
+      "responseHex": "6200158CFF",
+      "expected": 0.7000000000000001
+    },
+    {
+      "type": "decode",
+      "case": "native_5",
+      "channel": "short_term_fuel_trim_primary",
+      "responseHex": "62000681",
+      "expected": 0.78125
+    },
+    {
+      "type": "decode",
+      "case": "native_5",
+      "channel": "short_term_fuel_trim_secondary",
+      "responseHex": "62163E0052",
+      "expected": 1.0009765625
+    },
+    {
+      "type": "decode",
+      "case": "native_5",
+      "channel": "absolute_load",
+      "responseHex": "620043017E",
+      "expected": 1.4980392156862745
+    },
+    {
+      "type": "decode",
+      "case": "native_5",
+      "channel": "accelerator_pedal_position",
+      "responseHex": "621340BF",
+      "expected": 75.19569396386005
+    },
+    {
+      "type": "decode",
+      "case": "native_5",
+      "channel": "actual_valve_timing",
+      "responseHex": "6216CD0001",
+      "expected": 0.0625
+    },
+    {
+      "type": "decode",
+      "case": "native_5",
+      "channel": "barometric_pressure",
+      "responseHex": "62003374",
+      "expected": 116
+    },
+    {
+      "type": "decode",
+      "case": "native_5",
+      "channel": "clutch_switch",
+      "responseHex": "62A2110000",
+      "expected": 0
+    },
+    {
+      "type": "decode",
+      "case": "native_5",
+      "channel": "module_voltage",
+      "responseHex": "62004238A4",
+      "expected": 14.5
+    },
+    {
+      "type": "decode",
+      "case": "native_5",
+      "channel": "desired_engine_rpm",
+      "responseHex": "62096E1770",
+      "expected": 1500.0
+    },
+    {
+      "type": "decode",
+      "case": "native_5",
+      "channel": "desired_throttle_position",
+      "responseHex": "62004CC0",
+      "expected": 75.29411764705883
+    },
+    {
+      "type": "decode",
+      "case": "native_5",
+      "channel": "coolant_temperature",
+      "responseHex": "6200059E",
+      "expected": 118
+    },
+    {
+      "type": "decode",
+      "case": "native_5",
+      "channel": "engine_rpm",
+      "responseHex": "62000C6590",
+      "expected": 6500.0
+    },
+    {
+      "type": "decode",
+      "case": "native_5",
+      "channel": "fan_duty_cycle",
+      "responseHex": "62091F6000",
+      "expected": 75.0
+    },
+    {
+      "type": "decode",
+      "case": "native_5",
+      "channel": "intake_air_temperature",
+      "responseHex": "62000F9A",
+      "expected": 114
+    },
+    {
+      "type": "decode",
+      "case": "native_5",
+      "channel": "mass_airflow",
+      "responseHex": "6200103A98",
+      "expected": 150.0
+    },
+    {
+      "type": "decode",
+      "case": "native_5",
+      "channel": "maf_sensor_voltage",
+      "responseHex": "6211773C00",
+      "expected": 3.75
+    },
+    {
+      "type": "decode",
+      "case": "native_5",
+      "channel": "relative_throttle_position",
+      "responseHex": "620045BA",
+      "expected": 72.94117647058823
+    },
+    {
+      "type": "decode",
+      "case": "native_5",
+      "channel": "vehicle_speed",
+      "responseHex": "62000D78",
+      "expected": 120
+    },
+    {
+      "type": "decode",
+      "case": "native_5",
+      "channel": "ignition_timing",
+      "responseHex": "62000EB2",
+      "expected": 25.0
+    },
+    {
+      "type": "decode",
+      "case": "native_5",
+      "channel": "knock_retard",
+      "responseHex": "62174609",
+      "expected": 3.1640625
+    },
+    {
+      "type": "decode",
+      "case": "native_6",
+      "channel": "boost_air_temperature",
+      "responseHex": "621723C0",
+      "expected": 80.0
+    },
+    {
+      "type": "calculate",
+      "case": "native_6",
+      "channel": "boost_pressure",
+      "inputs": {
+        "manifold_absolute_pressure": 214.8235890865326,
+        "barometric_pressure": 126
+      },
+      "expected": 88.82358908653259
+    },
+    {
+      "type": "decode",
+      "case": "native_6",
+      "channel": "manifold_absolute_pressure",
+      "responseHex": "6209001000",
+      "expected": 214.8235890865326
+    },
+    {
+      "type": "decode",
+      "case": "native_6",
+      "channel": "map_sensor_voltage",
+      "responseHex": "6209001000",
+      "expected": 4.0
+    },
+    {
+      "type": "decode",
+      "case": "native_6",
+      "channel": "wastegate_duty_cycle",
+      "responseHex": "6216E1CCCD",
+      "expected": 80.00030517578125
+    },
+    {
+      "type": "decode",
+      "case": "native_6",
+      "channel": "actual_lambda",
+      "responseHex": "620034B3338000",
+      "expected": 1.399993896484375
+    },
+    {
+      "type": "decode",
+      "case": "native_6",
+      "channel": "desired_lambda",
+      "responseHex": "620044C000",
+      "expected": 1.5
+    },
+    {
+      "type": "decode",
+      "case": "native_6",
+      "channel": "injection_pulsewidth",
+      "responseHex": "62141005DC",
+      "expected": 12.0
+    },
+    {
+      "type": "decode",
+      "case": "native_6",
+      "channel": "fuel_pressure_sensor_voltage",
+      "responseHex": "62168BC000",
+      "expected": 3.7500572213321126
+    },
+    {
+      "type": "decode",
+      "case": "native_6",
+      "channel": "fuel_rail_pressure",
+      "responseHex": "62002305FE",
+      "expected": 15340
+    },
+    {
+      "type": "calculate",
+      "case": "native_6",
+      "channel": "injector_duty_cycle",
+      "inputs": {
+        "injection_pulsewidth": 12.0,
+        "engine_rpm": 8000.0
+      },
+      "expected": 160.0
+    },
+    {
+      "type": "decode",
+      "case": "native_6",
+      "channel": "long_term_fuel_trim",
+      "responseHex": "620007A0",
+      "expected": 25.0
+    },
+    {
+      "type": "decode",
+      "case": "native_6",
+      "channel": "narrowband_oxygen_voltage",
+      "responseHex": "620015B4FF",
+      "expected": 0.9
+    },
+    {
+      "type": "decode",
+      "case": "native_6",
+      "channel": "short_term_fuel_trim_primary",
+      "responseHex": "6200068D",
+      "expected": 10.15625
+    },
+    {
+      "type": "decode",
+      "case": "native_6",
+      "channel": "short_term_fuel_trim_secondary",
+      "responseHex": "62163E0333",
+      "expected": 9.99755859375
+    },
+    {
+      "type": "decode",
+      "case": "native_6",
+      "channel": "absolute_load",
+      "responseHex": "62004301FE",
+      "expected": 2.0
+    },
+    {
+      "type": "decode",
+      "case": "native_6",
+      "channel": "accelerator_pedal_position",
+      "responseHex": "621340FE",
+      "expected": 99.99846212995003
+    },
+    {
+      "type": "decode",
+      "case": "native_6",
+      "channel": "actual_valve_timing",
+      "responseHex": "6216CD00A0",
+      "expected": 10.0
+    },
+    {
+      "type": "decode",
+      "case": "native_6",
+      "channel": "barometric_pressure",
+      "responseHex": "6200337E",
+      "expected": 126
+    },
+    {
+      "type": "decode",
+      "case": "native_6",
+      "channel": "clutch_switch",
+      "responseHex": "62A2110001",
+      "expected": 1
+    },
+    {
+      "type": "decode",
+      "case": "native_6",
+      "channel": "module_voltage",
+      "responseHex": "6200423E80",
+      "expected": 16.0
+    },
+    {
+      "type": "decode",
+      "case": "native_6",
+      "channel": "desired_engine_rpm",
+      "responseHex": "62096E2EE0",
+      "expected": 3000.0
+    },
+    {
+      "type": "decode",
+      "case": "native_6",
+      "channel": "desired_throttle_position",
+      "responseHex": "62004CE6",
+      "expected": 90.19607843137254
+    },
+    {
+      "type": "decode",
+      "case": "native_6",
+      "channel": "coolant_temperature",
+      "responseHex": "6200059D",
+      "expected": 117
+    },
+    {
+      "type": "decode",
+      "case": "native_6",
+      "channel": "engine_rpm",
+      "responseHex": "62000C7D00",
+      "expected": 8000.0
+    },
+    {
+      "type": "decode",
+      "case": "native_6",
+      "channel": "fan_duty_cycle",
+      "responseHex": "62091F7333",
+      "expected": 89.9993896484375
+    },
+    {
+      "type": "decode",
+      "case": "native_6",
+      "channel": "intake_air_temperature",
+      "responseHex": "62000F9D",
+      "expected": 117
+    },
+    {
+      "type": "decode",
+      "case": "native_6",
+      "channel": "mass_airflow",
+      "responseHex": "6200107530",
+      "expected": 300.0
+    },
+    {
+      "type": "decode",
+      "case": "native_6",
+      "channel": "maf_sensor_voltage",
+      "responseHex": "621177493E",
+      "expected": 4.57763671875
+    },
+    {
+      "type": "decode",
+      "case": "native_6",
+      "channel": "relative_throttle_position",
+      "responseHex": "620045E4",
+      "expected": 89.41176470588235
+    },
+    {
+      "type": "decode",
+      "case": "native_6",
+      "channel": "vehicle_speed",
+      "responseHex": "62000DC8",
+      "expected": 200
+    },
+    {
+      "type": "decode",
+      "case": "native_6",
+      "channel": "ignition_timing",
+      "responseHex": "62000EE4",
+      "expected": 50.0
+    },
+    {
+      "type": "decode",
+      "case": "native_6",
+      "channel": "knock_retard",
+      "responseHex": "6217461C",
+      "expected": 9.84375
+    },
+    {
+      "type": "decode",
+      "case": "native_7",
+      "channel": "boost_air_temperature",
+      "responseHex": "621723FF",
+      "expected": 119.375
+    },
+    {
+      "type": "calculate",
+      "case": "native_7",
+      "channel": "boost_pressure",
+      "inputs": {
+        "manifold_absolute_pressure": 268.94123634696007,
+        "barometric_pressure": 63
+      },
+      "expected": 205.94123634696007
+    },
+    {
+      "type": "decode",
+      "case": "native_7",
+      "channel": "manifold_absolute_pressure",
+      "responseHex": "6209001400",
+      "expected": 268.94123634696007
+    },
+    {
+      "type": "decode",
+      "case": "native_7",
+      "channel": "map_sensor_voltage",
+      "responseHex": "6209001400",
+      "expected": 5.0
+    },
+    {
+      "type": "decode",
+      "case": "native_7",
+      "channel": "wastegate_duty_cycle",
+      "responseHex": "6216E1FFFF",
+      "expected": 99.99847412109375
+    },
+    {
+      "type": "decode",
+      "case": "native_7",
+      "channel": "actual_lambda",
+      "responseHex": "620034F99A8000",
+      "expected": 1.95001220703125
+    },
+    {
+      "type": "decode",
+      "case": "native_7",
+      "channel": "desired_lambda",
+      "responseHex": "620044FEB8",
+      "expected": 1.989990234375
+    },
+    {
+      "type": "decode",
+      "case": "native_7",
+      "channel": "injection_pulsewidth",
+      "responseHex": "62141009C4",
+      "expected": 20.0
+    },
+    {
+      "type": "decode",
+      "case": "native_7",
+      "channel": "fuel_pressure_sensor_voltage",
+      "responseHex": "62168BFFC0",
+      "expected": 4.995193408102541
+    },
+    {
+      "type": "decode",
+      "case": "native_7",
+      "channel": "fuel_rail_pressure",
+      "responseHex": "6200230625",
+      "expected": 15730
+    },
+    {
+      "type": "calculate",
+      "case": "native_7",
+      "channel": "injector_duty_cycle",
+      "inputs": {
+        "injection_pulsewidth": 20.0,
+        "engine_rpm": 16000.0
+      },
+      "expected": 533.3333333333334
+    },
+    {
+      "type": "decode",
+      "case": "native_7",
+      "channel": "long_term_fuel_trim",
+      "responseHex": "620007C0",
+      "expected": 50.0
+    },
+    {
+      "type": "decode",
+      "case": "native_7",
+      "channel": "narrowband_oxygen_voltage",
+      "responseHex": "620015FFFF",
+      "expected": 1.2750000000000001
+    },
+    {
+      "type": "decode",
+      "case": "native_7",
+      "channel": "short_term_fuel_trim_primary",
+      "responseHex": "620006A0",
+      "expected": 25.0
+    },
+    {
+      "type": "decode",
+      "case": "native_7",
+      "channel": "short_term_fuel_trim_secondary",
+      "responseHex": "62163E1000",
+      "expected": 50.0
+    },
+    {
+      "type": "decode",
+      "case": "native_7",
+      "channel": "absolute_load",
+      "responseHex": "62004303FC",
+      "expected": 4.0
+    },
+    {
+      "type": "decode",
+      "case": "native_7",
+      "channel": "accelerator_pedal_position",
+      "responseHex": "621340FF",
+      "expected": 100.3921568627451
+    },
+    {
+      "type": "decode",
+      "case": "native_7",
+      "channel": "actual_valve_timing",
+      "responseHex": "6216CD0280",
+      "expected": 40.0
+    },
+    {
+      "type": "decode",
+      "case": "native_7",
+      "channel": "barometric_pressure",
+      "responseHex": "6200333F",
+      "expected": 63
+    },
+    {
+      "type": "decode",
+      "case": "native_7",
+      "channel": "clutch_switch",
+      "responseHex": "62A2110400",
+      "expected": 0
+    },
+    {
+      "type": "decode",
+      "case": "native_7",
+      "channel": "module_voltage",
+      "responseHex": "6200424E20",
+      "expected": 20.0
+    },
+    {
+      "type": "decode",
+      "case": "native_7",
+      "channel": "desired_engine_rpm",
+      "responseHex": "62096E7D00",
+      "expected": 8000.0
+    },
+    {
+      "type": "decode",
+      "case": "native_7",
+      "channel": "desired_throttle_position",
+      "responseHex": "62004CFF",
+      "expected": 100.0
+    },
+    {
+      "type": "decode",
+      "case": "native_7",
+      "channel": "coolant_temperature",
+      "responseHex": "6200059C",
+      "expected": 116
+    },
+    {
+      "type": "decode",
+      "case": "native_7",
+      "channel": "engine_rpm",
+      "responseHex": "62000CFA00",
+      "expected": 16000.0
+    },
+    {
+      "type": "decode",
+      "case": "native_7",
+      "channel": "fan_duty_cycle",
+      "responseHex": "62091F8000",
+      "expected": 100.0
+    },
+    {
+      "type": "decode",
+      "case": "native_7",
+      "channel": "intake_air_temperature",
+      "responseHex": "62000F88",
+      "expected": 96
+    },
+    {
+      "type": "decode",
+      "case": "native_7",
+      "channel": "mass_airflow",
+      "responseHex": "620010FFFF",
+      "expected": 655.35
+    },
+    {
+      "type": "decode",
+      "case": "native_7",
+      "channel": "maf_sensor_voltage",
+      "responseHex": "6211775000",
+      "expected": 5.0
+    },
+    {
+      "type": "decode",
+      "case": "native_7",
+      "channel": "relative_throttle_position",
+      "responseHex": "620045FA",
+      "expected": 98.0392156862745
+    },
+    {
+      "type": "decode",
+      "case": "native_7",
+      "channel": "vehicle_speed",
+      "responseHex": "62000DFF",
+      "expected": 255
+    },
+    {
+      "type": "decode",
+      "case": "native_7",
+      "channel": "ignition_timing",
+      "responseHex": "62000EFF",
+      "expected": 63.5
+    },
+    {
+      "type": "decode",
+      "case": "native_7",
+      "channel": "knock_retard",
+      "responseHex": "621746FF",
+      "expected": 89.6484375
+    },
+    {
+      "type": "decode",
+      "case": "all_switch_flag_combinations",
+      "channel": "clutch_switch",
+      "responseHex": "62A2111000",
+      "expected": 0
+    },
+    {
+      "type": "decode",
+      "case": "all_switch_flag_combinations",
+      "channel": "clutch_switch",
+      "responseHex": "62A2111400",
+      "expected": 0
+    },
+    {
+      "type": "decode",
+      "case": "all_switch_flag_combinations",
+      "channel": "clutch_switch",
+      "responseHex": "62A2110000",
+      "expected": 0
+    },
+    {
+      "type": "decode",
+      "case": "all_switch_flag_combinations",
+      "channel": "clutch_switch",
+      "responseHex": "62A2110400",
+      "expected": 0
+    },
+    {
+      "type": "decode",
+      "case": "all_switch_flag_combinations",
+      "channel": "clutch_switch",
+      "responseHex": "62A2111000",
+      "expected": 0
+    },
+    {
+      "type": "decode",
+      "case": "all_switch_flag_combinations",
+      "channel": "clutch_switch",
+      "responseHex": "62A2111400",
+      "expected": 0
+    },
+    {
+      "type": "decode",
+      "case": "all_switch_flag_combinations",
+      "channel": "clutch_switch",
+      "responseHex": "62A2110000",
+      "expected": 0
+    },
+    {
+      "type": "decode",
+      "case": "all_switch_flag_combinations",
+      "channel": "clutch_switch",
+      "responseHex": "62A2110400",
+      "expected": 0
+    },
+    {
+      "type": "decode",
+      "case": "all_switch_flag_combinations",
+      "channel": "clutch_switch",
+      "responseHex": "62A2111001",
+      "expected": 1
+    },
+    {
+      "type": "decode",
+      "case": "all_switch_flag_combinations",
+      "channel": "clutch_switch",
+      "responseHex": "62A2111401",
+      "expected": 1
+    },
+    {
+      "type": "decode",
+      "case": "all_switch_flag_combinations",
+      "channel": "clutch_switch",
+      "responseHex": "62A2110001",
+      "expected": 1
+    },
+    {
+      "type": "decode",
+      "case": "all_switch_flag_combinations",
+      "channel": "clutch_switch",
+      "responseHex": "62A2110401",
+      "expected": 1
+    },
+    {
+      "type": "decode",
+      "case": "all_switch_flag_combinations",
+      "channel": "clutch_switch",
+      "responseHex": "62A2111001",
+      "expected": 1
+    },
+    {
+      "type": "decode",
+      "case": "all_switch_flag_combinations",
+      "channel": "clutch_switch",
+      "responseHex": "62A2111401",
+      "expected": 1
+    },
+    {
+      "type": "decode",
+      "case": "all_switch_flag_combinations",
+      "channel": "clutch_switch",
+      "responseHex": "62A2110001",
+      "expected": 1
+    },
+    {
+      "type": "decode",
+      "case": "all_switch_flag_combinations",
+      "channel": "clutch_switch",
+      "responseHex": "62A2110401",
+      "expected": 1
+    }
+  ]
+}

@@ -7,7 +7,7 @@ appear above the tuning explanation. Storage addresses and data types remain
 under **Storage details**. The window follows the selected map.
 
 The bundled profiles have been reviewed for unit and arithmetic clarity across
-all nine ROM layouts. An imported definition supplies its own units and help;
+all ten ROM layouts. An imported definition supplies its own units and help;
 SpeedLink displays that definition's metadata. Missing imported units are shown
 as unspecified, rather than guessed.
 

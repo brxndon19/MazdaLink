@@ -14,7 +14,8 @@ public class MultiRomLoggerTests
         { "L38KEH000", 38, 34, 298 }, { "L39SED000", 38, 34, 298 },
         { "L39SEE000", 38, 34, 298 }, { "L39SEF000", 38, 34, 298 },
         { "L3M7EF000", 35, 31, 277 }, { "L35HEH000", 36, 32, 284 },
-        { "L33XEH000", 35, 31, 277 }, { "L3P4EM000", 35, 31, 277 }, { "L3CGEE000", 20, 19, 77 }
+        { "L33XEH000", 35, 31, 277 }, { "L3P4EM000", 35, 31, 277 }, { "L3CGEE000", 20, 19, 77 },
+        { "L3M6EG000", 33, 30, 247 }
     };
     private static string Data(string id, string kind) => Path.Combine(AppContext.BaseDirectory, "LoggerDefinitions", $"{id}.{kind}.json");
     private static JsonDocument Vectors(string id) => JsonDocument.Parse(File.ReadAllBytes(Data(id, "vectors")));
@@ -57,9 +58,9 @@ public class MultiRomLoggerTests
         var expected = Profiles.Select(row => (string)row[0]).Order().ToArray();
         Assert.Equal(expected, LoggerDefinition.Known.SelectMany(p => p.SoftwareIds).Order().ToArray());
         Assert.Equal(expected, RomInspector.KnownProfiles.Select(p => p.Calibration).Order().ToArray());
-        Assert.Equal(2384, Profiles.Sum(row => (int)row[3]));
-        Assert.Equal(313, LoggerDefinition.Known.Sum(p => p.ChannelIds.Count));
-        Assert.Equal(33, LoggerDefinition.Known.Sum(p => p.UnavailableChannels.Count));
+        Assert.Equal(2631, Profiles.Sum(row => (int)row[3]));
+        Assert.Equal(346, LoggerDefinition.Known.Sum(p => p.ChannelIds.Count));
+        Assert.Equal(38, LoggerDefinition.Known.Sum(p => p.UnavailableChannels.Count));
         foreach (var profile in document.RootElement.GetProperty("profiles").EnumerateArray())
         {
             string path = Path.Combine(AppContext.BaseDirectory, "LoggerDefinitions", profile.GetProperty("profileFile").GetString()!);

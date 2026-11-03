@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.0-alpha.7
+
+- Add the verified L3M6EG000 / L3M6EG000L3T60A1 stock layout: 263 tuning tables and 600 diagnostic controls. Include tuner-focused help, units and named code states. Unknown compatible ROMs remain readable without a definition.
+- Apply mandatory checksum correction and verification on every L3M6EG000 editor export. The native program sum covers 0x3F000 through 0xFFFFF; correction uses reserved padding at 0xFFFF4 and preserves live instructions at the range start.
+- Exclude only the established per-ECU identification record from this profile's boot fingerprint. Exports preserve that record byte-for-byte; the remaining boot bytes, calibration identity, program signature and checksum-layout checks remain enforced. Existing calibration-ID matching is unchanged.
+- Add a 33-parameter stock logger using 30 sequential requests, with native encoder and identifier-copy checks plus 247 synthetic conversion vectors. Five unverified/unoffered baseline parameters remain unavailable, including a neutral bit that this stock status encoder does not populate. Real-ECU logging acceptance, physical values and rates remain pending.
+- Extend the editor, import, layout, navigation, map-window, recovery and save-integrity checks to the tenth ROM. A reference-ROM audit covers all 863 controls, 21,389 logical cells, localized edits, undo and checksum-verified exports. ECU programming remains disabled.
+
 ## 0.7.0-alpha.6
 
 - Recognize supported short chassis-number replies, including space/null padding, instead of rejecting them as invalid 17-character VINs. Show **Chassis ID** in Connection and retain the chassis number separately in local backup metadata.

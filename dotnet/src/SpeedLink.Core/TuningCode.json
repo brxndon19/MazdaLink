@@ -43,5 +43,10 @@
     "Calibration": "L3CGEE000",
     "CodeStart": 16384,
     "Sha256": "17c849da2d689874581bfcdf8aaa9a544e7db2a70e60478058f5fbe586edcaa2"
+  },
+  {
+    "Calibration": "L3M6EG000",
+    "CodeStart": 258048,
+    "Sha256": "05016e33748cf00ef61d861349004a802d4be4875ba7a8ff821242b69524de68"
   }
 ]

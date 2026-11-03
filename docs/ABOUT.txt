@@ -13,7 +13,7 @@ Auto fit preserves text size and measured cell minimums; smaller panes scroll.
 Independent 85–150% map text zoom, selections and graph views.
 Per-calibration map layouts and detached-window positions restore on ROM open.
 Floating editor panels follow the active workspace; empty graphs stay hidden.
-Nine tuning definitions, Fit map, floating panels, changes and undo/redo.
+Ten tuning definitions, Fit map, floating panels, changes and undo/redo.
 Permanent application menus, labeled navigation, saved layouts and zoomable long MAF curves.
 Opening a ROM shows its maps; the Maps button restores the browser at any time.
 Compact wrapping value cards with units, Apply/Cancel, baseline and change.
@@ -38,7 +38,9 @@ A definition is not required to dump a ROM.
 
 Adapters: Vgate vLinker FS (USB), Tactrix Openport 2.0
 Experimental: Mongoose-Plus ISO/CAN3 reader/logger; hardware testing pending.
-Stock-ROM logger: eight Gen 1 profiles with 35–38 parameters; Gen 2 with 20.
+Stock-ROM logger: nine Gen 1 profiles with 33–38 parameters; Gen 2 with 20.
+L3M6EG000: 863 editor controls, mandatory checksum correction, 33 stock logger parameters.
+Per-ECU identification bytes preserved unchanged in ROM exports.
 Experimental Gen 2 L3CGEE000: 287 tuning entries and 155 DTC reporting controls.
 Compatible unknown Gen 2 dumping uses a separate, bounded read protocol.
 Known short and complete ECU calibration IDs recognized for logging.

@@ -27,7 +27,7 @@ public sealed class DefinitionImportTests
         var original = library.Load(); var profile = Fixture.Profiles.Single(p => p.Calibration == calibration); byte[] input = Fixture.Image(profile);
         var open = new RomEditor(input, Path.Combine(folder.Path, "source.bin"), Fixture.Inspector(), Fixture.TuningGuard, original.Editors);
         var candidate = library.Preview(WriteEditor(folder, calibration)); library.Install(candidate, null);
-        var loaded = new DefinitionLibrary(installed).Load(); Assert.Equal(18, loaded.Entries.Count);
+        var loaded = new DefinitionLibrary(installed).Load(); Assert.Equal(20, loaded.Entries.Count);
         Assert.Equal("import-test", loaded.Editors.Single(d => d.Calibration == calibration).Version); Assert.NotEqual("import-test", open.Definition.Version);
         var editor = new RomEditor(input, Path.Combine(folder.Path, "source.bin"), Fixture.Inspector(), Fixture.TuningGuard, loaded.Editors);
         var table = editor.Definition.Tables.First(t => t.Kind == "1D" && t.Storage == "float");

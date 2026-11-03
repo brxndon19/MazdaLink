@@ -2,7 +2,7 @@
 
 For a visual tour, see the [logger overview and screenshots](logger/README.md).
 
-The logger draft covers eight Gen 1 ROMs with 35–38 parameters, plus experimental Gen 2
+The logger draft covers nine Gen 1 ROMs with 33–38 parameters, plus experimental Gen 2
 L3CGEE000 with 20. It uses the
 factory application's read-identifier interface; a logging patch is not required.
 The ROM encoders and offline conversions have been checked. Real-ECU acceptance,
@@ -179,3 +179,12 @@ identity binding. Load its matching ECU backup. Pressure has a 1 kPa resolution
 and 255 kPa diagnostic ceiling. Other baseline channels remain unavailable until
 established for this ROM. See [Gen 2 support](GEN2.md) for coverage and limits.
 Real ECU sensor values and rates are pending.
+
+## L3M6EG000 stock interface
+
+This profile offers 33 parameters over 30 sequential requests. Native encoder,
+identifier-copy and conversion checks use synthetic inputs; real ECU logging
+acceptance and measured values/rates remain pending. Five baseline parameters
+are not offered: desired fuel rail pressure, fuel injection amount, ambient
+temperature, catalyst temperature and neutral switch. The stock status encoder
+does not populate the neutral bit, so it is unavailable instead of a false zero.

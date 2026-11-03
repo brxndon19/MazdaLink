@@ -18,6 +18,7 @@ permission. Unknown images can be backed up and reopened normally.
 | L39SED000 | Mazdaspeed3 | 0x048000 | 0x048000 |
 | L39SEE000 | Mazdaspeed3 | 0x048000 | 0x048000 |
 | L39SEF000 | Mazdaspeed3 | 0x048000 | 0x048000 |
+| L3M6EG000 | Mazdaspeed6 / Mazda 6 MPS / Mazdaspeed Atenza | 0x03F000 | 0x0FFFF4 |
 | L3M7EF000 | Mazdaspeed6 / Mazda 6 MPS | 0x03F000 | 0x0FFFF4 |
 | L35HEH000 | Mazda3 MPS | 0x048000 | 0x048000 |
 | L33XEH000 | Mazdaspeed3 / Axela | 0x048000 | 0x048000 |
@@ -30,8 +31,9 @@ checksum is not guessed. Read success does not require a passing known-ROM check
 
 ## Stock-ROM logging
 
-All nine layouts above also have a logger profile. L38KEH000 and the three
+All ten layouts above also have a logger profile. L38KEH000 and the three
 L39S variants have 38 parameters; L3M7EF000, L33XEH000 and L3P4EM000 have 35; L35HEH000 has 36.
+L3M6EG000 offers 33 parameters over 30 requests, with five baseline parameters unavailable.
 L3CGEE000 offers 20 parameters; see [Gen 2 coverage and integrity limits](GEN2.md).
 Its native sum covers code only; editable calibration bytes are excluded and invalid code is rejected without repair.
 Each profile has independent ROM evidence and its own MAP calibration bindings.
@@ -43,6 +45,7 @@ All real-ECU logging checks remain pending. Unknown ROMs remain readable.
 
 File-layout checks can be tested against reference images and synthetic data.
 The shared reader has been tested through real adapters against a simulated ECU.
-A user has reported a successful Mongoose ECU dump; formal adapter and
+L3M6EG000 has a hardware backup with two matching 1 MiB passes through vLinker FS.
+A user has also reported a successful Mongoose ECU dump; formal adapter and
 vehicle qualification remains incomplete. A definition's existence does not establish
 on-car read compatibility or authorize flashing. Live programming stays disabled.

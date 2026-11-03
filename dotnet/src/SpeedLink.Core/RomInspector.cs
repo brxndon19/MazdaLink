@@ -14,6 +14,7 @@ public sealed record RomProfile(string Calibration, string Model, int IdentityOf
 {
     public string Family { get; init; } = "Gen1";
     public int BootLength { get; init; } = 0x8000;
+    public RomRange[]? BootDataRanges { get; init; }
     public RomRange[]? SumRanges { get; init; }
     public RomRange[]? RoutineRanges { get; init; }
     public MarkerGuard[]? Markers { get; init; }
@@ -66,6 +67,23 @@ public sealed class RomInspector
         return Array.AsReadOnly(JsonSerializer.Deserialize<RomProfile[]>(stream) ?? throw new InvalidDataException("Invalid ROM metadata."));
     }
     public static string Hash(ReadOnlySpan<byte> data) => Convert.ToHexStringLower(SHA256.HashData(data));
+    public static string BootHash(ReadOnlySpan<byte> data, RomProfile profile)
+    {
+        if (data.Length != RomSize || profile.BootLength is < 1 or > RomSize)
+            throw new InvalidDataException("Complete ROM and valid boot fingerprint bounds required.");
+        var boot = data[..profile.BootLength];
+        if (profile.BootDataRanges is not { Length: > 0 }) return Hash(boot);
+        // Normalize established per-ECU records in a temporary fingerprint copy only.
+        var normalized = boot.ToArray(); int end = 0;
+        foreach (var range in profile.BootDataRanges.OrderBy(r => r.Address))
+        {
+            if (range.Address < end || range.Length < 1 || range.Address > normalized.Length - range.Length)
+                throw new InvalidDataException("Invalid per-ECU boot data range.");
+            normalized.AsSpan(range.Address, range.Length).Clear();
+            end = range.Address + range.Length;
+        }
+        return Hash(normalized);
+    }
     public static bool MatchesCalibrationId(RomProfile profile, string? calibration) => calibration is not null &&
         new[] { profile.Calibration, profile.Identity }.Any(id => System.Text.RegularExpressions.Regex.IsMatch(calibration,
             "(?<![A-Z0-9])" + System.Text.RegularExpressions.Regex.Escape(id) + "(?![A-Z0-9])",
@@ -97,7 +115,7 @@ public sealed class RomInspector
         if (data.Length != RomSize)
             throw new InvalidDataException($"Expected {RomSize:N0} bytes; this file has {data.Length:N0}.");
         var profile = ProfileFor(data);
-        var boot = Hash(data[..(profile?.BootLength ?? BootSize)]);
+        var boot = profile is null ? Hash(data[..BootSize]) : BootHash(data, profile);
         if (profile is null)
             return new(data.Length, null, null, Hash(data), boot, false, false, false, false, false, null, null, null, null, null, false, false, "unavailable");
         var markers = data[0x8002] == 0x5A && data[0x8003] == 0xA5 && data[^2] == 0xA5 && data[^1] == 0x5A;

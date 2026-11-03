@@ -1,6 +1,6 @@
 # Bundled tuning definitions
 
-These nine XML files are supported snapshots from the local MazdaSpeedDefs
+These ten XML files are supported snapshots from the local MazdaSpeedDefs
 repository, incorporated under its MIT license (LICENSE in this folder). They
 are embedded into the executable. No ROM image or commercial software is bundled.
 
@@ -22,3 +22,10 @@ calibrations are outside that sum; additional calibration integrity is unestabli
 
 Update these snapshots deliberately, retain the license, and rerun editor tests
 and the local reference-ROM audit after definition changes.
+
+L3M6EG000 includes 263 tuning tables and 600 diagnostic controls. Its native
+program sum starts at 0x3F000; automatic correction uses reserved padding at
+0xFFFF4 and preserves the instructions at the range start. Its boot fingerprint
+normalizes only the established 128-byte per-ECU identification record. That
+record is retained byte-for-byte in every exported ROM; the remaining boot bytes
+and program/checksum guards remain checked.

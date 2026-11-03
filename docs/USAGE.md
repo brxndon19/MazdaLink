@@ -32,7 +32,7 @@ live data, **Recordings** to review logs, **ROM checks** to inspect a file, or
    ROM-specific checksum/integrity checks. The original and existing files are preserved.
 
 Drag the table/preview divider to resize it. **Fit map** restores automatic
-sizing; Ctrl+B hides or restores the browser. Editing requires one of the nine
+sizing; Ctrl+B hides or restores the browser. Editing requires one of the ten
 supported stock program layouts. Static axes are read-only; extended/patched
 layouts are unsupported.
 
@@ -88,7 +88,7 @@ then choose **Start logging**. **Stop** ends the recording and disconnects;
 reconnect before another session. Disconnect and reconnect after a ROM read
 before logging.
 
-The logger supports eight Gen 1 profiles with 35–38 parameters each, plus the
+The logger supports nine Gen 1 profiles with 33–38 parameters each, plus the
 experimental L3CGEE000 Gen 2 profile with 20. Logging can run with the engine
 running; ROM reads require it stopped. The **Hz** column
 shows measured host sample rates. Real-ECU acceptance, readings and achievable
@@ -157,3 +157,16 @@ choose their reader automatically. For an unknown compatible Gen 2 ECU, select
 Gen 2 saves validate native code and markers without repairing code; additional
 calibration-integrity rules are unestablished. Choose **Help → Gen 2 (experimental)**
 for scope, exclusions and pending real ECU validation.
+
+## L3M6EG000
+
+L3M6EG000 / L3M6EG000L3T60A1 includes 863 editor controls and a 33-parameter
+stock-ROM logger. Open your complete 1 MiB backup; its filename does not select
+the definition. Every editor save corrects and verifies the native program sum.
+The vehicle-specific identification record remains unchanged.
+
+The logger makes 30 sequential requests per full scan. Desired fuel rail
+pressure, fuel injection amount, ambient temperature, catalyst temperature and
+neutral switch are unavailable through this checked stock interface. They are
+not substituted with zeros. Load the current matching backup for MAP calibration.
+Live ECU query acceptance, physical readings and rates still need testing.

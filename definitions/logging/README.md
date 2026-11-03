@@ -1,11 +1,11 @@
 # Stock-ROM logger definitions
 
-The catalog now covers **nine ROMs with tuning definitions**: eight Gen 1 profiles with
-35–38 parameters, plus L3CGEE000 Gen 2 with 20. See [per-ROM coverage and exclusions](All_ROM_Coverage.md),
+The catalog now covers **ten ROMs with tuning definitions**: nine Gen 1 profiles with
+33–38 parameters, plus L3CGEE000 Gen 2 with 20. See [per-ROM coverage and exclusions](All_ROM_Coverage.md),
 [channel coverage](All_ROM_Coverage.csv), and the
 [live ECU checklist](All_ROM_ECU_Checklist.csv). `Catalog.json` inventories the
 profiles. Every profile has its own requests, MAP bindings, code guards, native
-vectors and evidence. All 313 included ROM/channel combinations need ECU testing.
+vectors and evidence. All 346 included ROM/channel combinations need ECU testing.
 
 `LoggerDefinition.Known` exposes the embedded catalog;
 `LoggerDefinition.ForCalibration` selects a unique live calibration ID;

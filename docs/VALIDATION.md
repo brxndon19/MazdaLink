@@ -1,5 +1,39 @@
 # Alpha validation scope
 
+## L3M6EG000 integration — 0.7.0-alpha.7
+
+- The finished definition supplies 263 tuning tables and 600 diagnostic controls.
+  Its final bank-selection checks distinguish otherwise identical load-limit
+  and injection-phase banks. SpeedLink retains those addresses, axes, scaling,
+  bits and states; its help uses the established tuner-facing wording and units.
+- The actual reference ROM passes editor opening and an independent 863-control
+  audit: 21,389 decoded values, 1,683 bit edits, 259 numeric edits and four named
+  switches. No-op edits and exports remain byte-identical; edits stay within
+  their storage, undo restores bytes, and edited exports verify the native sum.
+- The native program sum is independently checked over 0x3F000–0xFFFFF. Every
+  save applies correction at 0xFFFF4 and verifies the durable result. Ten-profile
+  save-integrity tests cover edited, repeated, no-edit and failed saves.
+- Only the established 128-byte per-ECU identification record is normalized for
+  the L3M6EG000 boot fingerprint. Synthetic alternate records remain compatible;
+  adjacent boot mutations are rejected, and saves preserve the record exactly.
+  Other profiles retain their existing boot policy. Short and complete known
+  calibration IDs match; unknown builds and unsupported program changes do not.
+- The logger executes bounded native encoders and identifier-copy paths with
+  synthetic RAM: 33 parameters, 30 requests, 247 vectors and 203 independent
+  scalar checks. Native status construction does not encode the neutral bit;
+  that channel is unavailable. Actual-ROM logger binding and MAP calibration
+  checks pass. Sensor generation, scheduler/peripheral behavior and actual
+  vehicle values/rates are outside these checks.
+- The core suite passes 522 cases and 75 required regressions. Local desktop
+  checks cover the new profile's editor, import, navigation, small maps, map
+  windows, projects, unsupported-file recovery, 1,726 every-table axis views,
+  logger recording and connection failure. Protected checks run the expanded
+  all-profile matrix before publication.
+- The source capture has two matching hardware ROM reads through vLinker FS.
+  This integration used offline tests only: no adapters were opened, no CAN
+  traffic was sent, and no ECU was written. Real-ECU logger acceptance and
+  physical readings/rates remain pending. ECU programming stays disabled.
+
 ## VIN and chassis identification — 0.7.0-alpha.6
 
 - Standard 17-character VINs retain their validation. Recognized short chassis

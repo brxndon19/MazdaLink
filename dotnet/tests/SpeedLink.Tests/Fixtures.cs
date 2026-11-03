@@ -34,7 +34,7 @@ internal static class Fixture
         var data = Image(p);
         return p with
         {
-            BootSha256 = RomInspector.Hash(data.AsSpan(0, p.BootLength)),
+            BootSha256 = RomInspector.BootHash(data, p),
             LoopSha256 = p.RoutineRanges is not null ? RomInspector.Hash(p.RoutineRanges.SelectMany(r => data.Skip(r.Address).Take(r.Length)).ToArray()) :
                 p.LoopAddress is int at ? RomInspector.Hash(data.AsSpan(at, p.LoopSize!.Value)) : null
         };

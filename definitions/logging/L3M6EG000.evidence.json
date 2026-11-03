@@ -1,0 +1,52 @@
+{
+  "passed": true,
+  "calibration": "L3M6EG000",
+  "romSha256": "c1820a3dee0c5a935a401d97647a6d21a05527adca456be8b093787b0c516b0b",
+  "channels": 33,
+  "distinctRequests": 30,
+  "nativeVectors": 247,
+  "independentScalarChecks": 203,
+  "instructionSteps": 336293,
+  "executedInstructionWords": 1772,
+  "realEcuTested": false,
+  "loggerAdapterBenchTested": false,
+  "excludedChannels": [
+    {
+      "id": "desired_fuel_rail_pressure",
+      "name": "Desired fuel rail pressure",
+      "reason": "Identifier absent from this ROM",
+      "ecu": "not_offered_by_this_profile"
+    },
+    {
+      "id": "fuel_injection_amount",
+      "name": "Fuel injection amount",
+      "reason": "Identifier absent from this ROM",
+      "ecu": "not_offered_by_this_profile"
+    },
+    {
+      "id": "ambient_air_temperature",
+      "name": "Ambient air temperature",
+      "reason": "Inactive native lookup; no active encoder established",
+      "ecu": "not_offered_by_this_profile"
+    },
+    {
+      "id": "catalyst_temperature",
+      "name": "Catalyst temperature",
+      "reason": "Inactive native lookup; no active encoder established",
+      "ecu": "not_offered_by_this_profile"
+    },
+    {
+      "id": "neutral_switch",
+      "name": "Neutral switch",
+      "reason": "The native stock status encoder does not populate the neutral-switch bit",
+      "ecu": "not_offered_by_this_profile"
+    }
+  ],
+  "sourceRomUnchanged": true,
+  "scope": "Original bounded encoders and descriptor copy paths with synthetic RAM; bitmap refresh and unrelated capture/status paths held out. No peripheral, scheduler or physical ECU validation.",
+  "csharpVectorsPassed": true,
+  "offlineDesktopWorkflowsPassed": [
+    "record-stop",
+    "connection-failure"
+  ]
+}

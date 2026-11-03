@@ -243,7 +243,7 @@ Layout shortcuts apply when you are not typing in a text field.
 ## Compatible files and definition updates
 
 Supported stock layouts: **L33XEH000, L35HEH000, L38KEH000, L39SED000,
-L39SEE000, L39SEF000, L3M7EF000 and L3P4EM000**. Opening requires a complete 1 MiB image
+L39SEE000, L39SEF000, L3M6EG000, L3M7EF000 and L3P4EM000**. Opening requires a complete 1 MiB image
 with matching calibration, boot, checksum layout and program-area signature.
 The program check allows defined tuning controls and checksum changes while
 rejecting other program changes. Patched/extended layouts are unsupported.
@@ -266,3 +266,9 @@ L3CGEE000 uses mandatory native code-sum and marker validation on every export.
 Calibration edits are outside the code sum. Invalid code is rejected without
 repair; additional calibration-integrity rules are not established. See the
 [Gen 2 guide](GEN2.md). Its 155 DTC controls govern reporting, not readiness.
+
+For L3M6EG000, every save corrects the native big-endian program sum over
+0x3F000–0xFFFFF using reserved padding at 0xFFFF4. The range start contains live
+instructions and is preserved. A known per-ECU identification record is excluded
+only from the boot fingerprint; exports preserve that record exactly. No setting
+or imported definition can disable checksum verification or change this policy.
