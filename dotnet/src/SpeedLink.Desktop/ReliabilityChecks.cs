@@ -40,7 +40,7 @@ public partial class MainWindow
 
         var profile = LoggerDefinition.ForCalibration(editor.Document.Definition.Calibration)!;
         ConfigureLoggerProfile(profile); loggerCalibration = LoggerCalibration.ExplicitMap(100, 0);
-        using var peer = new CountingTestTransport(createPeer(profile)); transport = peer; identity = new("test", peer.Adapter, null, profile.SoftwareIds.Single());
+        using var peer = new CountingTestTransport(createPeer(profile)); transport = peer; identity = new("test", peer.Adapter, null, RomInspector.KnownProfiles.Single(p => p.Calibration == profile.SoftwareIds.Single()).Identity);
         foreach (var row in loggerRows) { row.Selected = row.Id == "engine_rpm"; row.Plotted = row.Selected; }
         StoichBox.Text = "invalid"; Navigate(2); Controls();
         LoggerStartButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
@@ -71,7 +71,9 @@ public partial class MainWindow
         }
         finally { timer.Stop(); }
         string[] plotted = LoggerPlots.Children.OfType<StackPanel>().SelectMany(p => p.Children.OfType<TextBlock>()).Select(t => t.Text).ToArray();
-        Check(transport is null && loggerScans >= 3 && plotted.Any(t => t.StartsWith("Stopped", StringComparison.Ordinal)) && !plotted.Any(t => t.StartsWith("OK", StringComparison.Ordinal)), "Stopped charts refresh immediately and connection released");
+        Check(ReferenceEquals(transport, peer) && LoggerStartButton.IsEnabled && !LoggerStopButton.IsEnabled && !ReadButton.IsEnabled && loggerScans >= 3 && plotted.Any(t => t.StartsWith("Stopped", StringComparison.Ordinal)) && !plotted.Any(t => t.StartsWith("OK", StringComparison.Ordinal)), "Stopped charts refresh immediately and logging can restart without reconnecting");
+        await ClickAndWait(DisconnectButton);
+        Check(transport is null && !LoggerStartButton.IsEnabled && peer.Disposed, "Explicit disconnect releases the stopped logger connection");
         var display = new LoggerRow(profile.Channels.First(c => c.Id == "engine_rpm")); var now = DateTimeOffset.UtcNow;
         display.Observe(new(display.Id, 1000, now, "OK"), profile, null, now);
         display.Observe(new(display.Id, null, null, "Waiting"), profile, null, now.AddMilliseconds(100));
@@ -82,6 +84,8 @@ public partial class MainWindow
         display.Observe(new(display.Id, null, null, "Unavailable: NRC"), profile, null, now.AddSeconds(7));
         display.Observe(new(display.Id, null, null, "Waiting"), profile, null, now.AddSeconds(7));
         Check(display.ValueText == "—", "Rejected data is never revived by a pending scan");
+        display.Observe(new(display.Id, 1000, now.AddSeconds(8), "OK"), profile, null, now.AddSeconds(8));
+        Check(display.ExpireIfStale(now.AddSeconds(14)) && display.ValueText == "—" && display.Status.StartsWith("Stale", StringComparison.Ordinal), "A stalled receive expires displayed values without waiting for the next reply");
 
         Navigate(3); await RecordingsPane.OpenAsync(recording);
         var retained = RecordingsPane.Recording;
@@ -113,7 +117,7 @@ public partial class MainWindow
         var expectedProfile = loggerRows.Select(r => new LoggerChannelPreference(r.Id, r.Selected, r.Unit, r.Plotted)).ToArray();
         ConfigureLoggerProfile(gen2);
         foreach (var row in loggerRows) { row.Selected = row.Id is "absolute_throttle_position" or "short_term_fuel_trim" or "battery_voltage" or "calculated_load"; row.Plotted = row.Id == "battery_voltage"; }
-        LoggerRateBox.SelectedItem = 20; StoichBox.Text = "14.0"; RecordCsvBox.IsChecked = false;
+        LoggerRateBox.SelectedValue = 20; StoichBox.Text = "14.0"; RecordCsvBox.IsChecked = false;
         var expected = loggerRows.Select(r => new LoggerChannelPreference(r.Id, r.Selected, r.Unit, r.Plotted)).ToArray();
         string settingsVault = vault;
         CloseWorkbenchTest(); // Uses the normal Window.Closing settings path without starting another log.
@@ -122,7 +126,7 @@ public partial class MainWindow
         {
             restored.Show();
             Check(restored.loggerDefinition.Id == gen2.Id && Choices(restored).SequenceEqual(expected), "Offline close and fresh launch retain every Gen 2 selection, unit and plot");
-            Check((int)restored.LoggerRateBox.SelectedItem == 20 && restored.StoichBox.Text == "14.0" && restored.RecordCsvBox.IsChecked == false && restored.loggerCalibration is null, "Global preferences restored without trusting old ROM binding");
+            Check((int)restored.LoggerRateBox.SelectedValue == 20 && restored.StoichBox.Text == "14.0" && restored.RecordCsvBox.IsChecked == false && restored.loggerCalibration is null, "Global preferences restored without trusting old ROM binding");
             Check(!restored.EditorPane.FloatingVisibilityForTest()[1], "Startup without map hides remembered floating graph");
             restored.ConfigureLoggerProfile(profile);
             Check(Choices(restored).SequenceEqual(profile.Id == gen2.Id ? expected : expectedProfile), "Fresh launch retains every selection, unit and plot for " + profile.SoftwareIds.Single());
@@ -136,7 +140,7 @@ public partial class MainWindow
         {
             activeProfileRestart.Show();
             Check(activeProfileRestart.loggerDefinition.Id == profile.Id && Choices(activeProfileRestart).SequenceEqual(profile.Id == gen2.Id ? expected : expectedProfile), "Fresh launch automatically restores the active profile and all choices for " + profile.SoftwareIds.Single());
-            Check((int)activeProfileRestart.LoggerRateBox.SelectedItem == 20 && activeProfileRestart.StoichBox.Text == "14.0" && activeProfileRestart.RecordCsvBox.IsChecked == false && activeProfileRestart.loggerCalibration is null, "Active-profile restart preserves global choices without an ECU binding");
+            Check((int)activeProfileRestart.LoggerRateBox.SelectedValue == 20 && activeProfileRestart.StoichBox.Text == "14.0" && activeProfileRestart.RecordCsvBox.IsChecked == false && activeProfileRestart.loggerCalibration is null, "Active-profile restart preserves global choices without an ECU binding");
         }
         finally { activeProfileRestart.CloseWorkbenchTest(); }
         return new { passed = true, cases, hardwareAccessed = false };

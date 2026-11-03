@@ -2,7 +2,7 @@
 
 All ten ROMs with local tuning definitions have a logger profile. Each profile uses its own identifier records, MAP calibration locations and code guards. The existing 38-channel baseline was checked separately in every image.
 
-| ROM | Parameters | Requests per full scan | Excluded baseline parameters | Native vectors |
+| ROM | Parameters | Distinct enhanced identifiers | Excluded baseline parameters | Native vectors |
 | --- | ---: | ---: | ---: | ---: |
 | L38KEH000 | 38 | 34 | 0 | 298 |
 | L39SED000 | 38 | 34 | 0 | 298 |
@@ -14,6 +14,13 @@ All ten ROMs with local tuning definitions have a logger profile. Each profile u
 | L33XEH000 | 35 | 31 | 3 | 277 |
 | L3P4EM000 | 35 | 31 | 3 | 277 |
 | L3CGEE000 | 20 | 19 | 22 | 77 |
+
+The counts above describe native enhanced identifiers. The runtime combines
+byte-equivalent RPM, absolute-load, spark, MAF and fuel-pressure fields on the
+nine checked Gen 1 layouts. Selecting all five saves four wire requests per
+scan (L3M6EG000: 30 identifiers, 26 wire requests). Gen 2 retains 19 separate
+identifiers. Selection and calculated dependencies determine the actual plan.
+[Alias fixtures](Mode01_Aliases.vectors.json) cover 45 bounded native cases.
 
 The checks execute bounded original ROM routines with synthetic RAM. They do not establish real-ECU session acceptance, physical values or rates. All 346 included ROM/channel combinations still need ECU testing. No ROM image is included.
 

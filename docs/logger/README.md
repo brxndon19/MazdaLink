@@ -39,8 +39,10 @@ readings appear as gaps. This screenshot uses the bundled synthetic example log.
 
 Recordings are stored under `data/logs` beside the EXE. Keep the entire recording
 folder when sharing a session for troubleshooting. Fewer selected parameters
-allow faster updates. **Target scans/s** is a requested ceiling; achieved rates
-depend on the selected parameters, transport and ECU.
+allow faster updates. Leave **Polling → Max** selected to avoid a scan-rate
+wait. Optional numeric limits reduce bus traffic or recording volume; achieved
+rates depend on the parameters, transport and ECU. See
+[measured performance](../LOGGER_PERFORMANCE.md) for rates and validation limits.
 
 Logging can run with the engine running. ROM backup reads require the engine
 stopped; disconnect and reconnect after a backup before starting the logger.

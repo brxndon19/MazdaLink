@@ -84,16 +84,19 @@ walks through verification and contributing a file for support.
 Connect and identify, then choose **Logger → Load current ECU ROM…**. Use the
 full backup currently installed in the ECU; its calibration must match. Choose
 **Essentials** or individual parameters and units, leave **Record CSV** checked,
-then choose **Start logging**. **Stop** ends the recording and disconnects;
-reconnect before another session. Disconnect and reconnect after a ROM read
-before logging.
+then choose **Start logging**. **Stop** finishes the recording and keeps a healthy
+connection ready for another Start. The current ROM, selections, units and plots
+stay selected. Disconnect and reconnect when switching between ROM reading and
+logging, or after a connection error.
 
 The logger supports nine Gen 1 profiles with 33–38 parameters each, plus the
 experimental L3CGEE000 Gen 2 profile with 20. Logging can run with the engine
 running; ROM reads require it stopped. The **Hz** column
-shows measured host sample rates. Real-ECU acceptance, readings and achievable
-rates remain untested. See the [logger guide](LOGGER.md) for units, plots and
-unavailable data.
+shows measured host sample rates. Leave **Polling** on **Max** for the fastest
+completed-reply polling; numeric limits are optional. Physical readings and
+achievable running-engine rates still require vehicle validation. Read-only start/stop and query acceptance
+on one L3M6EG000 bench ECU passed through vLinker FS and Tactrix. See the [logger guide](LOGGER.md) for units, plots and
+unavailable data, plus [measured bench performance](LOGGER_PERFORMANCE.md).
 
 Choose **Recordings → Open recording…** to review a SpeedLink `log.csv` without
 an adapter. Logs live under `data/logs` beside the EXE. Keep the complete folder,

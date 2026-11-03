@@ -16,6 +16,13 @@ still be dumped by the reader. No ROM files are bundled.
 The application can overlay imported `*.logger.json` updates through **Definitions**.
 See [definition import](../../docs/DEFINITIONS.md) for file selection and compatibility limits.
 
+`Mode01_Aliases.vectors.json` adds 45 synthetic original-handler cases across
+the nine Gen 1 profiles. The five standard aliases have byte-identical payloads
+to their enhanced identifiers; batching changes request count, not the existing
+scales or precision. Gen 2 is excluded. Completed unsupported-batch rejections
+use the individual path on the next scan; uncertain exchanges stop. See
+[performance and validation scope](../../docs/LOGGER_PERFORMANCE.md).
+
 The following is the original L38KEH000 research record; its counts and addresses
 apply to that profile only.
 

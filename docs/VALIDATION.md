@@ -1,5 +1,35 @@
 # Alpha validation scope
 
+## Logging restart and performance — 0.7.0-alpha.8
+
+- Required desktop tests cover all ten profiles: three consecutive recorded
+  Start/Stop cycles on one connection, immediate cancellation followed by another
+  live-only session, retained ROM/selection/unit/plot choices, separate replayable
+  recordings, and explicit disconnect. Failure requires manual reconnect without
+  retrying the uncertain request; a changed ECU identity is rejected before new
+  logger traffic or recording.
+- All 558 core tests passed, including ten-profile mandatory ROM-save integrity,
+  exact-length reply completion, fragmented/pending/malformed/no-data cases,
+  prompt races, adapter resynchronization, no duplicate ECU requests, completed
+  batch rejection, all-profile conversions, preference migration and bounded
+  concurrent display handoff. Native alias fixtures cover 45 cases across nine
+  Gen 1 reference layouts; Gen 2 is not assigned these aliases.
+- Each wired adapter completed eight uncapped ten-second workload phases with
+  recording off/on and a three-minute all-33-parameter recording on one powered
+  L3M6EG000 bench ECU. More than 25,000 requests combined completed without
+  transport failures or stale/skew gaps in completed frames. Both achieved about
+  50 single-parameter polls/s or 1.85 complete all-parameter scans/s.
+- Actual desktop Max-polling sessions with plots, diagnostics and CSV passed
+  three consecutive Start/Stop cycles per adapter for one, six and all 33
+  parameters. Each released its device cleanly and all six recordings reopened.
+  Traffic was limited to identification and known stock logger queries.
+- These results establish query/session behavior on one bench ECU. Physical
+  sensor accuracy, ECU-internal source update rates, running-engine behavior and
+  the remaining profile/channel vehicle checks are pending. Missing or stale
+  values remain explicit gaps. No ECU programming was performed.
+
+See [measured performance](LOGGER_PERFORMANCE.md) for rates and their limits.
+
 ## L3M6EG000 integration — 0.7.0-alpha.7
 
 - The finished definition supplies 263 tuning tables and 600 diagnostic controls.

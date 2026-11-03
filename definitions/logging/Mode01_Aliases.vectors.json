@@ -1,0 +1,292 @@
+{
+  "schemaVersion": 1,
+  "description": "Synthetic original-handler fixtures verify byte-equivalent standard/enhanced payloads; no ROM code or real sensor measurements.",
+  "aliases": [
+    "000C",
+    "0043",
+    "000E",
+    "0010",
+    "0023"
+  ],
+  "profiles": [
+    {
+      "calibration": "L33XEH000",
+      "romSha256": "6110a26bcdafaa2f739153a1a098c7f6928fe613cae5888a02d798a76a44042d",
+      "cases": [
+        {
+          "requestHex": "010c430e1023",
+          "responseHex": "410c0c3743436e0e0e10103b23234e",
+          "instructions": 5631
+        },
+        {
+          "requestHex": "010c43",
+          "responseHex": "410c0c3743436e",
+          "instructions": 2350
+        },
+        {
+          "requestHex": "010e10",
+          "responseHex": "410e0e10103b",
+          "instructions": 2337
+        },
+        {
+          "requestHex": "0123",
+          "responseHex": "4123234e",
+          "instructions": 1252
+        },
+        {
+          "requestHex": "0123100e430c",
+          "responseHex": "4123234e10103b0e0e43436e0c0c37",
+          "instructions": 5631
+        }
+      ]
+    },
+    {
+      "calibration": "L35HEH000",
+      "romSha256": "6064ecaf2c5358bf19a95315fcba973974289900c40dd3f35056c61acd057908",
+      "cases": [
+        {
+          "requestHex": "010c430e1023",
+          "responseHex": "410c0c3743436e0e0e10103b23234e",
+          "instructions": 5631
+        },
+        {
+          "requestHex": "010c43",
+          "responseHex": "410c0c3743436e",
+          "instructions": 2350
+        },
+        {
+          "requestHex": "010e10",
+          "responseHex": "410e0e10103b",
+          "instructions": 2337
+        },
+        {
+          "requestHex": "0123",
+          "responseHex": "4123234e",
+          "instructions": 1252
+        },
+        {
+          "requestHex": "0123100e430c",
+          "responseHex": "4123234e10103b0e0e43436e0c0c37",
+          "instructions": 5631
+        }
+      ]
+    },
+    {
+      "calibration": "L38KEH000",
+      "romSha256": "1b9a8b78ef9fe1a346a32865ffa0e5a2bd971d7383c5b39db35392f959349a85",
+      "cases": [
+        {
+          "requestHex": "010c430e1023",
+          "responseHex": "410c0c3743436e0e0e10103b23234e",
+          "instructions": 5631
+        },
+        {
+          "requestHex": "010c43",
+          "responseHex": "410c0c3743436e",
+          "instructions": 2350
+        },
+        {
+          "requestHex": "010e10",
+          "responseHex": "410e0e10103b",
+          "instructions": 2337
+        },
+        {
+          "requestHex": "0123",
+          "responseHex": "4123234e",
+          "instructions": 1252
+        },
+        {
+          "requestHex": "0123100e430c",
+          "responseHex": "4123234e10103b0e0e43436e0c0c37",
+          "instructions": 5631
+        }
+      ]
+    },
+    {
+      "calibration": "L39SED000",
+      "romSha256": "34e8e15bccd4aa959da538c64837306b4cadf41aae772cb4689fe134eaea8339",
+      "cases": [
+        {
+          "requestHex": "010c430e1023",
+          "responseHex": "410c0c3743436e0e0e10103b23234e",
+          "instructions": 5631
+        },
+        {
+          "requestHex": "010c43",
+          "responseHex": "410c0c3743436e",
+          "instructions": 2350
+        },
+        {
+          "requestHex": "010e10",
+          "responseHex": "410e0e10103b",
+          "instructions": 2337
+        },
+        {
+          "requestHex": "0123",
+          "responseHex": "4123234e",
+          "instructions": 1252
+        },
+        {
+          "requestHex": "0123100e430c",
+          "responseHex": "4123234e10103b0e0e43436e0c0c37",
+          "instructions": 5631
+        }
+      ]
+    },
+    {
+      "calibration": "L39SEE000",
+      "romSha256": "d6efae18dbb016d6a5056c953d8ac54e92cff90f014757e1ef77eb6c5442fac2",
+      "cases": [
+        {
+          "requestHex": "010c430e1023",
+          "responseHex": "410c0c3743436e0e0e10103b23234e",
+          "instructions": 5631
+        },
+        {
+          "requestHex": "010c43",
+          "responseHex": "410c0c3743436e",
+          "instructions": 2350
+        },
+        {
+          "requestHex": "010e10",
+          "responseHex": "410e0e10103b",
+          "instructions": 2337
+        },
+        {
+          "requestHex": "0123",
+          "responseHex": "4123234e",
+          "instructions": 1252
+        },
+        {
+          "requestHex": "0123100e430c",
+          "responseHex": "4123234e10103b0e0e43436e0c0c37",
+          "instructions": 5631
+        }
+      ]
+    },
+    {
+      "calibration": "L39SEF000",
+      "romSha256": "9d26f7d7d2519619996ce0dfa7fe093d6d124eb50b66a1d2f30dee2b307b4631",
+      "cases": [
+        {
+          "requestHex": "010c430e1023",
+          "responseHex": "410c0c3743436e0e0e10103b23234e",
+          "instructions": 5631
+        },
+        {
+          "requestHex": "010c43",
+          "responseHex": "410c0c3743436e",
+          "instructions": 2350
+        },
+        {
+          "requestHex": "010e10",
+          "responseHex": "410e0e10103b",
+          "instructions": 2337
+        },
+        {
+          "requestHex": "0123",
+          "responseHex": "4123234e",
+          "instructions": 1252
+        },
+        {
+          "requestHex": "0123100e430c",
+          "responseHex": "4123234e10103b0e0e43436e0c0c37",
+          "instructions": 5631
+        }
+      ]
+    },
+    {
+      "calibration": "L3M6EG000",
+      "romSha256": "c1820a3dee0c5a935a401d97647a6d21a05527adca456be8b093787b0c516b0b",
+      "cases": [
+        {
+          "requestHex": "010c430e1023",
+          "responseHex": "410c0c3743436e0e0e10103b23234e",
+          "instructions": 5631
+        },
+        {
+          "requestHex": "010c43",
+          "responseHex": "410c0c3743436e",
+          "instructions": 2350
+        },
+        {
+          "requestHex": "010e10",
+          "responseHex": "410e0e10103b",
+          "instructions": 2337
+        },
+        {
+          "requestHex": "0123",
+          "responseHex": "4123234e",
+          "instructions": 1252
+        },
+        {
+          "requestHex": "0123100e430c",
+          "responseHex": "4123234e10103b0e0e43436e0c0c37",
+          "instructions": 5631
+        }
+      ]
+    },
+    {
+      "calibration": "L3M7EF000",
+      "romSha256": "a953a9102dc56e44056dbaa9613d3c8fbda99e2f89c340949317d12f2cee515a",
+      "cases": [
+        {
+          "requestHex": "010c430e1023",
+          "responseHex": "410c0c3743436e0e0e10103b23234e",
+          "instructions": 5631
+        },
+        {
+          "requestHex": "010c43",
+          "responseHex": "410c0c3743436e",
+          "instructions": 2350
+        },
+        {
+          "requestHex": "010e10",
+          "responseHex": "410e0e10103b",
+          "instructions": 2337
+        },
+        {
+          "requestHex": "0123",
+          "responseHex": "4123234e",
+          "instructions": 1252
+        },
+        {
+          "requestHex": "0123100e430c",
+          "responseHex": "4123234e10103b0e0e43436e0c0c37",
+          "instructions": 5631
+        }
+      ]
+    },
+    {
+      "calibration": "L3P4EM000",
+      "romSha256": "ef5e35796c813f85526727aefcc21a05c87749e89b7812168c715ba1842486fe",
+      "cases": [
+        {
+          "requestHex": "010c430e1023",
+          "responseHex": "410c0c3743436e0e0e10103b23234e",
+          "instructions": 5631
+        },
+        {
+          "requestHex": "010c43",
+          "responseHex": "410c0c3743436e",
+          "instructions": 2350
+        },
+        {
+          "requestHex": "010e10",
+          "responseHex": "410e0e10103b",
+          "instructions": 2337
+        },
+        {
+          "requestHex": "0123",
+          "responseHex": "4123234e",
+          "instructions": 1252
+        },
+        {
+          "requestHex": "0123100e430c",
+          "responseHex": "4123234e10103b0e0e43436e0c0c37",
+          "instructions": 5631
+        }
+      ]
+    }
+  ]
+}

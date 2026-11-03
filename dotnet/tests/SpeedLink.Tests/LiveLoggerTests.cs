@@ -33,22 +33,22 @@ public class LiveLoggerTests
         {
             DiagnosticProtocol.CheckReadOnly(request, ReadChunkSize);
             string key = Convert.ToHexString(request); Requests.Add(key);
-            return Override?.Invoke(key) ?? Replies[key];
+            return Override?.Invoke(key) ?? (request[0] == 1 ? [0x41, .. request.Skip(1).SelectMany(id => new[] { id }.Concat(Replies["2200" + id.ToString("X2")].Skip(3)))] : Replies[key]);
         }
         public void Dispose() { }
     }
 
     [Fact]
-    public void All38ChannelsPoll34ReadOnlyQueriesWithoutEnteringRomReadSession()
+    public void All38ChannelsUseVerifiedReadOnlyBatchesWithoutEnteringRomReadSession()
     {
         var definition = Profile(); using var peer = new Peer(definition);
         var logger = new LiveLogger(definition, Calibration(), peer, Identity(), definition.ChannelIds);
         var frame = logger.ReadFrame();
-        Assert.Equal(34, logger.QueryCount); Assert.Equal(34, peer.Requests.Count);
-        Assert.Equal(34, peer.Requests.Distinct().Count()); Assert.All(peer.Requests, request => Assert.StartsWith("22", request));
+        Assert.Equal(34, logger.UngroupedQueryCount); Assert.Equal(30, logger.QueryCount); Assert.Equal(30, peer.Requests.Count);
+        Assert.Equal(30, peer.Requests.Distinct().Count()); Assert.All(peer.Requests, request => Assert.True(request.StartsWith("22", StringComparison.Ordinal) || request.StartsWith("01", StringComparison.Ordinal)));
         Assert.False(peer.ReadAttempted); Assert.Equal(38, frame.Readings.Count);
         Assert.All(frame.Readings.Values, value => { Assert.NotNull(value.Value); Assert.Equal("OK", value.Status); Assert.NotNull(value.Timestamp); });
-        Assert.Equal(34, frame.Exchanges.Count); Assert.Equal(1, frame.Scan);
+        Assert.Equal(30, frame.Exchanges.Count); Assert.Equal(1, frame.Scan);
         Assert.Equal(2, logger.ReadFrame().Scan);
     }
 
@@ -155,6 +155,23 @@ public class LiveLoggerTests
     }
 
     [Fact]
+    public void CleanStopFinishesTheCurrentExchangeAndAllowsANewLoggerOnTheSameTransport()
+    {
+        var definition = Profile(); using var peer = new Peer(definition); using var stop = new CancellationTokenSource();
+        peer.Override = key => { stop.Cancel(); return peer.Replies[key]; };
+        var first = new LiveLogger(definition, Calibration(), peer, Identity(), ["engine_rpm", "knock_retard"]);
+        Assert.Throws<OperationCanceledException>(() => first.ReadFrame(stop.Token));
+        Assert.Single(peer.Requests);
+        Assert.NotNull(first.LastFrame!.Readings["engine_rpm"].Value);
+        peer.Override = null;
+        var next = new LiveLogger(definition, Calibration(), peer, Identity(), ["engine_rpm", "knock_retard"]);
+        var frame = next.ReadFrame();
+        Assert.Equal(1, frame.Scan);
+        Assert.Equal(3, peer.Requests.Count);
+        Assert.All(frame.Readings.Values, reading => Assert.NotNull(reading.Value));
+    }
+
+    [Fact]
     public void DisplayUnitsPreserveVacuumAndRequireExplicitAfrStoichiometry()
     {
         var definition = Profile();
@@ -173,6 +190,31 @@ public class LiveLoggerTests
         DiagnosticProtocol.CheckReadOnly([0x22, 0x17, 0x46]);
         foreach (byte[] request in new byte[][] { [0x22], [0x22, 0x17], [0x22, 0x17, 0x46, 0], [0x22, 0xF1, 0xA0], [0x2E, 0x17, 0x46], [0x31, 1, 0], [0x34, 0, 0], [0x36, 1] })
             Assert.Throws<TransportException>(() => DiagnosticProtocol.CheckReadOnly(request));
+    }
+
+    [Fact]
+    public void Fast_partial_and_complete_frames_keep_one_recording_clock_origin()
+    {
+        var definition = Profile(); using var peer = new Peer(definition);
+        var logger = new LiveLogger(definition, Calibration(), peer, Identity(), ["engine_rpm", "knock_retard"]);
+        using var temporary = new TempFolder();
+        using var file = new LoggerRecording(temporary.Path, definition, Calibration(), Identity(), ["engine_rpm", "knock_retard"],
+            new Dictionary<string, string> { ["engine_rpm"] = "rpm", ["knock_retard"] = "deg" }, null, "test", 0);
+        long? originTicks = null;
+        void Check(LoggerFrame frame)
+        {
+            long ticks = frame.Timestamp.UtcTicks - frame.Elapsed.Ticks;
+            originTicks ??= ticks;
+            Assert.Equal(originTicks.Value, ticks);
+        }
+        for (int i = 0; i < 200; i++)
+        {
+            var frame = logger.ReadFrame(progress: Check);
+            Check(frame); file.Append(frame);
+            if (i % 25 == 0) Thread.Yield();
+        }
+        file.Complete("Stopped");
+        Assert.Equal(200, RecordedLog.Load(Path.Combine(file.Folder, "log.csv")).Rows);
     }
 
     [Fact]

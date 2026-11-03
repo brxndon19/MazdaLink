@@ -7,7 +7,7 @@ using System.Text.Json;
 namespace SpeedLink.Core;
 
 public sealed record LoggerReading(string Channel, double? Value, DateTimeOffset? Timestamp, string Status);
-public sealed record LoggerExchange(string Query, DateTimeOffset Timestamp, double DurationMs, string? ResponseHex, string? Error);
+public sealed record LoggerExchange(string Query, DateTimeOffset Timestamp, double DurationMs, string? ResponseHex, string? Error, string? RequestHex = null);
 public sealed record LoggerFrame(long Scan, DateTimeOffset Timestamp, TimeSpan Elapsed,
     IReadOnlyDictionary<string, LoggerReading> Readings, IReadOnlyList<LoggerExchange> Exchanges);
 
@@ -18,17 +18,22 @@ public sealed class LiveLogger
     private readonly LoggerCalibration calibration;
     private readonly IReadTransport transport;
     private readonly LoggerChannel[] selected, needed;
-    private readonly LoggerChannel[][] plan;
+    private sealed record PollRequest(string Key, byte[] Request, LoggerChannel[][] Groups, int ResponseLength);
+    private readonly PollRequest[] directPlan, groupedPlan;
+    private bool standardBatchesUnavailable;
+    private PollRequest[] Plan => standardBatchesUnavailable ? directPlan : groupedPlan;
     private readonly Dictionary<string, string> rejected = new(StringComparer.Ordinal);
     private readonly Stopwatch clock = Stopwatch.StartNew();
     private readonly DateTimeOffset origin = DateTimeOffset.UtcNow;
     private long scan;
     public static readonly TimeSpan MaximumSampleAge = TimeSpan.FromSeconds(5);
     public static readonly TimeSpan MaximumInputSkew = TimeSpan.FromMilliseconds(500);
-    public int QueryCount => plan.Length;
+    public int QueryCount => Plan.Length;
+    public int UngroupedQueryCount => directPlan.Length;
     public LoggerFrame? LastFrame { get; private set; }
-    public int ActiveQueryCount => plan.Count(group => !rejected.ContainsKey(group[0].Query!));
+    public int ActiveQueryCount => Plan.Count(group => !rejected.ContainsKey(group.Key));
     private DateTimeOffset Now => origin + clock.Elapsed; // UTC anchor plus monotonic elapsed time.
+    public DateTimeOffset CurrentTime => Now;
 
     public LiveLogger(LoggerDefinition definition, LoggerCalibration calibration, IReadTransport transport,
         EcuIdentity identity, IEnumerable<string> selection)
@@ -54,7 +59,16 @@ public sealed class LiveLogger
         }
         foreach (var channel in selected.Where(c => c.Query is null)) Schedule(channel);
         foreach (var channel in selected) Schedule(channel);
-        plan = order.Select(query => needed.Where(c => c.Query == query).ToArray()).ToArray();
+        directPlan = order.Select(query => needed.Where(c => c.Query == query).ToArray())
+            .Select(group => new PollRequest(group[0].Query!, definition.RequestFor(group[0].Id), [group], definition.ResponseLengthFor(group[0].Id))).ToArray();
+        var aliases = Mode01LoggerProtocol.HasVerifiedAliases(definition) ? directPlan.Where(p => Mode01LoggerProtocol.IsAlias(p.Request, p.ResponseLength)).ToArray() : [];
+        if (aliases.Length >= 2)
+        {
+            byte[] batch = [1, .. aliases.Select(p => p.Request[2])];
+            var combined = new PollRequest("01/" + Convert.ToHexString(batch.AsSpan(1)), batch, aliases.SelectMany(p => p.Groups).ToArray(), Mode01LoggerProtocol.ResponseLength(batch));
+            groupedPlan = directPlan.SelectMany(p => ReferenceEquals(p, aliases[0]) ? new[] { combined } : aliases.Contains(p) ? [] : new[] { p }).ToArray();
+        }
+        else groupedPlan = directPlan;
     }
 
     public LoggerFrame ReadFrame(CancellationToken cancellation = default, Action<LoggerFrame>? progress = null)
@@ -67,7 +81,10 @@ public sealed class LiveLogger
         var exchanges = new List<LoggerExchange>();
         LoggerFrame Snapshot()
         {
-            var now = Now;
+            // Capture once: preemption between separate clock reads must not make
+            // the recorded UTC and elapsed clocks describe different instants.
+            var elapsed = clock.Elapsed;
+            var now = origin + elapsed;
             var result = new Dictionary<string, LoggerReading>(StringComparer.Ordinal);
             foreach (var channel in selected)
             {
@@ -76,15 +93,16 @@ public sealed class LiveLogger
                     reading = reading with { Value = null, Status = "Stale" };
                 result.Add(channel.Id, reading);
             }
-            return LastFrame = new(number, now, clock.Elapsed, new ReadOnlyDictionary<string, LoggerReading>(result), exchanges.ToArray());
+            return LastFrame = new(number, now, elapsed, new ReadOnlyDictionary<string, LoggerReading>(result), exchanges.ToArray());
         }
-        foreach (var group in plan)
+        foreach (var poll in Plan)
         {
             cancellation.ThrowIfCancellationRequested();
-            string query = group[0].Query!;
+            string query = poll.Key;
+            var allChannels = poll.Groups.SelectMany(g => g).ToArray();
             if (rejected.TryGetValue(query, out string? prior))
             {
-                foreach (var channel in group) readings[channel.Id] = new(channel.Id, null, null, prior);
+                foreach (var channel in allChannels) readings[channel.Id] = new(channel.Id, null, null, prior);
                 continue;
             }
             var started = Now;
@@ -92,28 +110,38 @@ public sealed class LiveLogger
             string? capturedResponse = null;
             try
             {
-                byte[] response = transport.Exchange(definition.RequestFor(group[0].Id));
+                byte[] response = transport.ExchangeLogger(poll.Request, poll.ResponseLength);
                 capturedResponse = Convert.ToHexString(response);
                 var timestamp = Now;
-                foreach (var channel in group)
+                var standard = poll.Request[0] == 1 ? Mode01LoggerProtocol.Split(poll.Request, response) : null;
+                foreach (var group in poll.Groups)
                 {
-                    double value = definition.Decode(channel.Id, response, calibration);
-                    readings[channel.Id] = new(channel.Id, value, timestamp, "OK");
-                    samples[channel.Id] = new(value, timestamp);
+                    byte[] own = standard is not null ? [0x62, 0, definition.RequestFor(group[0].Id)[2], .. standard[definition.RequestFor(group[0].Id)[2]]] : response;
+                    foreach (var channel in group)
+                    {
+                        double value = definition.Decode(channel.Id, own, calibration);
+                        readings[channel.Id] = new(channel.Id, value, timestamp, "OK");
+                        samples[channel.Id] = new(value, timestamp);
+                    }
                 }
-                exchanges.Add(new(query, started, timer.Elapsed.TotalMilliseconds, Convert.ToHexString(response), null));
+                exchanges.Add(new(query, started, timer.Elapsed.TotalMilliseconds, Convert.ToHexString(response), null, Convert.ToHexString(poll.Request)));
             }
             catch (NegativeResponseException error)
             {
                 string status = $"Unavailable · NRC {error.Code:X2}";
-                if (error.Code is 0x11 or 0x12 or 0x31) rejected[query] = status;
-                foreach (var channel in group) readings[channel.Id] = new(channel.Id, null, null, status);
-                exchanges.Add(new(query, started, timer.Elapsed.TotalMilliseconds, null, $"7F22{error.Code:X2}"));
+                if (poll.Request[0] == 1 && error.Code is 0x11 or 0x12 or 0x31)
+                {
+                    standardBatchesUnavailable = true;
+                    transport.Diagnostics?.Record("logger.standard_batch_unavailable", new { code = $"{error.Code:X2}", individualQueriesFromNextScan = true });
+                }
+                else if (error.Code is 0x11 or 0x12 or 0x31) rejected[query] = status;
+                foreach (var channel in allChannels) readings[channel.Id] = new(channel.Id, null, null, status);
+                exchanges.Add(new(query, started, timer.Elapsed.TotalMilliseconds, null, $"7F{poll.Request[0]:X2}{error.Code:X2}", Convert.ToHexString(poll.Request)));
             }
             catch (Exception error)
             {
-                foreach (var channel in group) readings[channel.Id] = new(channel.Id, null, null, "Connection stopped");
-                exchanges.Add(new(query, started, timer.Elapsed.TotalMilliseconds, capturedResponse, error.Message));
+                foreach (var channel in allChannels) readings[channel.Id] = new(channel.Id, null, null, "Connection stopped");
+                exchanges.Add(new(query, started, timer.Elapsed.TotalMilliseconds, capturedResponse, error.Message, Convert.ToHexString(poll.Request)));
                 Snapshot();
                 throw;
             }
@@ -169,7 +197,7 @@ public sealed class LoggerRecording : IDisposable
             ["calibrationRomSha256"] = calibration.SourceRomSha256, ["mapCalibration"] = calibration.Values,
             ["displayParameters"] = this.displayParameters, ["units"] = this.units, ["selection"] = this.selection,
             ["startedUtc"] = DateTimeOffset.UtcNow, ["status"] = "Recording or interrupted",
-            ["requestedScansPerSecond"] = requestedScansPerSecond, ["ratesAreMeasuredAtRuntime"] = true,
+            ["requestedScansPerSecond"] = requestedScansPerSecond, ["pollingMode"] = requestedScansPerSecond == 0 ? "maximum" : "limited", ["ratesAreMeasuredAtRuntime"] = true,
             ["maximumAgeMs"] = LiveLogger.MaximumSampleAge.TotalMilliseconds,
             ["maximumCalculatedInputSkewMs"] = LiveLogger.MaximumInputSkew.TotalMilliseconds,
             ["atomicEcuSnapshot"] = false, ["channelValidation"] = "ROM/offline checked; real-ECU validation pending"
@@ -197,7 +225,7 @@ public sealed class LoggerRecording : IDisposable
             row.Add(reading.Value is double value ? definition.ConvertDisplay(id, value, units[id], displayParameters).ToString("R", CultureInfo.InvariantCulture) : "");
             row.Add(reading.Timestamp?.ToString("O", CultureInfo.InvariantCulture) ?? ""); row.Add(reading.Status);
         }
-        foreach (var exchange in frame.Exchanges) wire.WriteLine(JsonSerializer.Serialize(new { frame.Scan, exchange.Query, exchange.Timestamp, exchange.DurationMs, requestHex = "22" + exchange.Query, exchange.ResponseHex, exchange.Error }));
+        foreach (var exchange in frame.Exchanges) wire.WriteLine(JsonSerializer.Serialize(new { frame.Scan, exchange.Query, exchange.Timestamp, exchange.DurationMs, requestHex = exchange.RequestHex ?? "22" + exchange.Query, exchange.ResponseHex, exchange.Error }));
         wire.Flush(); csv.WriteLine(string.Join(',', row.Select(Escape))); csv.Flush(); Rows++;
     }
     public void Complete(string status)

@@ -78,7 +78,8 @@ public partial class MainWindow : Window
         SessionText.Text = transport is null ? "Offline" : identity?.Calibration ?? "Adapter connected";
         ConnectButton.IsEnabled = idle && transport is null;
         DisconnectButton.IsEnabled = idle && transport is not null;
-        ReadButton.IsEnabled = idle && transport is not null && identity is not null && !transport.ReadAttempted;
+        ReadButton.IsEnabled = idle && transport is not null && identity is not null && !transport.ReadAttempted && !loggerReadReconnectRequired;
+        ReadButton.ToolTip = loggerReadReconnectRequired ? "Disconnect and reconnect before reading a ROM after logging." : "Read and verify two matching copies of the ECU ROM.";
         var readProfiles = RomInspector.KnownProfiles.Where(p => RomInspector.MatchesCalibrationId(p, identity?.Calibration)).ToArray();
         if (readProfiles.Length == 1) ReadFamilyBox.SelectedIndex = readProfiles[0].Family == "Gen2" ? 1 : 0;
         ReadFamilyBox.IsEnabled = idle && readProfiles.Length == 0;
@@ -196,6 +197,7 @@ public partial class MainWindow : Window
         transport = null;
         connection = null;
         identity = null;
+        loggerReadReconnectRequired = false;
         if (link is not null)
         {
             await Task.Run(link.Dispose);
@@ -217,7 +219,7 @@ public partial class MainWindow : Window
     }
     private async void Read_Click(object sender, RoutedEventArgs e)
     {
-        if (transport is null || identity is null)
+        if (transport is null || identity is null || loggerReadReconnectRequired)
             return;
         var link = transport;
         var expected = identity;

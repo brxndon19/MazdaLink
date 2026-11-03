@@ -113,6 +113,7 @@ public static partial class DiagnosticProtocol
     {
         bool allowed = request.SequenceEqual(new byte[] { 0x09, 0x02 }) || request.SequenceEqual(new byte[] { 0x09, 0x04 }) || request.SequenceEqual(new byte[] { 0x01, 0x0C })
             || request.SequenceEqual(new byte[] { 0x10, 0x87 }) || request.SequenceEqual(new byte[] { 0x27, 0x01 }) || (request.Length == 5 && request[0] == 0x27 && request[1] == 0x02);
+        allowed |= Mode01LoggerProtocol.IsAllowed(request);
         allowed |= request.SequenceEqual(new byte[] { 0x10, 0x03 }) || request.SequenceEqual(new byte[] { 0x27, 0x03 }) ||
             (request.Length == 5 && request[0] == 0x27 && request[1] == 0x04);
         allowed |= request.Length == 3 && request[0] == 0x22 && LoggerDefinition.AllowsKnownReadRequest(request);
@@ -135,6 +136,8 @@ public static partial class DiagnosticProtocol
 
 public interface IReadTransport : IDisposable
 {
+    // Only the logger supplies a definition-verified reply length. Other operations retain their transport policy.
+    byte[] ExchangeLogger(byte[] request, int expectedResponseLength) => Exchange(request);
     IDiagnosticSink? Diagnostics => null;
     string Mode
     {

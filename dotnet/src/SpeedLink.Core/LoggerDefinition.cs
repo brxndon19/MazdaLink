@@ -229,6 +229,13 @@ public sealed class LoggerDefinition
         return Convert.FromHexString(Text(queries[Text(channel, "query")], "requestHex"));
     }
 
+    public int ResponseLengthFor(string channelId)
+    {
+        var channel = channels[channelId];
+        if (Text(channel, "kind") != "query") throw new InvalidOperationException("Calculated channels have no ECU reply.");
+        return 3 + queries[Text(channel, "query")].GetProperty("dataBytes").GetInt32();
+    }
+
     public double Decode(string channelId, ReadOnlySpan<byte> response, LoggerCalibration? calibration = null)
     {
         var channel = channels[channelId];

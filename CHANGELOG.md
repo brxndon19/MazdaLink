@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.7.0-alpha.8
+
+- Default to **Polling → Max**, with no artificial scan-rate wait. Optional numeric limits remain available for lower bus traffic or recording volume; older settings migrate to Max while retaining channel, unit, plot and recording choices.
+- Finish vLinker logger receives after a complete, exact-length, matching reply, then consume the prompt and verify adapter synchronization. Preserve response timeouts and never repeat an uncertain ECU request. Verified standard read batches reduce requests on nine Gen 1 layouts without changing payload precision; Gen 2 retains its independent identifier path.
+- Separate display updates from polling and recording. Expire stale screen values during stalled receives and capture each frame's UTC/elapsed timestamps together so recorded clocks stay consistent.
+- Validate both wired adapters on one L3M6EG000 bench ECU with more than 25,000 read-only requests combined, mixed workloads, recording off/on, sustained all-parameter recording and repeated desktop sessions. Both achieved about 50 single-parameter polls/s or 1.85 complete all-33-parameter scans/s. Physical sensor accuracy and running-engine rates remain pending; see the logger performance guide.
+- Fix Start logging staying disabled after Stop. Normal Stop completes the current exchange and recording, preserves a healthy connection and ROM/parameter choices, and allows another Start without reconnecting. Each start uses fresh polling state and a separate recording.
+- Recheck ECU identity before each logging session. Keep explicit reconnect requirements after transport errors, identity changes and before switching between ROM-reading and logging sessions. Failed or uncertain requests are never retried automatically.
+- Exercise three consecutive Start/Stop cycles, immediate cancellation, distinct replayable recordings, retained choices and failure cleanup across every supported logger profile. Add a separately gated read-only real-ECU logger test path; ECU programming remains disabled.
+
 ## 0.7.0-alpha.7
 
 - Add the verified L3M6EG000 / L3M6EG000L3T60A1 stock layout: 263 tuning tables and 600 diagnostic controls. Include tuner-focused help, units and named code states. Unknown compatible ROMs remain readable without a definition.

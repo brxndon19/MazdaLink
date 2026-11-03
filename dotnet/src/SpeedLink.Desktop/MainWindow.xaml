@@ -37,7 +37,7 @@
      <ComboBox x:Name="ReadFamilyBox" Width="215" Margin="12,0,0,0" VerticalContentAlignment="Center" ToolTip="Known ROMs select their protocol automatically. For an unknown ROM, choose its ECU generation before reading."/>
     </WrapPanel>
     <DockPanel Grid.Row="2" LastChildFill="False"><Button x:Name="ConnectButton" Content="Connect &amp; identify" Click="Connect_Click" Style="{DynamicResource PrimaryButton}"/>
-     <Button x:Name="DisconnectButton" Content="Disconnect" Click="Disconnect_Click"/><Button x:Name="ReadButton" Content="Read &amp; verify backup" Click="Read_Click"/>
+     <Button x:Name="DisconnectButton" Content="Disconnect" Click="Disconnect_Click"/><Button x:Name="ReadButton" Content="Read &amp; verify backup" Click="Read_Click" ToolTipService.ShowOnDisabled="True"/>
      <Button x:Name="ExportReportButton" DockPanel.Dock="Right" Content="Export support report…" Click="ExportReport_Click"/><Button x:Name="StopButton" DockPanel.Dock="Right" Content="Stop" Click="Stop_Click"/></DockPanel>
     <TextBlock Grid.Row="3" x:Name="IdentityText" Text="Disconnected. No ECU has been identified." TextWrapping="Wrap" Margin="0,18,0,12"/>
     <Border x:Name="ReadProgressPanel" Grid.Row="4" Visibility="Collapsed" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource LineBrush}" BorderThickness="1" CornerRadius="4" Padding="12" Margin="0,0,0,12">
@@ -60,7 +60,7 @@
      <Button x:Name="LoggerStartButton" Content="Start logging" Click="LoggerStart_Click" ToolTipService.ShowOnDisabled="True" Style="{DynamicResource PrimaryButton}"/>
      <Button x:Name="LoggerStopButton" Content="Stop" Click="Stop_Click"/>
      <CheckBox x:Name="RecordCsvBox" Content="Record CSV" IsChecked="True" VerticalAlignment="Center" Margin="8,0,16,0"/>
-     <TextBlock Text="Target scans/s" VerticalAlignment="Center"/><ComboBox x:Name="LoggerRateBox" Width="65" Margin="8,0,16,0" VerticalContentAlignment="Center"/>
+     <TextBlock Text="Polling" VerticalAlignment="Center"/><ComboBox x:Name="LoggerRateBox" ToolTip="Max polls as quickly as complete replies allow. An optional scans/s limit reduces bus traffic and recording volume." Width="65" Margin="8,0,16,0" VerticalContentAlignment="Center"/>
      <TextBlock Text="Stoich AFR" VerticalAlignment="Center"/><TextBox x:Name="StoichBox" Width="65" Margin="8,0,0,0" ToolTip="Optional. Enter your fuel's stoichiometric AFR before choosing AFR units. Leave blank to use lambda."/>
     </WrapPanel>
     <DockPanel Grid.Row="3" Margin="0,0,0,8"><StackPanel DockPanel.Dock="Right" Orientation="Horizontal"><Button x:Name="LoggerEssentialsButton" Content="Essentials" Click="LoggerEssentials_Click"/><Button x:Name="LoggerAllButton" Content="All" Click="LoggerAll_Click"/><Button x:Name="LoggerNoneButton" Content="None" Click="LoggerNone_Click"/></StackPanel><TextBlock Text="Search" VerticalAlignment="Center" Margin="0,0,8,0"/><TextBox x:Name="LoggerSearchBox" TextChanged="LoggerSearch_Changed" ToolTip="Filter by parameter name or group" Margin="0,0,12,0"/></DockPanel>

@@ -25,13 +25,17 @@ public sealed class DiagnosticTransport(IReadTransport inner, DiagnosticSession 
         return request.Length == 3 && request[0] == 0x22 ? "Read logger identifier " + Convert.ToHexString(request[1..]) : "Diagnostic service " + (request.IsEmpty ? "empty" : request[0].ToString("X2"));
     }
     public byte[] Exchange(byte[] request)
+        => ExchangeCore(request, () => inner.Exchange(request));
+    public byte[] ExchangeLogger(byte[] request, int expectedResponseLength)
+        => ExchangeCore(request, () => inner.ExchangeLogger(request, expectedResponseLength));
+    private byte[] ExchangeCore(byte[] request, Func<byte[]> exchange)
     {
         string stage = Describe(request); var timer = Stopwatch.StartNew();
         string requestHex = Convert.ToHexString(request);
         session.Record("exchange.started", new { stage, requestHex, requestBytes = request.Length });
         try
         {
-            var response = inner.Exchange(request);
+            var response = exchange();
             if (request.AsSpan().SequenceEqual(new byte[] { 9, 2 }) && response.Length > 3) session.RegisterSecret(Encoding.ASCII.GetString(response.AsSpan(3).TrimEnd((byte)0)));
             bool security = request.Length > 0 && request[0] == 0x27;
             bool omit = request.Length > 0 && request[0] is 0x09 or 0x23 || response.Length > 64 && !security || response.Length > 0 && response[0] == 0x63;

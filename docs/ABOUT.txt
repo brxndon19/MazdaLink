@@ -46,6 +46,11 @@ Compatible unknown Gen 2 dumping uses a separate, bounded read protocol.
 Known short and complete ECU calibration IDs recognized for logging.
 Parameter selection, up to six synchronized charts, CSV and recorded-log viewer.
 Per-profile logger choices saved on close, with explicit pending and stopped states.
+Normal Stop keeps a healthy connection ready for another Start and a new recording.
+Max polling by default; optional numeric limits reduce bus load or recording volume.
+Complete-reply handling avoids idle waits; display redraws do not cap acquisition.
+Verified standard batches retain stock Gen 1 precision; Gen 2 uses its own protocol.
+Both wired adapters passed sustained read-only logging on one L3M6EG000 bench ECU.
 Post-read reconnect guidance and recoverable display/recording input errors.
 ROM/offline checked; real-ECU logging validation pending.
 ECU flashing is planned.

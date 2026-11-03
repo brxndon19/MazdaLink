@@ -46,7 +46,7 @@ public class MultiRomLoggerTests
         var logger = new LiveLogger(definition, Calibration(data.RootElement), peer,
             new EcuIdentity("test", "fixture", null, complete), definition.ChannelIds);
         var frame = logger.ReadFrame();
-        Assert.Equal(channels, frame.Readings.Count); Assert.Equal(queries, peer.Requests.Count);
+        Assert.Equal(channels, frame.Readings.Count); Assert.Equal(queries, logger.UngroupedQueryCount); Assert.Equal(id == "L3CGEE000" ? queries : queries - 4, peer.Requests.Count);
         Assert.Equal(vectors, data.RootElement.GetProperty("vectors").GetArrayLength());
         Assert.All(frame.Readings.Values, reading => Assert.Equal("OK", reading.Status));
     }
@@ -108,7 +108,8 @@ public class MultiRomLoggerTests
         public byte[] Exchange(byte[] request)
         {
             DiagnosticProtocol.CheckReadOnly(request, ReadChunkSize);
-            string key = Convert.ToHexString(request); Requests.Add(key); return replies[key];
+            string key = Convert.ToHexString(request); Requests.Add(key);
+            return request[0] == 1 ? [0x41, .. request.Skip(1).SelectMany(id => new[] { id }.Concat(replies["2200" + id.ToString("X2")].Skip(3)))] : replies[key];
         }
         public void Dispose() { }
     }
@@ -126,8 +127,8 @@ public class MultiRomLoggerTests
         var logger = new LiveLogger(profile, Calibration(data.RootElement), peer,
             new EcuIdentity("test", "fixture", null, "SW-" + id + ".HEX"), profile.ChannelIds);
         var frame = logger.ReadFrame();
-        Assert.Equal(channels, frame.Readings.Count); Assert.Equal(queries, peer.Requests.Count);
-        Assert.Equal(profile.QueryIds.Order(), peer.Requests.Select(r => r[2..]).Order());
+        Assert.Equal(channels, frame.Readings.Count); Assert.Equal(queries, logger.UngroupedQueryCount); Assert.Equal(id == "L3CGEE000" ? queries : queries - 4, peer.Requests.Count);
+        Assert.Equal(profile.QueryIds.Order(), peer.Requests.SelectMany(r => r.StartsWith("01", StringComparison.Ordinal) ? Convert.FromHexString(r[2..]).Select(pid => "00" + pid.ToString("X2")) : new[] { r[2..] }).Order());
         Assert.All(frame.Readings.Values, r => { Assert.NotNull(r.Value); Assert.Equal("OK", r.Status); });
         foreach (var missing in profile.UnavailableChannels) Assert.DoesNotContain(missing.Id, frame.Readings.Keys);
         Assert.False(peer.ReadAttempted);

@@ -13,13 +13,14 @@ foreach ($definitionFile in (Get-ChildItem -LiteralPath (Join-Path $repoRoot 'de
     $definition = $definitionFile.FullName
     $calibration = $definitionFile.Name.Replace('.logger.json', '')
     $vectors = Join-Path $definitionFile.DirectoryName ($calibration + '.vectors.json')
-foreach ($mode in @('record-stop', 'connection-failure')) {
+foreach ($mode in @('record-stop', 'connection-failure', 'identity-change')) {
     $folder = Join-Path $runRoot ($calibration + '-' + $mode)
     New-Item -ItemType Directory -Path $folder | Out-Null
     $report = Join-Path $folder 'report.json'
     $arguments = @('--logger-offline', '--definition', ('"' + $definition + '"'), '--vectors', ('"' + $vectors + '"'),
         '--vault', ('"' + (Join-Path $folder 'data') + '"'), '--report', ('"' + $report + '"'), '--screenshot', ('"' + (Join-Path $folder 'logger.png') + '"'))
     if ($mode -eq 'connection-failure') { $arguments += '--fault' }
+    if ($mode -eq 'identity-change') { $arguments += '--identity-change' }
     $process = Start-Process -FilePath $harness -ArgumentList $arguments -WindowStyle Hidden -PassThru
     if (-not $process.WaitForExit(45000)) { $process.Kill(); throw "Offline logger UI timed out: $mode" }
     if ($process.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $report)) {
@@ -28,6 +29,9 @@ foreach ($mode in @('record-stop', 'connection-failure')) {
     }
     $result = Get-Content -LiteralPath $report -Raw | ConvertFrom-Json
     if ($result.passed -ne $true -or $result.realEcuTested -ne $false) { throw "Unexpected offline UI result: $mode" }
+    if ($mode -ne 'connection-failure' -and ($result.startStopCycles -ne 3 -or !$result.restartWithoutReconnectVerified -or !$result.immediateStopVerified -or !$result.separateRecordingsVerified -or !$result.recordingOffRestartVerified)) { throw "Logger restart regression missing: $calibration" }
+    if ($mode -eq 'identity-change' -and !$result.identityChangeRejected) { throw "Logger identity-change regression missing: $calibration" }
+    if ($mode -eq 'connection-failure' -and ($result.startStopCycles -ne 1 -or !$result.connectionReleased -or $result.faultRequests -ne 1)) { throw "Logger failure cleanup regression missing: $calibration" }
     $reports += $result
 }
 }

@@ -223,5 +223,44 @@
   },
   {
     "test": "SpeedLink.Tests.BootFingerprintTests.l3m6_profile_excludes_only_its_native_identification_record"
+  },
+  {
+    "test": "SpeedLink.Tests.LiveLoggerTests.CleanStopFinishesTheCurrentExchangeAndAllowsANewLoggerOnTheSameTransport"
+  },
+  {
+    "test": "SpeedLink.Tests.Mode01LoggerTests.All_enabled_reference_aliases_match_independent_original_handler_fixtures"
+  },
+  {
+    "test": "SpeedLink.Tests.Mode01LoggerTests.Verified_aliases_share_one_reply_without_changing_units_or_precision"
+  },
+  {
+    "test": "SpeedLink.Tests.Mode01LoggerTests.Completed_batch_rejection_uses_individual_reads_only_on_the_next_scan(code: 49)"
+  },
+  {
+    "test": "SpeedLink.Tests.VLinkerLoggerCompletionTests.Valid_reply_completes_before_idle_timeout_without_repeating_the_ecu_request(fragment: 1)"
+  },
+  {
+    "test": "SpeedLink.Tests.VLinkerLoggerCompletionTests.Natural_prompt_race_never_sends_a_repeat_command(readyWithReply: False)"
+  },
+  {
+    "test": "SpeedLink.Tests.VLinkerLoggerCompletionTests.Slow_first_reply_and_pending_reply_are_not_cut_off_by_a_shorter_timeout"
+  },
+  {
+    "test": "SpeedLink.Tests.VLinkerLoggerCompletionTests.Completed_negative_reply_retains_synchronization_for_the_next_query"
+  },
+  {
+    "test": "SpeedLink.Tests.VLinkerLoggerCompletionTests.Invalid_logger_metadata_and_programming_are_blocked_before_io"
+  },
+  {
+    "test": "SpeedLink.Tests.LoggerDisplayBufferTests.Slow_display_cannot_block_acquisition_and_keeps_newest_updates_bounded"
+  },
+  {
+    "test": "SpeedLink.Tests.LoggerDisplayBufferTests.Display_and_acquisition_can_run_concurrently_without_changing_recorded_frames"
+  },
+  {
+    "test": "SpeedLink.Tests.LoggerPreferencesTests.Old_default_scan_caps_migrate_to_maximum_without_losing_choices(version: 2)"
+  },
+  {
+    "test": "SpeedLink.Tests.LiveLoggerTests.Fast_partial_and_complete_frames_keep_one_recording_clock_origin"
   }
 ]

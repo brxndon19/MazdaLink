@@ -12,7 +12,7 @@ public sealed class LoggerPreferencesTests
         var prefs = LoggerPreferences.Load(path);
         prefs.Profiles["gen1"] = [new("engine_rpm", true, "rpm", false)]; prefs.Save(path);
         var loaded = LoggerPreferences.Load(path);
-        Assert.Equal(2, loaded.Version); Assert.Equal(10, loaded.Target); Assert.False(loaded.Record);
+        Assert.Equal(3, loaded.Version); Assert.Equal(0, loaded.Target); Assert.False(loaded.Record);
         Assert.True(loaded.ForProfile("gen2").Single(c => c.Id == "battery_voltage").Plotted);
         Assert.False(loaded.ForProfile("gen2").Single(c => c.Id == "engine_rpm").Selected);
         Assert.True(loaded.ForProfile("gen1").Single().Selected);
@@ -29,6 +29,19 @@ public sealed class LoggerPreferencesTests
         Assert.Equal(20, loaded.Target); Assert.Equal("14.0", loaded.Stoich); Assert.Equal("L3CGEE000", loaded.ActiveCalibration);
         Assert.False(loaded.ForProfile("one").Single().Selected); Assert.Equal(2, loaded.ForProfile("two").Count);
         Assert.Empty(Directory.GetFiles(folder.Path, "*.pending-*"));
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    public void Old_default_scan_caps_migrate_to_maximum_without_losing_choices(int version)
+    {
+        using var folder = new TempFolder(); string path = Path.Combine(folder.Path, "settings.json");
+        File.WriteAllText(path, "{\"version\":" + version + ",\"target\":5,\"stoich\":\"14.0\",\"record\":false,\"channels\":[{\"id\":\"engine_rpm\",\"selected\":true,\"unit\":\"rpm\",\"plotted\":true}]}");
+        var prefs = LoggerPreferences.Load(path);
+        Assert.Equal(0, prefs.Target); Assert.Equal(3, prefs.Version); Assert.False(prefs.Record); Assert.Equal("14.0", prefs.Stoich);
+        Assert.True(prefs.ForProfile("test").Single().Selected); Assert.True(prefs.ForProfile("test").Single().Plotted);
+        prefs.Save(path); Assert.Equal(0, LoggerPreferences.Load(path).Target);
     }
 
     [Theory]

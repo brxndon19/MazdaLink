@@ -7,8 +7,8 @@ public sealed record LoggerChannelPreference(string Id, bool Selected, string Un
 /// <summary>Local display choices only. A saved choice never establishes an ECU or ROM binding.</summary>
 public sealed class LoggerPreferences
 {
-    public int Version { get; set; } = 2;
-    public int Target { get; set; } = 5;
+    public int Version { get; set; } = 3;
+    public int Target { get; set; } = 0; // Zero means maximum acquisition rate, with no scan delay.
     public string Stoich { get; set; } = "";
     public bool Record { get; set; } = true;
     public string? ActiveCalibration { get; set; }
@@ -24,7 +24,7 @@ public sealed class LoggerPreferences
         using var input = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
         if (input.Length > 131072) throw new InvalidDataException("Logger settings file is too large.");
         var value = JsonSerializer.Deserialize<LoggerPreferences>(input, options) ?? throw new InvalidDataException("Invalid logger settings.");
-        if (value.Version is not (1 or 2) || value.Stoich is null || value.Stoich.Length > 128 || value.Profiles is null || value.Profiles.Count > 32 || value.Channels is null)
+        if (value.Version is not (1 or 2 or 3) || value.Stoich is null || value.Stoich.Length > 128 || value.Profiles is null || value.Profiles.Count > 32 || value.Channels is null)
             throw new InvalidDataException("Invalid logger settings version or limits.");
         static void Validate(LoggerChannelPreference[] rows)
         {
@@ -37,8 +37,9 @@ public sealed class LoggerPreferences
             if (string.IsNullOrWhiteSpace(id) || id.Length > 100 || rows is null) throw new InvalidDataException("Invalid logger profile settings.");
             Validate(rows);
         }
-        value.Version = 2;
-        if (value.Target is not (1 or 2 or 5 or 10 or 20)) value.Target = 5;
+        if (value.Version < 3) value.Target = 0; // Earlier versions saved the old default cap without distinguishing an explicit limit.
+        value.Version = 3;
+        if (value.Target is not (0 or 1 or 2 or 5 or 10 or 20)) value.Target = 0;
         return value;
     }
 

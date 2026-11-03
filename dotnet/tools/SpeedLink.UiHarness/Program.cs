@@ -172,13 +172,35 @@ internal static class Program
                     using var peer = new LoggerPeer(profile, Get("--vectors"), fault);
                     loggerWindow = new MainWindow(Get("--vault")); loggerApp.MainWindow = loggerWindow;
                     string? romPath = args.Contains("--logger-rom", StringComparer.Ordinal) ? Get("--logger-rom") : null;
-                    var result = await loggerWindow.ExerciseLoggerOffline(peer, Get("--screenshot"), fault, profile, calibration, peer.AllowTraffic, romPath);
+                    int? requestsBeforeIdentityChange = null;
+                    Action? changeIdentity = args.Contains("--identity-change", StringComparer.Ordinal) ? () => { requestsBeforeIdentityChange = peer.Requests.Count; peer.IdentityChanged = true; } : null;
+                    var result = await loggerWindow.ExerciseLoggerOffline(peer, Get("--screenshot"), fault, profile, calibration, peer.AllowTraffic, romPath, changeIdentity);
+                    if (requestsBeforeIdentityChange is int before && peer.Requests.Count != before) throw new InvalidOperationException("Changed ECU received logger queries before identity rejection.");
                     result["requests"] = peer.Requests; result["faultRequests"] = peer.FaultRequests;
                     if (fault && peer.FaultRequests != 1) throw new InvalidOperationException("Faulted request was retried.");
                     File.WriteAllText(Get("--report"), JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true })); resultCode = 0;
                 }
                 catch (Exception error) { File.WriteAllText(Get("--report"), JsonSerializer.Serialize(new { passed = false, error = error.ToString() })); }
                 finally { loggerWindow?.Close(); loggerApp.Shutdown(resultCode); }
+            };
+            loggerApp.Run(); return resultCode;
+        }
+        if (args.Contains("--real-ecu-logger", StringComparer.Ordinal))
+        {
+            var loggerApp = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown }; int resultCode = 1;
+            loggerApp.Startup += async (_, _) =>
+            {
+                MainWindow? window = null;
+                try
+                {
+                    window = new MainWindow(Get("--vault")); loggerApp.MainWindow = window;
+                    int seconds = args.Contains("--throughput-seconds", StringComparer.Ordinal) ? int.Parse(Get("--throughput-seconds")) : 0;
+                    if (seconds is < 0 or > 20) throw new ArgumentOutOfRangeException(nameof(seconds));
+                    var result = await window.ExerciseLoggerHardware(Get("--port"), Get("--rom"), Get("--screenshot"), args.Contains("--tactrix", StringComparer.Ordinal), realEcu: true, performanceSeconds: seconds);
+                    File.WriteAllText(Get("--report"), JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true })); resultCode = 0;
+                }
+                catch (Exception error) { File.WriteAllText(Get("--report"), JsonSerializer.Serialize(new { passed = false, error = error.ToString() })); }
+                finally { window?.Close(); loggerApp.Shutdown(resultCode); }
             };
             loggerApp.Run(); return resultCode;
         }
@@ -224,9 +246,12 @@ internal sealed class LoggerPeer : SpeedLink.Core.IReadTransport
     public string Adapter => "Offline logger UI fixture";
     public int ReadChunkSize => 3968;
     public bool ReadAttempted { get; set; }
+    private readonly string calibrationIdentity;
+    public bool IdentityChanged { get; set; }
     public LoggerPeer(SpeedLink.Core.LoggerDefinition definition, string vectors, bool fault)
     {
         this.fault = fault;
+        calibrationIdentity = SpeedLink.Core.RomInspector.KnownProfiles.Single(p => p.Calibration == definition.SoftwareIds.Single()).Identity;
         using var data = JsonDocument.Parse(File.ReadAllBytes(vectors));
         foreach (var vector in data.RootElement.GetProperty("vectors").EnumerateArray())
             if (vector.GetProperty("type").GetString() == "decode")
@@ -237,9 +262,12 @@ internal sealed class LoggerPeer : SpeedLink.Core.IReadTransport
     {
         if (!ready.Wait(TimeSpan.FromSeconds(10))) throw new InvalidOperationException("Offline UI did not enable fixture traffic.");
         SpeedLink.Core.DiagnosticProtocol.CheckReadOnly(request);
-        if (request.Length != 3 || request[0] != 0x22) throw new InvalidOperationException("Logger attempted a non-logging request.");
+        if (request.AsSpan().SequenceEqual(new byte[] { 0x09, 0x02 })) throw new SpeedLink.Core.NegativeResponseException(0x09, 0x11);
+        if (request.AsSpan().SequenceEqual(new byte[] { 0x09, 0x04 })) return [0x49, 0x04, 1, .. System.Text.Encoding.ASCII.GetBytes(IdentityChanged ? "UNSUPPORTED" : calibrationIdentity)];
+        if (!(request.Length == 3 && request[0] == 0x22) && !SpeedLink.Core.Mode01LoggerProtocol.IsAllowed(request)) throw new InvalidOperationException("Logger attempted a non-logging request.");
         string key = Convert.ToHexString(request); Requests.Add(key);
         if (fault && Requests.Count >= 4) { FaultRequests++; throw new SpeedLink.Core.TransportException("Offline injected USB removal"); }
+        if (request[0] == 1) return [0x41, .. request.Skip(1).SelectMany(id => new[] { id }.Concat(replies["2200" + id.ToString("X2")].Skip(3)))];
         return replies[key];
     }
     public void Dispose() => ready.Dispose();

@@ -4,7 +4,7 @@ Open-source ROM reading, data logging and offline ROM editing for Mazdaspeed and
 
 [![C# checks](https://github.com/mrphyslaw/SpeedLink/actions/workflows/checks-dotnet.yml/badge.svg)](https://github.com/mrphyslaw/SpeedLink/actions/workflows/checks-dotnet.yml)
 
-**[Download v0.7.0-alpha.7](https://github.com/mrphyslaw/SpeedLink/releases/tag/v0.7.0-alpha.7)** — a single Windows EXE, with no installer or .NET installation required.
+**[Download v0.7.0-alpha.8](https://github.com/mrphyslaw/SpeedLink/releases/tag/v0.7.0-alpha.8)** — a single Windows EXE, with no installer or .NET installation required.
 
 **Watch the 4-minute SpeedLink demo (4:11)**
 
@@ -173,9 +173,11 @@ logger supports [ten defined ROMs](definitions/logging/All_ROM_Coverage.md).
    before choosing an AFR display unit.
 5. Leave **Record CSV** checked and select **Start logging**. Use the **Plot** column
    to choose up to six synchronized charts for logged parameters. The **Hz** column shows its measured sample rate;
-   **Target scans/s** is a ceiling, not a guaranteed rate.
-6. Select **Stop** to finish the recording and disconnect. Use **Open logs** to
-   find it under `data/logs` beside the EXE. Reconnect before another logging session.
+   **Polling → Max** collects data without a scan-rate delay. Numeric limits are optional; the **Hz** column shows achieved rates.
+6. Select **Stop** to finish the recording. The healthy connection stays ready for
+   **Start logging** again, with your ROM and selections retained. Each start creates
+   a separate recording. Use **Open logs** to find them under `data/logs` beside the EXE.
+   Disconnect and reconnect before switching from logging to a ROM backup read.
 
 Logging can run with the engine running. **ROM backup reads require the engine
 stopped.** Unknown ROMs can still be dumped; logging requires a supported profile.
@@ -204,7 +206,7 @@ Related RomRaider definitions are available in [MazdaSpeedDefs](https://github.c
 
 ## Status and development
 
-**Current release: [v0.7.0-alpha.7](https://github.com/mrphyslaw/SpeedLink/releases/tag/v0.7.0-alpha.7), a Windows Workbench alpha.**
+**Current release: [v0.7.0-alpha.8](https://github.com/mrphyslaw/SpeedLink/releases/tag/v0.7.0-alpha.8), a Windows Workbench alpha.**
 
 - **Available:** ROM reading, two-pass verified backups, known-ROM checks and
   checksum correction to a separate file; live logging, charts, CSV recording
@@ -215,7 +217,7 @@ Related RomRaider definitions are available in [MazdaSpeedDefs](https://github.c
   No logging patch is required. See [coverage and exclusions](definitions/logging/All_ROM_Coverage.md).
 - **Fixed:** logger matching accepts known complete ECU calibration IDs, including
   `L3P4EM000L3T6051`. Renaming a ROM file is unnecessary.
-- **Checked:** 522 C# tests and 2,631 native-derived logger vectors. Ten-profile
+- **Checked:** 558 C# tests, 2,631 native-derived logger vectors and 45 standard-batch equivalence cases. Ten-profile
   editor checks cover direct cell entry, comparison, undo/redo and byte-identical
   no-edit exports. L3CGEE000 adds 379 native logger instruction checks and complete
   reference-ROM cell/axis comparisons. See [validation](docs/VALIDATION.md).
@@ -224,8 +226,13 @@ Related RomRaider definitions are available in [MazdaSpeedDefs](https://github.c
   and USB recovery. Isolated Gen 2 simulated-peer reads and logging have also
   passed using vLinker FS and Tactrix; this does not establish real ECU acceptance. Saved-log viewing and
   standalone EXE checks also passed.
-- **Still pending:** broader Mazda ECU read coverage, live logging acceptance, sensor readings and
-  achievable vehicle logging rates. All 346 channel/profile ECU logging checks remain pending.
+- **Logging performance:** Max polling is the default. Both wired adapters completed
+  over 25,000 read-only requests combined on one L3M6EG000 bench ECU, including
+  three-minute all-parameter recordings and repeated desktop Start/Stop sessions.
+  See [measured rates and scope](docs/LOGGER_PERFORMANCE.md).
+- **Still pending:** broader Mazda ECU read coverage, physical sensor readings,
+  running-engine behavior and achievable vehicle logging rates. The 346 channel/profile
+  vehicle validation checks remain pending.
 - **Planned:** ECU flashing. Live programming is disabled in this release.
 
 Bench testing uses simulated ECU replies over real adapters. A matching pair of

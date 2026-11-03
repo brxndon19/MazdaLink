@@ -13,6 +13,7 @@ Start with the workflow you need. ECU programming remains disabled.
 | [Map-help conventions](TUNING_HELP.md) | Units, sign conventions, multipliers, corrections and interpretation limits |
 | [Logger overview](logger/README.md) | Live-data and recorded-log screenshots, features and a quick start |
 | [Logger](LOGGER.md) | Adapter setup, ROM binding, parameters, units, charts, CSV recording and log viewing |
+| [Logger performance](LOGGER_PERFORMANCE.md) | Max polling, measured adapter rates, reply completion and validation limits |
 | [Report a problem](TROUBLESHOOTING.md) | Export a support ZIP, review its contents and open a guided issue |
 | [General usage](USAGE.md) | Reading, backups, transport settings and file inspection |
 | [Supported ROMs](SUPPORTED_ROMS.md) | Known inspection layouts and compatibility limits |

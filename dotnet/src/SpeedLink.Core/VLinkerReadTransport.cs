@@ -141,6 +141,7 @@ public class ElmTransport : IReadTransport
         catch (NegativeResponseException) { throw; }
         catch { Failed = true; throw; }
     }
+    public virtual byte[] ExchangeLogger(byte[] request, int expectedResponseLength) => Exchange(request);
     public virtual void Dispose()
     {
         Ready = false;
@@ -151,6 +152,7 @@ public class ElmTransport : IReadTransport
 
 public sealed class VLinkerReadTransport : ElmTransport
 {
+    private string serialIdentity = "";
     // Host USB-UART rate. ATSP6 configures the separate 500 kbit/s CAN link.
     public const int TransferBaud = 2000000;
     public int ConfiguredTransferBaud
@@ -176,6 +178,8 @@ public sealed class VLinkerReadTransport : ElmTransport
             Serial.DiscardInput();
             Command("ATI");
             Command("ATE0");
+            serialIdentity = Command("ATI").Trim();
+            if (serialIdentity.Length == 0 || serialIdentity.Contains('?')) throw new TransportException("Adapter identity was not established.");
             var firmware = Command("VTI").Trim();
             if (!firmware.StartsWith("vLinker FS ", StringComparison.Ordinal))
                 throw new TransportException("SpeedLink requires a Vgate vLinker FS.");
@@ -253,6 +257,80 @@ public sealed class VLinkerReadTransport : ElmTransport
         }
         catch (NegativeResponseException) { throw; } // A complete NRC reply retains framing synchronization.
         catch { Failed = true; throw; }
+    }
+    public override byte[] ExchangeLogger(byte[] request, int expectedResponseLength)
+    {
+        DiagnosticProtocol.CheckReadOnly(request, ReadChunkSize);
+        bool standard = Mode01LoggerProtocol.IsAllowed(request);
+        if ((!standard && (request.Length != 3 || request[0] != 0x22)) || expectedResponseLength is < 3 or > 4095 ||
+            !standard && expectedResponseLength < 4 ||
+            standard && expectedResponseLength != Mode01LoggerProtocol.ResponseLength(request))
+            throw new TransportException("Invalid logger request or reply length.");
+        if (!Ready || Failed) throw new TransportException("Initialize a fresh connection before logging.");
+        try
+        {
+            WriteExact(Encoding.ASCII.GetBytes($"STPX L:{request.Length},T:200,R:1\r"));
+            if (Prompt(3, 65536).Trim().ToUpperInvariant() != "DATA") throw new TransportException("Adapter did not request the logger payload.");
+            WriteExact(Encoding.ASCII.GetBytes(Convert.ToHexString(request) + "\r"));
+            var started = Clock.Elapsed;
+            using var received = new MemoryStream(); var buffer = new byte[16384];
+            while (Clock.Elapsed - started < TimeSpan.FromSeconds(6))
+            {
+                int count = Serial.Read(buffer, 0, Math.Max(1, Math.Min(Serial.BytesToRead, buffer.Length)));
+                received.Write(buffer, 0, count);
+                if (received.Length > 32768) throw new TransportException("Logger response exceeded the receive limit.");
+                var bytes = received.GetBuffer().AsSpan(0, (int)received.Length);
+                if (bytes.ToArray().Any(b => b > 127)) throw new TransportException("Non-ASCII logger reply.");
+                int prompt = bytes.IndexOf((byte)'>');
+                if (prompt >= 0)
+                {
+                    if (bytes[(prompt + 1)..].ToArray().Any(b => !char.IsWhiteSpace((char)b))) throw new TransportException("Unexpected data after adapter prompt.");
+                    return ValidateLoggerReply(request, expectedResponseLength, DiagnosticProtocol.ParseSegmented(Encoding.ASCII.GetString(bytes[..prompt])));
+                }
+                // Segmented replies are emitted as complete hex lines. Do not infer completion from a byte prefix,
+                // a pending response, an unchanged sensor value, or a partially reassembled message.
+                if (bytes.Length == 0 || bytes[^1] is not (13 or 10)) continue;
+                string text = Encoding.ASCII.GetString(bytes);
+                string[] lines = text.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                if (lines.Length == 0 || lines.Any(line => line.Length % 2 != 0 || line.Any(c => !Uri.IsHexDigit(c)))) continue;
+                var packets = DiagnosticProtocol.ParseSegmented(text);
+                if (packets.All(p => p.AsSpan().SequenceEqual(new byte[] { 0x7F, request[0], 0x78 })))
+                {
+                    if (packets.Count > 32) throw new TransportException("Too many pending logger replies.");
+                    continue;
+                }
+                NegativeResponseException? negative = null; byte[]? reply = null;
+                try { reply = ValidateLoggerReply(request, expectedResponseLength, packets); }
+                catch (NegativeResponseException error) { negative = error; }
+                // '!' cannot repeat a diagnostic request if the natural prompt races this write. A CR can.
+                // Interrupt only the idle receive tail, then consume its prompt and verify adapter-only identity.
+                WriteExact("!"u8.ToArray());
+                string footer = Prompt(3, 4096).Trim();
+                if (footer is not ("" or "STOPPED")) throw new TransportException("Unexpected logger completion footer.");
+                string adapter = Command("ATI", 3).Trim();
+                if (adapter == "?") adapter = Command("ATI", 3).Trim(); // A raced prompt buffered '!'; this retries only adapter identification.
+                if (adapter != serialIdentity)
+                    throw new TransportException("Logger completion did not restore a synchronized adapter prompt.");
+                diagnostics?.Record("serial.logger_completed", new { expectedResponseLength, elapsedMs = (Clock.Elapsed - started).TotalMilliseconds, idleWaitEnded = true });
+                if (negative is not null) throw negative;
+                return reply!;
+            }
+            throw new TransportException("Logger response timed out. Request was not resent; reconnect before continuing.");
+        }
+        catch (NegativeResponseException) { throw; }
+        catch { Failed = true; throw; }
+    }
+    private static byte[] ValidateLoggerReply(byte[] request, int expectedLength, IReadOnlyList<byte[]> packets)
+    {
+        var reply = DiagnosticProtocol.FinalResponse(request, packets);
+        if (Mode01LoggerProtocol.IsAllowed(request))
+        {
+            if (reply.Length != expectedLength) throw new TransportException("Unexpected standard logger reply length.");
+            Mode01LoggerProtocol.Split(request, reply); return reply;
+        }
+        if (reply.Length != expectedLength || reply[0] != 0x62 || !reply.AsSpan(1, 2).SequenceEqual(request.AsSpan(1, 2)))
+            throw new TransportException("Unexpected logger response length or identifier.");
+        return reply;
     }
     public override void Dispose()
     {
