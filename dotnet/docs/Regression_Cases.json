@@ -202,5 +202,17 @@
   },
   {
     "test": "SpeedLink.Tests.ReadProgressTests.test_progress_tracks_both_passes_and_completes_after_sealing"
+  },
+  {
+    "test": "SpeedLink.Tests.VehicleIdentityTests.elm_multiframe_and_j2534_decode_the_same_padded_chassis_response"
+  },
+  {
+    "test": "SpeedLink.Tests.VehicleIdentityTests.unknown_calibration_with_chassis_id_can_create_a_two_pass_verified_backup"
+  },
+  {
+    "test": "SpeedLink.Tests.VehicleIdentityTests.chassis_text_and_hex_are_redacted_from_support_exports"
+  },
+  {
+    "test": "SpeedLink.Tests.VehicleIdentityTests.chassis_id_does_not_bypass_logger_calibration_binding"
   }
 ]

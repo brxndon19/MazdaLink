@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.0-alpha.6
+
+- Recognize supported short chassis-number replies, including space/null padding, instead of rejecting them as invalid 17-character VINs. Show **Chassis ID** in Connection and retain the chassis number separately in local backup metadata.
+- Preserve standard VIN validation and reject malformed identifiers. Recheck VIN/chassis identity and calibration before starting a backup; changing any of them still stops before read-session access. Unknown compatible ROMs remain dumpable without borrowing another profile's logger or editor definitions.
+- Redact chassis identifiers from support exports, including logged text and hexadecimal forms. Keep factory security diagnostics and omit ROM payloads.
+- Add offline identification, adapter-response, backup, logger-binding and privacy regressions, plus chassis-based Gen 1/Gen 2 desktop backup checks. A real bench ECU successfully identified and reported stopped-engine RPM through both supported adapters using the patched reader. This does not establish ROM-dump, logging or flashing compatibility for its calibration. ECU programming remains disabled.
+
 ## 0.7.0-alpha.5
 
 - Center vertical axis titles beside the visible data rows, including short tables with empty space below them. Center horizontal titles over the visible data columns, excluding row headers, scrollbars and unused space.

@@ -21,7 +21,7 @@ internal sealed class SupportReportWindow : Window
         var header = new StackPanel(); DockPanel.SetDock(header, Dock.Top); panel.Children.Add(header);
         header.Children.Add(new TextBlock { Text = "Choose the session with the problem", FontSize = 20, FontWeight = FontWeights.SemiBold });
         header.Children.Add(chooser);
-        header.Children.Add(new TextBlock { Text = "Includes adapter/driver setup, requests, timing, errors and factory security access. VIN, adapter serial and personal paths are redacted. ROM bytes and recordings are kept in your backups.", TextWrapping = TextWrapping.Wrap, Foreground = UiTheme.Muted, Margin = new(0, 0, 0, 12) });
+        header.Children.Add(new TextBlock { Text = "Includes adapter/driver setup, requests, timing, errors and factory security access. VIN/chassis IDs, adapter serial and personal paths are redacted. ROM bytes and recordings are kept in your backups.", TextWrapping = TextWrapping.Wrap, Foreground = UiTheme.Muted, Margin = new(0, 0, 0, 12) });
         var footer = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new(0, 12, 0, 0) }; DockPanel.SetDock(footer, Dock.Bottom); panel.Children.Add(footer);
         var cancel = new Button { Content = "Close", IsCancel = true }; cancel.Click += (_, _) => Close(); footer.Children.Add(cancel);
         var issue = new Button { Content = "Open problem form", ToolTip = "Opens GitHub in your browser. Attach the saved ZIP yourself." };

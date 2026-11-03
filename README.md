@@ -4,7 +4,7 @@ Open-source ROM reading, data logging and offline ROM editing for Mazdaspeed and
 
 [![C# checks](https://github.com/mrphyslaw/SpeedLink/actions/workflows/checks-dotnet.yml/badge.svg)](https://github.com/mrphyslaw/SpeedLink/actions/workflows/checks-dotnet.yml)
 
-**[Download v0.7.0-alpha.5](https://github.com/mrphyslaw/SpeedLink/releases/tag/v0.7.0-alpha.5)** — a single Windows EXE, with no installer or .NET installation required.
+**[Download v0.7.0-alpha.6](https://github.com/mrphyslaw/SpeedLink/releases/tag/v0.7.0-alpha.6)** — a single Windows EXE, with no installer or .NET installation required.
 
 **Watch the 4-minute SpeedLink demo (4:11)**
 
@@ -24,7 +24,11 @@ forward. **View → Map layout and display → Tile maps side by side** restores
 SpeedLink can dump unknown 1 MiB MZR DISI ROMs, create two-pass verified backups,
 log stock-ECU data, review recordings and edit the nine supported stock ROM layouts.
 ECU access remains read-only: **flashing is disabled**. ROM files and adapter drivers
-are not bundled. Real Mazda ECU validation remains pending.
+are not bundled. Full ROM-read and live-logging acceptance on real ECUs remains pending.
+
+Connect & identify accepts standard VINs and supported short chassis-number
+replies, including space/null-padded identifiers reported by some ECUs. A chassis
+ID is labeled separately; it does not select or authorize a different ROM/logger profile.
 
 **Experimental Gen 2:** L3CGEE000 adds 442 editor controls and a 20-parameter
 stock-ROM logger. Compatible unknown Gen 2 ROMs can be dumped by selecting the

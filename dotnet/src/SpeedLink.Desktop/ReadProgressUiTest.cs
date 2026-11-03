@@ -25,7 +25,10 @@ public partial class MainWindow
         if (ReadProgressPanel.Visibility != Visibility.Collapsed || ReadBackupBar.Value != 0 || ProgressBar.Value != 0)
             throw new InvalidOperationException("A new connection retained the previous ECU's backup result.");
         transport = peer; identity = ReadWorkflow.Identify(peer);
-        IdentityText.Text = "Synthetic progress test · no adapter or vehicle connected";
+        ShowEcuIdentity();
+        if (!IdentityText.Text.Contains(identity.VehicleIdentifierLabel + ": " + identity.VehicleIdentifier, StringComparison.Ordinal) ||
+            !IdentityText.Text.Contains("Calibration: " + identity.Calibration, StringComparison.Ordinal))
+            throw new InvalidOperationException("Connected ECU identifier/calibration is not displayed correctly.");
         Controls();
         if (unknownGen2)
         {
@@ -84,6 +87,7 @@ public partial class MainWindow
             throw new InvalidOperationException("Progress or log clipped at minimum window size.");
         Capture("Result");
         return new() { ["passed"] = true, ["scenario"] = scenario, ["hardwareAccessed"] = false, ["actualReadButton"] = true,
+            ["vehicleIdentifierLabel"] = identity.VehicleIdentifierLabel, ["identityDisplayVerified"] = true,
             ["firstPassObserved"] = firstPass, ["secondPassObserved"] = secondPass, ["estimatedTimeObserved"] = estimate,
             ["progressReset"] = reset, ["newConnectionClearsResult"] = true, ["controlsLocked"] = locked, ["unverifiedTransferCapped"] = true, ["lateCallbacksIgnored"] = true,
             ["minimumWindowVerified"] = true, ["progress"] = resultValue, ["stage"] = resultStage, ["backupComplete"] = entries[0].Complete };

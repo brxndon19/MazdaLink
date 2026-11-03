@@ -21,7 +21,7 @@ internal static class Program
                 try
                 {
                     string output = Get("--output"); Directory.CreateDirectory(output);
-                    using var peer = new ReadProgressPeer(Get("--scenario"), args.Contains("--gen2", StringComparer.Ordinal), args.Contains("--unknown-cal", StringComparer.Ordinal));
+                    using var peer = new ReadProgressPeer(Get("--scenario"), args.Contains("--gen2", StringComparer.Ordinal), args.Contains("--unknown-cal", StringComparer.Ordinal), args.Contains("--chassis-id", StringComparer.Ordinal));
                     window = new MainWindow(Path.Combine(output, "data")); readApp.MainWindow = window;
                     var report = await window.ExerciseReadProgressOffline(peer, output, Get("--scenario"), args.Contains("--unknown-cal", StringComparer.Ordinal));
                     report["memoryRequests"] = peer.MemoryRequests;
@@ -245,7 +245,7 @@ internal sealed class LoggerPeer : SpeedLink.Core.IReadTransport
     public void Dispose() => ready.Dispose();
 }
 
-internal sealed class ReadProgressPeer(string scenario, bool gen2 = false, bool unknown = false) : SpeedLink.Core.IReadTransport
+internal sealed class ReadProgressPeer(string scenario, bool gen2 = false, bool unknown = false, bool chassis = false) : SpeedLink.Core.IReadTransport
 {
     private readonly byte[] memory = CreateMemory();
     private static byte[] CreateMemory()
@@ -265,7 +265,7 @@ internal sealed class ReadProgressPeer(string scenario, bool gen2 = false, bool 
         SpeedLink.Core.DiagnosticProtocol.CheckReadOnly(request, ReadChunkSize);
         switch (Convert.ToHexString(request))
         {
-            case "0902": return [0x49, 0x02, 1, .. "JM1GG12L061000001"u8.ToArray()];
+            case "0902": return [0x49, 0x02, 1, .. (chassis ? "GG3P123456       "u8.ToArray() : "JM1GG12L061000001"u8.ToArray())];
             case "0904": return [0x49, 0x04, 1, .. (gen2 && !unknown ? "L3CGEE000L3T6060"u8.ToArray() : "UNKNOWN01"u8.ToArray())];
             case "010C": return [0x41, 0x0C, 0, 0];
             case "1087":

@@ -1,5 +1,6 @@
 using System.Buffers.Binary;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace SpeedLink.Core;
 
@@ -42,7 +43,7 @@ public sealed class ReadWorkflow
     }
     public static EcuIdentity Identify(IReadTransport transport)
     {
-        string? vin = null, calibration = null, vinStatus = null, calibrationStatus = null;
+        string? vin = null, chassisId = null, calibration = null, vinStatus = null, calibrationStatus = null;
         foreach (var code in new byte[] { 0x02, 0x04 })
         {
             try
@@ -51,21 +52,30 @@ public sealed class ReadWorkflow
                 if (response.Length < 3 || response[0] != 0x49 || response[1] != code || response[2] != 1)
                     throw new TransportException("Unrecognized identification response format.");
                 var text = response.AsSpan(3).TrimEnd((byte)0);
+                if (code == 0x02)
+                    while (!text.IsEmpty && text[^1] is 0 or 32) text = text[..^1];
                 if (text.IsEmpty || text.ToArray().Any(c => c < 32 || c > 126))
                     throw new TransportException("Invalid ECU identity text.");
                 var value = Encoding.ASCII.GetString(text);
                 if (code == 0x02)
                 {
-                    if (value.Length != 17 || value.Any(c => !"ABCDEFGHJKLMNPRSTUVWXYZ0123456789".Contains(c)))
+                    if (value.Length == 17 && value.All(c => "ABCDEFGHJKLMNPRSTUVWXYZ0123456789".Contains(c)))
+                        vin = value;
+                    else if (Regex.IsMatch(value, @"\A[A-Z][A-Z0-9]{2,5}-?[0-9]{6}\z", RegexOptions.CultureInvariant | RegexOptions.NonBacktracking))
+                    {
+                        chassisId = value;
+                        vinStatus = "ECU reports a chassis ID instead of a 17-character VIN.";
+                    }
+                    else
                         throw new TransportException("Invalid VIN response.");
-                    vin = value;
+                    transport.Diagnostics?.RegisterSecret(value);
                 }
                 else
                     calibration = value;
             }
             catch (NegativeResponseException error) { if (code == 0x02) vinStatus = error.Message; else calibrationStatus = error.Message; }
         }
-        return new(transport.Mode, transport.Adapter, vin, calibration, vinStatus, calibrationStatus);
+        return new(transport.Mode, transport.Adapter, vin, calibration, vinStatus, calibrationStatus) { ChassisId = chassisId };
     }
     public static void CheckEngineStopped(IReadTransport transport)
     {
@@ -95,7 +105,7 @@ public sealed class ReadWorkflow
                 cancellation.ThrowIfCancellationRequested();
                 progress?.Report(new(0, "Preparing backup · checking ECU and read access…") { Stage = BackupReadStage.Preparing });
                 var identity = Identify(transport);
-                if (identity.Vin != expected.Vin || identity.Calibration != expected.Calibration)
+                if (!identity.MatchesVehicle(expected))
                     throw new TransportException("ECU identity changed. Reconnect and identify again.");
                 CheckEngineStopped(transport);
                 journal.Append("identity", new()

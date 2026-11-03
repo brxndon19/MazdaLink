@@ -54,6 +54,13 @@ Use **Help → Editor guide** for the complete included guide, or see the
 5. Wait for **Backup verified · two matching reads**. Find the operation under
    **Backups → Open backup folder** and keep the entire folder.
 
+An ECU may report a short chassis number instead of a conventional VIN.
+SpeedLink labels recognized replies as **Chassis ID**, removes trailing space/null
+padding, and still reads the calibration. It keeps that ID separate from VINs in
+backup metadata and checks it again before reading. A chassis number does not
+identify a ROM layout: unknown calibrations can be dumped using the compatible
+read protocol, while editing and logging require their own matching definitions.
+
 During the backup, Connection shows the current pass, bytes read, overall
 progress across both reads and elapsed time. Remaining time is estimated from
 the measured transfer speed and can change during a read. Verification stays

@@ -14,7 +14,7 @@ public sealed class DiagnosticTransport(IReadTransport inner, DiagnosticSession 
     public IDiagnosticSink Diagnostics => session;
     public static string Describe(ReadOnlySpan<byte> request)
     {
-        if (request.SequenceEqual(new byte[] { 9, 2 })) return "Read VIN";
+        if (request.SequenceEqual(new byte[] { 9, 2 })) return "Read VIN / chassis ID";
         if (request.SequenceEqual(new byte[] { 9, 4 })) return "Read calibration";
         if (request.SequenceEqual(new byte[] { 1, 12 })) return "Check engine speed";
         if (request.SequenceEqual(new byte[] { 0x10, 0x87 }) || request.SequenceEqual(new byte[] { 0x10, 3 })) return "Enter ROM read session";

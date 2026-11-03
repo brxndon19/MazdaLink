@@ -158,11 +158,16 @@ public interface IReadTransport : IDisposable
 public sealed record EcuIdentity(string Mode, string Adapter, string? Vin, string? Calibration,
     string? VinStatus = null, string? CalibrationStatus = null, string? ReadProtocolName = null)
 {
+    public string? ChassisId { get; init; }
+    public string? VehicleIdentifier => Vin ?? ChassisId;
+    public string VehicleIdentifierLabel => ChassisId is null ? "VIN" : "Chassis ID";
+    public bool MatchesVehicle(EcuIdentity other) => Vin == other.Vin && ChassisId == other.ChassisId && Calibration == other.Calibration;
     public object ToManifest() => new Dictionary<string, object?>
     {
         ["mode"] = Mode,
         ["adapter"] = Adapter,
         ["vin"] = Vin,
+        ["chassisId"] = ChassisId,
         ["calibration"] = Calibration,
         ["vinStatus"] = VinStatus,
         ["calibrationStatus"] = CalibrationStatus,

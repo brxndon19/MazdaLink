@@ -28,6 +28,7 @@ public sealed class DiagnosticRedactor
     {
         lock (gate) foreach (string secret in secrets.OrderByDescending(s => s.Length)) text = text.Replace(secret, "[redacted]", StringComparison.OrdinalIgnoreCase);
         text = Regex.Replace(text, @"\b[A-HJ-NPR-Z0-9]{17}\b", "[redacted VIN]", RegexOptions.CultureInvariant);
+        text = Regex.Replace(text, @"\b[A-Z][A-Z0-9]{2,5}-?[0-9]{6}\b", "[redacted chassis ID]", RegexOptions.CultureInvariant);
         text = Regex.Replace(text, @"(?i)\b(SN|serial(?:\s+number)?)\s*[:=]\s*[A-Za-z0-9_-]+", "$1:[redacted]");
         text = Regex.Replace(text, @"(?i)\b[A-Z]:[\\/][^\r\n\""<>|]*", "[redacted path]");
         text = Regex.Replace(text, @"(?:\\\\|/home/|/Users/)[^\r\n\""<>|]*", "[redacted path]");
@@ -43,7 +44,7 @@ public sealed class DiagnosticRedactor
         if (node is JsonObject obj)
         {
             foreach (string key in obj.Select(p => p.Key).ToArray())
-                obj[key] = Regex.IsMatch(key, "^(vin|serial|serialNumber|username|userProfile|accessToken|authorization|driverPath|path)$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)
+                obj[key] = Regex.IsMatch(key, "^(vin|chassisId|vehicleIdentifier|serial|serialNumber|username|userProfile|accessToken|authorization|driverPath|path)$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)
                     ? JsonValue.Create("[redacted]") : Visit(obj[key]);
         }
         else if (node is JsonArray array)

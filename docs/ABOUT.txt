@@ -4,6 +4,7 @@ Bundled .NET runtime: {runtime}
 
 Workbench alpha
 ROM reading, verified backups, offline ROM editing and live logging.
+Standard VINs and supported short chassis IDs recognized during identification.
 One workspace for editing, live logging and recorded logs.
 Multiple resizable map panes with native detachable map windows.
 Independent edge/corner resizing and title dragging; overlapping panes stay put.
@@ -29,7 +30,7 @@ Import editor/logger definition updates and restore bundled copies.
 Automatic adapter diagnostics and support ZIP export, including failed connections.
 Local crash reports with next-launch review and support ZIP export; nothing sent automatically.
 Tested GitHub release packages with matching source, hashes and build provenance.
-Factory seed/key exchanges retained; ROM payloads excluded; personal data redacted.
+Factory seed/key exchanges retained; ROM payloads excluded; VIN/chassis IDs and personal data redacted.
 Getting started, Editor, Logger and Report a problem guides included under Help.
 Every editor save applies mandatory ROM-specific integrity checks. Originals preserved.
 Gen 2 code and markers are validated; no arbitrary checksum repair is offered.

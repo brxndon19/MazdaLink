@@ -178,10 +178,15 @@ public partial class MainWindow : Window
             identity = connected.Identity;
             diagnosticSession?.Record("connection.ready", new { identity.Adapter, identity.Calibration, identity.VinStatus, identity.CalibrationStatus });
             LoggerIdentityChanged();
-            IdentityText.Text = $"{identity.Adapter}\nVIN: {identity.Vin ?? "unavailable"}    Calibration: {identity.Calibration ?? "unavailable"}";
+            ShowEcuIdentity();
             StatusText.Text = "Connected · identification recorded";
             Log(IdentityText.Text);
         });
+    }
+    private void ShowEcuIdentity()
+    {
+        if (identity is not null)
+            IdentityText.Text = $"{identity.Adapter}\n{identity.VehicleIdentifierLabel}: {identity.VehicleIdentifier ?? "unavailable"}    Calibration: {identity.Calibration ?? "unavailable"}";
     }
     private async void Disconnect_Click(object sender, RoutedEventArgs e) => await Run(Disconnect);
     private async Task Disconnect()

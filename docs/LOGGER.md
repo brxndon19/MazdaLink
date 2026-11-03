@@ -95,7 +95,7 @@ The CSV is a sequential scan, **not an atomic ECU snapshot**. Use the per-channe
 timestamps when comparing signals. Files flush after each scan. An interrupted
 process can leave a partial final line; earlier flushed rows remain available.
 A recording left marked `Recording or interrupted` did not close normally.
-Keep the whole folder. ECU identity includes the VIN when available; review it
+Keep the whole folder. ECU identity includes the VIN or chassis ID when available; review it
 before sharing a log publicly.
 
 Selections, units and plot choices are remembered separately for each profile in

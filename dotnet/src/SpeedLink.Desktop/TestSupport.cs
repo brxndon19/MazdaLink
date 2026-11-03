@@ -180,7 +180,7 @@ public partial class MainWindow
         if (cancelledTactrix?.CloseWarning is not null)
             throw new InvalidOperationException("Tactrix cancellation cleanup failed: " + cancelledTactrix.CloseWarning);
         await ClickAndWait(ConnectButton);
-        if (transport is null || identity is null || identity.Vin != identified.Vin)
+        if (transport is null || identity is null || !identity.MatchesVehicle(identified))
             throw new InvalidOperationException("UI reconnect failed.");
         var completedConnection = connection;
         var completedTactrix = transport as SpeedLink.J2534.J2534ReadTransport;

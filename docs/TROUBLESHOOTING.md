@@ -57,7 +57,7 @@ result as an empty poll. This does not resend the request, extend the response d
 or hide a fatal driver error. ISO15765 replies use their complete reported message
 length; inconsistent extra-data indexes are retained in diagnostics.
 
-VINs, adapter serial numbers and personal file paths are redacted. Calibration
+VINs/chassis IDs, adapter serial numbers and personal file paths are redacted. Calibration
 IDs and the factory security exchange are retained. ROM payload bytes, full ROM
 images, raw backup captures, CSV recordings, imported definitions and unrelated
 files are excluded from the ZIP. ROM-read events retain the response length and
@@ -65,6 +65,11 @@ SHA-256 instead of duplicating the ROM. A ROM contribution is a separate,
 deliberate step in the [ROM-dump guide](DUMP_A_ROM.md).
 
 ## Capture limits and local storage
+
+If an older version stops at **Invalid VIN response**, upgrade to v0.7.0-alpha.6
+or later. Some ECUs return a padded short chassis number. Recognized replies now
+show **Chassis ID** and calibration instead of failing identification. Malformed
+responses still stop the connection; include a support ZIP if the error remains.
 
 Diagnostics live under `data/diagnostics` beside the EXE. Keep that `data` folder
 when upgrading. The app keeps the ten newest sessions, each with up to four

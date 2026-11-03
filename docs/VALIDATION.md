@@ -1,5 +1,23 @@
 # Alpha validation scope
 
+## VIN and chassis identification — 0.7.0-alpha.6
+
+- Standard 17-character VINs retain their validation. Recognized short chassis
+  numbers accept trailing spaces/nulls, are displayed as Chassis ID, and remain
+  separate from VINs in backup metadata. Arbitrary/malformed identifiers and
+  malformed response headers remain rejected.
+- Identification regressions cover both adapter response paths, normalization,
+  pre-read identity changes, unknown-calibration two-pass backups, logger-profile
+  binding and support-export redaction. Chassis numbers do not authorize another
+  calibration's logging addresses or editor definition.
+- Fifteen offline read-progress desktop cases include chassis-based Gen 1 and
+  Gen 2 success cases, standard VINs, cancellation, malformed/short replies,
+  mismatched passes, preflight failure and unknown Gen 2 protocol selection.
+- The patched reader identified one real bench ECU and confirmed zero RPM
+  through the vLinker FS and Tactrix, sending only Mode 09 identification and
+  Mode 01 RPM queries. No ECU programming, security unlock, ROM download or
+  live logger test was performed. Its ROM layout remains unestablished.
+
 ## Table-axis alignment — 0.7.0-alpha.5
 
 - Every bundled map/control is opened at two window sizes: 7,522 entries across
