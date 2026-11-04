@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.0-alpha.9
+
+- Make **View recording…** open the session just saved. Keep the last saved recording available after live-only logging, recover cleanly if a file was moved, and disable the shortcut while a recording is still being written.
+- Include the final durably saved block in stopped-read progress, even when its display callback is still queued. Ignore callbacks from previous operations and keep partial reads clearly unverified.
+- Reuse live chart views and draw frozen vector paths instead of rebuilding their controls on every update. Avoid repeated grid notifications for unchanged values. The same 33-channel, six-chart stress workload allocated about 67% fewer bytes per update on the test host; polling and recording remain independent of redraws.
+- Add required regressions for recording shortcuts across all ten profiles, cancellation/display races, bounded chart histories and selection changes, flat values and missing-data gaps. All 559 core tests and the ten-profile ROM-save integrity matrix passed, alongside desktop and read-only bench checks through both supported adapters.
+- Keep ECU programming disabled. Physical sensor accuracy and running-engine sampling behavior remain pending validation.
+
 ## 0.7.0-alpha.8
 
 - Default to **Polling → Max**, with no artificial scan-rate wait. Optional numeric limits remain available for lower bus traffic or recording volume; older settings migrate to Max while retaining channel, unit, plot and recording choices.

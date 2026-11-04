@@ -10,11 +10,14 @@ public partial class MainWindow
     private readonly Stopwatch readElapsed = new(), readTransferElapsed = new();
     private DispatcherTimer? readProgressTimer;
     private ReadProgress? currentReadProgress;
+    private ReadProgressCapture? readProgressCapture;
+    private long readProgressGeneration;
     private bool readProgressActive;
 
     private void ClearReadProgress()
     {
         readProgressActive = false;
+        readProgressGeneration++; readProgressCapture = null;
         readProgressTimer?.Stop();
         readElapsed.Reset(); readTransferElapsed.Reset(); currentReadProgress = null;
         ReadProgressPanel.Visibility = Visibility.Collapsed;
@@ -25,6 +28,11 @@ public partial class MainWindow
     {
         readProgressTimer?.Stop();
         readProgressActive = true;
+        long generation = ++readProgressGeneration;
+        readProgressCapture = new(new Progress<ReadProgress>(value =>
+        {
+            if (generation == readProgressGeneration) ShowReadProgress(value);
+        }));
         currentReadProgress = null;
         readElapsed.Restart(); readTransferElapsed.Reset();
         ReadProgressPanel.Visibility = Visibility.Visible;
@@ -41,11 +49,12 @@ public partial class MainWindow
     private void ShowReadProgress(ReadProgress value)
     {
         // Queued progress must not replace a stop, failure or completed result.
-        if (!readProgressActive || stop?.IsCancellationRequested == true) return;
+        if (!readProgressActive) return;
         currentReadProgress = value;
         if (value.Stage == BackupReadStage.Reading && !readTransferElapsed.IsRunning) readTransferElapsed.Start();
         if (value.Stage is BackupReadStage.Verifying or BackupReadStage.Complete) readTransferElapsed.Stop();
-        ReadProgressStage.Text = value.Stage == BackupReadStage.Complete ? "Verifying and saving backup…" : value.Message;
+        ReadProgressStage.Text = stop?.IsCancellationRequested == true ? "Stopping after the current exchange…"
+            : value.Stage == BackupReadStage.Complete ? "Verifying and saving backup…" : value.Message;
         ReadProgressDetail.Text = value.Stage switch
         {
             BackupReadStage.Preparing => "Checking ECU identity, engine stopped and read access.",
@@ -75,6 +84,8 @@ public partial class MainWindow
 
     private void FinishReadProgress(bool verified, bool stopped = false)
     {
+        // The worker may have saved its final block before the dispatcher handled its callback.
+        if (readProgressCapture?.Latest is { } final) ShowReadProgress(final);
         readProgressActive = false;
         readProgressTimer?.Stop(); readElapsed.Stop(); readTransferElapsed.Stop();
         string elapsed = readElapsed.Elapsed.ToString(readElapsed.Elapsed.TotalHours >= 1 ? @"h\:mm\:ss" : @"m\:ss");

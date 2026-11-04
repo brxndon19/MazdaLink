@@ -12,6 +12,24 @@ internal static class Program
             int at = Array.IndexOf(args, key);
             return at >= 0 && at + 1 < args.Length ? args[at + 1] : throw new ArgumentException("Missing " + key);
         }
+        if (args.Contains("--logger-render-offline", StringComparer.Ordinal))
+        {
+            var renderApp = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown }; int resultCode = 1;
+            renderApp.Startup += async (_, _) =>
+            {
+                MainWindow? window = null;
+                try
+                {
+                    string output = Get("--output"); Directory.CreateDirectory(output);
+                    window = new MainWindow(Path.Combine(output, "data")); renderApp.MainWindow = window;
+                    var report = await window.ExerciseLoggerRendering(1000, args.Contains("--require-stable", StringComparer.Ordinal));
+                    File.WriteAllText(Get("--report"), JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true })); resultCode = 0;
+                }
+                catch (Exception error) { File.WriteAllText(Get("--report"), JsonSerializer.Serialize(new { passed = false, error = error.ToString() })); }
+                finally { window?.CloseWorkbenchTest(); renderApp.Shutdown(resultCode); }
+            };
+            renderApp.Run(); return resultCode;
+        }
         if (args.Contains("--read-progress-offline", StringComparer.Ordinal))
         {
             var readApp = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown }; int resultCode = 1;
@@ -196,7 +214,9 @@ internal static class Program
                     window = new MainWindow(Get("--vault")); loggerApp.MainWindow = window;
                     int seconds = args.Contains("--throughput-seconds", StringComparer.Ordinal) ? int.Parse(Get("--throughput-seconds")) : 0;
                     if (seconds is < 0 or > 20) throw new ArgumentOutOfRangeException(nameof(seconds));
-                    var result = await window.ExerciseLoggerHardware(Get("--port"), Get("--rom"), Get("--screenshot"), args.Contains("--tactrix", StringComparer.Ordinal), realEcu: true, performanceSeconds: seconds);
+                    int soak = args.Contains("--soak-seconds", StringComparer.Ordinal) ? int.Parse(Get("--soak-seconds")) : 0;
+                    if (soak is < 0 or > 900) throw new ArgumentOutOfRangeException(nameof(soak));
+                    var result = await window.ExerciseLoggerHardware(Get("--port"), Get("--rom"), Get("--screenshot"), args.Contains("--tactrix", StringComparer.Ordinal), realEcu: true, performanceSeconds: seconds, soakSeconds: soak);
                     File.WriteAllText(Get("--report"), JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true })); resultCode = 0;
                 }
                 catch (Exception error) { File.WriteAllText(Get("--report"), JsonSerializer.Serialize(new { passed = false, error = error.ToString() })); }

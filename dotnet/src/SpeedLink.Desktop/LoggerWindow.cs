@@ -8,8 +8,6 @@ using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
-using System.Windows.Media;
-using System.Windows.Shapes;
 using Microsoft.Win32;
 using SpeedLink.Core;
 
@@ -47,8 +45,13 @@ internal sealed class LoggerRow(LoggerChannel channel) : INotifyPropertyChanged
     }
     public void SetUnavailable(string state)
     {
-        ValueText = "—"; Status = state; RateText = "—";
-        Changed(nameof(ValueText)); Changed(nameof(Status)); Changed(nameof(RateText));
+        SetDisplay("—", state, "—");
+    }
+    private void SetDisplay(string value, string state, string rate)
+    {
+        if (ValueText != value) { ValueText = value; Changed(nameof(ValueText)); }
+        if (Status != state) { Status = state; Changed(nameof(Status)); }
+        if (RateText != rate) { RateText = rate; Changed(nameof(RateText)); }
     }
     public bool ExpireIfStale(DateTimeOffset now)
     {
@@ -64,14 +67,15 @@ internal sealed class LoggerRow(LoggerChannel channel) : INotifyPropertyChanged
                 var age = now - previous;
                 if (age >= TimeSpan.Zero && age <= LiveLogger.MaximumSampleAge)
                 {
-                    Status = $"Pending · {age.TotalMilliseconds:0} ms old"; Changed(nameof(Status)); return;
+                    string state = $"Pending · {age.TotalMilliseconds:0} ms old";
+                    if (Status != state) { Status = state; Changed(nameof(Status)); }
+                    return;
                 }
                 SetUnavailable("Stale · waiting for sample"); return;
             }
             SetUnavailable(reading.Status); return;
         }
         double display = definition.ConvertDisplay(Id, value, Unit, parameters);
-        ValueText = display.ToString("0.###", CultureInfo.CurrentCulture); Status = reading.Status;
         if (timestamp != last)
         {
             if (last is not null && timestamp < last) throw new InvalidDataException("Logger time moved backwards.");
@@ -80,9 +84,9 @@ internal sealed class LoggerRow(LoggerChannel channel) : INotifyPropertyChanged
             times.Enqueue(timestamp);
             while (times.Count > 20) times.Dequeue();
         }
-        RateText = times.Count >= 2 && timestamp > times.Peek() ?
+        string rate = times.Count >= 2 && timestamp > times.Peek() ?
             ((times.Count - 1) / (timestamp - times.Peek()).TotalSeconds).ToString("0.0", CultureInfo.CurrentCulture) : "—";
-        Changed(nameof(ValueText)); Changed(nameof(Status)); Changed(nameof(RateText));
+        SetDisplay(display.ToString("0.###", CultureInfo.CurrentCulture), reading.Status, rate);
     }
 }
 
@@ -92,6 +96,8 @@ public partial class MainWindow
     private LoggerCalibration? loggerCalibration;
     private readonly ObservableCollection<LoggerRow> loggerRows = [];
     private bool loggingActive, loggerReadReconnectRequired;
+    private string? latestRecordingPath;
+    private bool openingLatestRecording;
     private long loggerScans;
     private LoggerPreferences loggerPreferences = new();
     private bool loggerSettingsReady, configuringLogger;
@@ -170,6 +176,10 @@ public partial class MainWindow
         LoggerStartButton.IsEnabled = idle && transport is not null && !transport.ReadAttempted && loggerCalibration is not null &&
             definitionSnapshot.LoggerFor(identity?.Calibration) is not null && loggerDefinition.MatchesCalibrationId(identity?.Calibration) && loggerRows.Any(row => row.Selected);
         LoggerStopButton.IsEnabled = loggingActive && !closing;
+        ViewRecordingButton.IsEnabled = idle && !openingLatestRecording && latestRecordingPath is not null;
+        ViewRecordingButton.ToolTip = loggingActive ? "Stop logging to open this recording."
+            : latestRecordingPath is null ? "Record a log to view it here. Older logs can be opened on Recordings."
+            : "Open the recording from the latest recorded session.";
         LoggerRomButton.IsEnabled = idle; LoggerRateBox.IsEnabled = idle; StoichBox.IsEnabled = idle; RecordCsvBox.IsEnabled = idle;
         LoggerEssentialsButton.IsEnabled = idle; LoggerAllButton.IsEnabled = idle; LoggerNoneButton.IsEnabled = idle;
         foreach (var row in loggerRows) row.CanEdit = idle;
@@ -269,7 +279,11 @@ public partial class MainWindow
                         {
                             file = new(LoggerFolder, loggerDefinition, calibration, ecu, selected.Select(row => row.Id), units, parameters, Version, target);
                             recordingCreated = true;
-                            Dispatcher.Invoke(() => LoggerFileText.Text = file.Folder);
+                            Dispatcher.Invoke(() =>
+                            {
+                                LoggerFileText.Text = file.Folder;
+                                latestRecordingPath = System.IO.Path.Combine(file.Folder, "log.csv");
+                            });
                         }
                         while (!stop!.IsCancellationRequested)
                         {
@@ -350,6 +364,8 @@ public partial class MainWindow
         DrawLoggerChart();
     }
     private bool drawingLogger;
+    private readonly Dictionary<string, LiveLoggerChart> liveCharts = new(StringComparer.Ordinal);
+    private TextBlock? emptyLoggerChart;
     private void LoggerChart_SizeChanged(object sender, SizeChangedEventArgs e) { if (Math.Abs(e.NewSize.Width - e.PreviousSize.Width) > 1) DrawLoggerChart(); }
     private void DrawLoggerChart()
     {
@@ -357,35 +373,29 @@ public partial class MainWindow
         drawingLogger = true;
         try
         {
-            LoggerPlots.Children.Clear();
             var charts = loggerRows.Where(r => r.Plotted && r.Selected).Take(6).ToArray();
-            if (charts.Length == 0) { LoggerPlots.Children.Add(new TextBlock { Text = "Select Log and Plot for up to six parameters.", Foreground = UiTheme.Muted, TextWrapping = TextWrapping.Wrap, Margin = new(12) }); return; }
-            var all = charts.SelectMany(r => r.Points).ToArray();
-            var end = all.Length == 0 ? DateTimeOffset.UtcNow : all.Max(p => p.Time);
-            double seconds = all.Length == 0 ? 30 : Math.Clamp((end - all.Min(p => p.Time)).TotalSeconds, 1, 30); var start = end.AddSeconds(-seconds);
-            double width = Math.Max(100, LoggerPlots.ActualWidth - 24), height = 112;
-            foreach (var row in charts)
+            foreach (string id in liveCharts.Keys.Where(id => !charts.Any(r => r.Id == id)).ToArray()) liveCharts.Remove(id);
+            if (charts.Length == 0)
             {
-                var panel = new StackPanel { Margin = new(8, 0, 8, 16) };
-                panel.Children.Add(new TextBlock { Text = $"{row.Name} · {row.ValueText} {row.Unit}", TextTrimming = TextTrimming.CharacterEllipsis, ToolTip = row.Channel.Help, FontWeight = FontWeights.SemiBold });
-                var canvas = new Canvas { Height = height + 16, Background = UiTheme.Panel, ClipToBounds = true, Margin = new(0, 7, 0, 4) };
-                var points = row.Points.Where(p => p.Time >= start && p.Time <= end).ToArray();
-                if (points.Length > 1)
-                {
-                    double min = points.Min(p => p.Value), max = points.Max(p => p.Value), scale = Math.Max(1, Math.Max(Math.Abs(min), Math.Abs(max)));
-                    double low = min / scale, high = max / scale; if (high - low < 1e-12) { low -= .5; high += .5; }
-                    Polyline Segment() { var line = new Polyline { Stroke = UiTheme.Amber, StrokeThickness = 1.8 }; canvas.Children.Add(line); return line; }
-                    var plot = Segment(); DateTimeOffset? previous = null;
-                    foreach (var point in points)
-                    {
-                        if (previous is not null && point.Time - previous > LiveLogger.MaximumSampleAge) plot = Segment();
-                        plot.Points.Add(new(8 + (point.Time - start).TotalSeconds / seconds * (width - 16), 8 + height - (point.Value / scale - low) / (high - low) * height)); previous = point.Time;
-                    }
-                }
-                panel.Children.Add(canvas);
-                panel.Children.Add(new TextBlock { Text = $"{row.Status} · {row.RateText} Hz · shared {seconds:0.#} s time axis", Foreground = UiTheme.Muted, TextWrapping = TextWrapping.Wrap });
-                LoggerPlots.Children.Add(panel);
+                emptyLoggerChart ??= new TextBlock { Text = "Select Log and Plot for up to six parameters.", Foreground = UiTheme.Muted, TextWrapping = TextWrapping.Wrap, Margin = new(12) };
+                if (LoggerPlots.Children.Count != 1 || !ReferenceEquals(LoggerPlots.Children[0], emptyLoggerChart))
+                { LoggerPlots.Children.Clear(); LoggerPlots.Children.Add(emptyLoggerChart); }
+                return;
             }
+            foreach (var row in charts) if (!liveCharts.ContainsKey(row.Id)) liveCharts.Add(row.Id, new());
+            if (LoggerPlots.Children.Count != charts.Length || charts.Where((row, index) => !ReferenceEquals(LoggerPlots.Children[index], liveCharts[row.Id])).Any())
+            { LoggerPlots.Children.Clear(); foreach (var row in charts) LoggerPlots.Children.Add(liveCharts[row.Id]); }
+            DateTimeOffset? first = null, last = null;
+            foreach (var row in charts)
+                if (row.Points.Count > 0)
+                {
+                    if (first is null || row.Points[0].Time < first) first = row.Points[0].Time;
+                    if (last is null || row.Points[^1].Time > last) last = row.Points[^1].Time;
+                }
+            var end = last ?? DateTimeOffset.UtcNow;
+            double seconds = first is null ? 30 : Math.Clamp((end - first.Value).TotalSeconds, 1, 30);
+            var start = end.AddSeconds(-seconds); double width = Math.Max(100, LoggerPlots.ActualWidth - 24);
+            foreach (var row in charts) liveCharts[row.Id].Update(row, start, end, seconds, width);
         }
         finally { drawingLogger = false; }
     }
@@ -393,7 +403,20 @@ public partial class MainWindow
     {
         TryFile(() => { Directory.CreateDirectory(LoggerFolder); Process.Start(new ProcessStartInfo(LoggerFolder) { UseShellExecute = true }); });
     }
-    private void ViewRecording_Click(object sender, RoutedEventArgs e) => Navigate(3);
+    private async void ViewRecording_Click(object sender, RoutedEventArgs e)
+    {
+        if (loggingActive || openingLatestRecording || latestRecordingPath is not string path) return;
+        openingLatestRecording = true; Controls(); Navigate(3);
+        try
+        {
+            await RecordingsPane.OpenAsync(path);
+            StatusText.Text = "Recording opened · " + System.IO.Path.GetFileName(System.IO.Path.GetDirectoryName(path));
+        }
+        catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException or System.Text.DecoderFallbackException)
+        { StatusText.Text = "Recording could not be opened: " + error.Message; Log(StatusText.Text); }
+        catch (OperationCanceledException) { }
+        finally { openingLatestRecording = false; Controls(); }
+    }
     private void RememberLoggerProfile()
     {
         if (loggerDefinition is null) return;

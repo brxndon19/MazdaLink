@@ -50,6 +50,10 @@ running-engine sampling behavior still require validation.
    parameters, units and plot choices stay selected; each start creates a separate
    recording. Disconnect and reconnect before reading a ROM. **Open logs** opens
    the recording folder location.
+6. After **Stop**, **View recording…** opens that session directly in Recordings.
+   The shortcut is disabled during logging so you open the finalized file. A
+   live-only session leaves the last saved recording available. Use
+   **Recordings → Open recording…** for older files, including after restarting SpeedLink.
 
 Logging can run with the engine running. **ROM backup reads require the engine
 stopped**. They use a different diagnostic session. A connection used for a ROM

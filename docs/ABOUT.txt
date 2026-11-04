@@ -47,6 +47,9 @@ Known short and complete ECU calibration IDs recognized for logging.
 Parameter selection, up to six synchronized charts, CSV and recorded-log viewer.
 Per-profile logger choices saved on close, with explicit pending and stopped states.
 Normal Stop keeps a healthy connection ready for another Start and a new recording.
+View recording opens the session just saved; live-only logging retains the last saved session.
+Retained chart views, frozen vector plots and quiet unchanged-value bindings reduce redraw allocations.
+Stopped-read progress includes the final durably saved block; partial reads stay unverified.
 Max polling by default; optional numeric limits reduce bus load or recording volume.
 Complete-reply handling avoids idle waits; display redraws do not cap acquisition.
 Verified standard batches retain stock Gen 1 precision; Gen 2 uses its own protocol.

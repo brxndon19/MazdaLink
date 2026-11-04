@@ -45,6 +45,7 @@ jobs:
       - run: ./tools/Test-LayoutUi.ps1 -Output TestResults/LayoutUi
       - run: ./tools/Test-AxisUi.ps1 -Output TestResults/AxisUi
       - run: ./tools/Test-LoggerUi.ps1 -Output TestResults/LoggerUi
+      - run: ./tools/Test-LoggerRendering.ps1 -Output TestResults/LoggerRendering
       - run: ./tools/Test-ReplayUi.ps1 -Output TestResults/ReplayUi
       - run: ./tools/Test-EditorUi.ps1 -Output TestResults/EditorUi
       - run: ./tools/Test-WorkbenchUi.ps1 -Output TestResults/WorkbenchUi

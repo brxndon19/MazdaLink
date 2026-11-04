@@ -30,6 +30,17 @@ public sealed record ReadProgress(double Fraction, string Message)
     public int Pass { get; init; }
     public int BytesInPass { get; init; }
 }
+/// <summary>Retains durable read progress even when its display callback is still queued.</summary>
+public sealed class ReadProgressCapture(IProgress<ReadProgress> display) : IProgress<ReadProgress>
+{
+    private ReadProgress? latest;
+    public ReadProgress? Latest => Volatile.Read(ref latest);
+    public void Report(ReadProgress value)
+    {
+        Volatile.Write(ref latest, value);
+        display.Report(value);
+    }
+}
 public sealed record BackupResult(string Path, RomInspection Inspection);
 
 public sealed class ReadWorkflow

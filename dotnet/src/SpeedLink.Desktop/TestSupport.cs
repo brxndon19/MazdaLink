@@ -33,7 +33,7 @@ internal sealed class LoggerOnlyTestTransport(IReadTransport inner, LoggerDefini
 
 public partial class MainWindow
 {
-    internal async Task<Dictionary<string, object?>> ExerciseLoggerHardware(string port, string rom, string screenshot, bool tactrix, bool realEcu = false, int performanceSeconds = 0)
+    internal async Task<Dictionary<string, object?>> ExerciseLoggerHardware(string port, string rom, string screenshot, bool tactrix, bool realEcu = false, int performanceSeconds = 0, int soakSeconds = 0)
     {
         Show(); UpdateLayout(); AdapterBox.SelectedIndex = tactrix ? 1 : 0; PortBox.Text = port; BaudBox.SelectedItem = 115200;
         await ClickAndWait(ConnectButton);
@@ -46,25 +46,40 @@ public partial class MainWindow
         RecordCsvBox.IsChecked = true; Controls(); bool locked = false;
         if (performanceSeconds > 0 && (int)LoggerRateBox.SelectedValue != 0) throw new InvalidOperationException("Performance test must use Max polling.");
         var cycleWatch = new System.Diagnostics.Stopwatch();
+        var resourceSamples = new List<object>(); int cycleTarget = performanceSeconds; double nextResourceSample = 0;
+        using var process = System.Diagnostics.Process.GetCurrentProcess();
         var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(20) };
         timer.Tick += (_, _) =>
         {
+            if (soakSeconds > 0 && cycleTarget == soakSeconds && cycleWatch.Elapsed.TotalSeconds >= nextResourceSample)
+            {
+                process.Refresh();
+                resourceSamples.Add(new { seconds = cycleWatch.Elapsed.TotalSeconds, residentBytes = process.WorkingSet64,
+                    privateBytes = process.PrivateMemorySize64, managedBytes = GC.GetTotalMemory(false), handles = process.HandleCount,
+                    allocatedBytes = GC.GetTotalAllocatedBytes(false), cpuSeconds = process.TotalProcessorTime.TotalSeconds });
+                nextResourceSample += 5;
+            }
             locked |= loggingActive && !LoggerRomButton.IsEnabled && !ReadButton.IsEnabled;
-            if (loggerScans >= (performanceSeconds > 0 ? 1 : 5) && (performanceSeconds == 0 || cycleWatch.Elapsed.TotalSeconds >= performanceSeconds) && LoggerStopButton.IsEnabled)
+            if (loggerScans >= (cycleTarget > 0 ? 1 : 5) && (cycleTarget == 0 || cycleWatch.Elapsed.TotalSeconds >= cycleTarget) && LoggerStopButton.IsEnabled)
             { timer.Stop(); LoggerStopButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); }
         };
         var cycleReports = new List<object>();
         for (int cycle = 0; cycle < 3; cycle++)
         {
+            cycleTarget = realEcu && cycle == 2 && soakSeconds > 0 ? soakSeconds : performanceSeconds;
             if (performanceSeconds > 0 && cycle == 0) foreach (var row in loggerRows) row.Selected = row.Id == "engine_rpm";
             if (performanceSeconds > 0 && cycle == 1) foreach (var row in loggerRows) row.Selected = new[] { "engine_rpm", "boost_pressure", "actual_lambda", "fuel_rail_pressure", "knock_retard", "injector_duty_cycle" }.Contains(row.Id);
-            if (realEcu && cycle == 2) foreach (var row in loggerRows) row.Selected = true;
+            if (realEcu && cycle == 2)
+            {
+                foreach (var row in loggerRows) { row.Selected = true; row.Plotted = false; }
+                foreach (var row in loggerRows.Take(6)) row.Plotted = true;
+            }
             var choices = loggerRows.Select(r => (r.Id, r.Selected, r.Unit, r.Plotted)).ToArray();
             cycleWatch.Restart(); timer.Start();
             try
             {
                 var work = ClickAndWait(LoggerStartButton);
-                if (await Task.WhenAny(work, Task.Delay(TimeSpan.FromSeconds(45))) != work)
+                if (await Task.WhenAny(work, Task.Delay(TimeSpan.FromSeconds(Math.Max(45, cycleTarget + 20)))) != work)
                 { stop?.Cancel(); await work; throw new InvalidOperationException("Physical logger cycle timed out."); }
                 await work;
             }
@@ -98,7 +113,7 @@ public partial class MainWindow
             ["adapter"] = tactrix ? "Tactrix" : "vLinker", ["calibration"] = loggerDefinition.SoftwareIds.Single(), ["cycles"] = cycleReports,
             ["actualButtons"] = true, ["restartWithoutReconnectVerified"] = true, ["connectionReleased"] = true,
             ["requests"] = guarded.Requests, ["onlyIdentificationAndLoggerQueries"] = true, ["liveProgrammingEnabled"] = false,
-            ["sensorAccuracyValidated"] = false, ["recordings"] = recordings, ["replayLoaded"] = true, ["screenshot"] = screenshot };
+            ["sensorAccuracyValidated"] = false, ["recordings"] = recordings, ["replayLoaded"] = true, ["resourceSamples"] = resourceSamples, ["screenshot"] = screenshot };
     }
     internal async Task<Dictionary<string, object?>> ExerciseLoggerOffline(IReadTransport peer, string screenshot, bool faultExpected, LoggerDefinition profile, LoggerCalibration calibration, Action allowFixtureTraffic, string? romPath = null, Action? changeIdentity = null)
     {
@@ -147,7 +162,7 @@ public partial class MainWindow
         var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(10) };
         timer.Tick += (_, _) =>
         {
-            if (loggingActive) locked |= !ReadButton.IsEnabled && !LoggerRomButton.IsEnabled && loggerRows.All(row => !row.CanEdit);
+            if (loggingActive) locked |= !ReadButton.IsEnabled && !LoggerRomButton.IsEnabled && !ViewRecordingButton.IsEnabled && loggerRows.All(row => !row.CanEdit);
             if (loggerScans >= 3 && LoggerStopButton.IsEnabled) { timer.Stop(); Capture(); LoggerStopButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); }
         };
         for (int cycle = 0; cycle < cycles; cycle++)
@@ -169,6 +184,15 @@ public partial class MainWindow
             if (!faultExpected && (!ReferenceEquals(transport, peer) || identity is null || !LoggerStartButton.IsEnabled || LoggerStopButton.IsEnabled || ReadButton.IsEnabled || loggingActive || busy || loggerScans < 3 ||
                 !ReferenceEquals(loggerCalibration, retainedCalibration) || !retainedChoices.SequenceEqual(loggerRows.Select(r => (r.Id, r.Selected, r.Unit, r.Plotted)))))
                 throw new InvalidOperationException("Normal Stop did not retain a restartable connection, choices and ROM binding in cycle " + (cycle + 1));
+            if (!faultExpected)
+            {
+                if (!ViewRecordingButton.IsEnabled || latestRecordingPath is null) throw new InvalidOperationException("Latest recording shortcut is unavailable after Stop.");
+                ViewRecordingButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                for (int attempt = 0; openingLatestRecording && attempt < 500; attempt++) await Task.Delay(10);
+                if (openingLatestRecording || Pages.SelectedIndex != 3 || RecordingsPane.OpenedPath != latestRecordingPath || RecordingsPane.Recording?.Rows < 3)
+                    throw new InvalidOperationException("View recording did not open the just-completed session.");
+                Navigate(2);
+            }
         }
         if (faultExpected && (transport is not null || identity is not null || loggingActive || LoggerStartButton.IsEnabled || LoggerStopButton.IsEnabled))
             throw new InvalidOperationException("Logger failure did not release the connection and disable restart.");
@@ -192,11 +216,26 @@ public partial class MainWindow
             throw new InvalidOperationException("Logger locking, remembered settings or backup separation failed.");
         if (peer.ReadAttempted) throw new InvalidOperationException("Logger entered a ROM-read workflow.");
         UpdateLayout(); DrawLoggerChart();
-        if (!faultExpected && !LoggerPlots.Children.OfType<StackPanel>().SelectMany(p => p.Children.OfType<System.Windows.Controls.Canvas>()).Any(c => c.Children.OfType<System.Windows.Shapes.Polyline>().Any(line => line.Points.Count >= 2))) throw new InvalidOperationException("Rolling chart was not drawn.");
+        if (!faultExpected && !LoggerPlots.Children.OfType<LiveLoggerChart>().Any(c => c.PointCount >= 2)) throw new InvalidOperationException("Rolling chart was not drawn.");
         if (faultExpected) Capture();
         else
         {
+            string savedPath = latestRecordingPath!;
+            var previousReplay = RecordingsPane.Recording;
+            latestRecordingPath = savedPath + ".missing";
+            ViewRecordingButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            for (int attempt = 0; openingLatestRecording && attempt < 500; attempt++) await Task.Delay(10);
+            if (openingLatestRecording || !StatusText.Text.StartsWith("Recording could not be opened:", StringComparison.Ordinal) ||
+                !ReferenceEquals(previousReplay, RecordingsPane.Recording) || !ViewRecordingButton.IsEnabled)
+                throw new InvalidOperationException("A moved recording broke the viewer or shortcut.");
+            latestRecordingPath = savedPath;
+            ViewRecordingButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            for (int attempt = 0; openingLatestRecording && attempt < 500; attempt++) await Task.Delay(10);
+            if (openingLatestRecording || RecordingsPane.OpenedPath != savedPath || !StatusText.Text.StartsWith("Recording opened ·", StringComparison.Ordinal))
+                throw new InvalidOperationException("The recording shortcut did not recover after a missing file.");
+            Navigate(2);
             // Stop immediately after Start as well; cancellation before the first poll must remain restartable.
+            string? lastRecorded = latestRecordingPath;
             RecordCsvBox.IsChecked = false;
             LoggerStartButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             LoggerStopButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
@@ -208,6 +247,8 @@ public partial class MainWindow
             finally { timer.Stop(); }
             if (!ReferenceEquals(transport, peer) || !LoggerStartButton.IsEnabled || loggerScans < 3 || System.IO.Directory.GetDirectories(LoggerFolder).Length != cycles)
                 throw new InvalidOperationException("Live-only logging did not restart after immediate Stop without creating a recording.");
+            if (latestRecordingPath != lastRecorded || !ViewRecordingButton.IsEnabled)
+                throw new InvalidOperationException("Live-only logging lost the latest saved recording.");
             if (changeIdentity is not null)
             {
                 changeIdentity();
@@ -236,6 +277,7 @@ public partial class MainWindow
             ["startStopCycles"] = cycles, ["restartWithoutReconnectVerified"] = !faultExpected,
             ["immediateStopVerified"] = !faultExpected, ["separateRecordingsVerified"] = true,
             ["recordingOffRestartVerified"] = !faultExpected, ["identityChangeRejected"] = changeIdentity is not null,
+            ["latestRecordingShortcutVerified"] = !faultExpected,
             ["minimumWindowLayoutVerified"] = true, ["sixPlotLimitVerified"] = true,
             ["calibration"] = profile.SoftwareIds.Single(), ["profile"] = profile.Id,
             ["ecuCalibration"] = completeIdentity, ["matchingRomBound"] = romPath is not null,

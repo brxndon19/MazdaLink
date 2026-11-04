@@ -1,5 +1,23 @@
 # C# validation
 
+## Logger workflow follow-up checks — 0.7.0-alpha.9
+
+- The latest-recording shortcut is exercised across every logger profile after
+  consecutive recorded sessions. Tests also cover missing-file recovery,
+  retained playback after live-only logging, and locking during acquisition.
+- Read-progress tests cover cancellation during an exchange and final progress
+  still queued on the dispatcher. Displayed stopped bytes must match the durable
+  capture; callbacks from an older operation cannot alter a new read. Cancellation
+  still leaves an unverified partial capture and never seals a backup.
+- An accelerated 33-channel, six-chart desktop workload checks retained chart
+  views, bounded histories and selection changes, quiet bindings for unchanged
+  readings, flat values and explicit gaps. Allocation and post-collection managed
+  memory are measured in the test harness; production never forces collection.
+  The same workload allocated about 67% fewer bytes per update after the renderer
+  changes on the test host. This is not a guarantee for every host or workload.
+- These changes leave ECU requests, polling policy, raw capture bytes and
+  mandatory editor-save integrity unchanged.
+
 ## Logging restart and performance — 0.7.0-alpha.8
 
 - Required desktop tests cover all ten profiles: three consecutive recorded

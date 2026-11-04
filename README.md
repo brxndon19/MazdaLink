@@ -4,7 +4,7 @@ Open-source ROM reading, data logging and offline ROM editing for Mazdaspeed and
 
 [![C# checks](https://github.com/mrphyslaw/SpeedLink/actions/workflows/checks-dotnet.yml/badge.svg)](https://github.com/mrphyslaw/SpeedLink/actions/workflows/checks-dotnet.yml)
 
-**[Download v0.7.0-alpha.8](https://github.com/mrphyslaw/SpeedLink/releases/tag/v0.7.0-alpha.8)** — a single Windows EXE, with no installer or .NET installation required.
+**[Download v0.7.0-alpha.9](https://github.com/mrphyslaw/SpeedLink/releases/tag/v0.7.0-alpha.9)** — a single Windows EXE, with no installer or .NET installation required.
 
 **Watch the 4-minute SpeedLink demo (4:11)**
 
@@ -63,6 +63,9 @@ tuning recommendations.
 Record selected parameters to CSV, then review up to six synchronized plots
 without an adapter. This preview uses synthetic example data; it does not show
 a vehicle test or measured ECU logging rates.
+After Stop, **View recording…** opens the session just saved. Live charts reuse
+their views to reduce redraw allocations; polling and recording retain their
+existing timing and data precision.
 [Live logger screenshots and a quick start →](docs/logger/README.md)
 
 ## Choose a workflow

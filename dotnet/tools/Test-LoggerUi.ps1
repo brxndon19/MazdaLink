@@ -31,6 +31,7 @@ foreach ($mode in @('record-stop', 'connection-failure', 'identity-change')) {
     if ($result.passed -ne $true -or $result.realEcuTested -ne $false) { throw "Unexpected offline UI result: $mode" }
     if ($mode -ne 'connection-failure' -and ($result.startStopCycles -ne 3 -or !$result.restartWithoutReconnectVerified -or !$result.immediateStopVerified -or !$result.separateRecordingsVerified -or !$result.recordingOffRestartVerified)) { throw "Logger restart regression missing: $calibration" }
     if ($mode -eq 'identity-change' -and !$result.identityChangeRejected) { throw "Logger identity-change regression missing: $calibration" }
+    if ($mode -ne 'connection-failure' -and !$result.latestRecordingShortcutVerified) { throw "Latest-recording shortcut regression missing: $calibration" }
     if ($mode -eq 'connection-failure' -and ($result.startStopCycles -ne 1 -or !$result.connectionReleased -or $result.faultRequests -ne 1)) { throw "Logger failure cleanup regression missing: $calibration" }
     $reports += $result
 }

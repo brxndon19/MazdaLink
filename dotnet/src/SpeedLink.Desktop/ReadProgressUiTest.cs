@@ -15,6 +15,21 @@ public partial class MainWindow
         Show(); UpdateLayout();
         if (ReadProgressPanel.Visibility != Visibility.Collapsed) throw new InvalidOperationException("Idle progress takes up space.");
         BeginReadProgress();
+        stop = new();
+        var oldProgress = readProgressCapture!;
+        stop.Cancel();
+        oldProgress.Report(new(.01, "last saved block") { Pass = 1, BytesInPass = 7936 });
+        FinishReadProgress(false, stopped: true);
+        if (currentReadProgress?.BytesInPass != 7936 || !ReadProgressDetail.Text.Contains(7936.ToString("N0"), StringComparison.Ordinal))
+            throw new InvalidOperationException("A queued final saved block was omitted from stopped progress.");
+        stop.Dispose(); stop = null;
+        BeginReadProgress();
+        oldProgress.Report(new(1, "old operation callback") { Pass = 2, BytesInPass = RomInspector.RomSize });
+        await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+        if (currentReadProgress is not null || ReadBackupBar.Value != 0)
+            throw new InvalidOperationException("A prior operation changed the new read's progress.");
+        ClearReadProgress();
+        BeginReadProgress();
         ShowReadProgress(new(1, "Verifying and saving backup…") { Stage = BackupReadStage.Verifying, Pass = 2, BytesInPass = RomInspector.RomSize });
         if (ReadBackupBar.Value != 99 || ReadProgressPercent.Text.Contains("100", StringComparison.Ordinal)) throw new InvalidOperationException("Unverified transfer displayed 100%.");
         FinishReadProgress(false);
@@ -75,6 +90,11 @@ public partial class MainWindow
             throw new InvalidOperationException("Unexpected read progress result: " + ReadProgressStage.Text + " · " + StatusText.Text);
         var entries = store.Scan(vault);
         if (entries.Count != 1 || entries[0].Complete != complete) throw new InvalidOperationException("Progress and durable backup disagree.");
+        if (currentReadProgress is { Pass: > 0 } savedProgress)
+        {
+            var capture = new FileInfo(Path.Combine(Path.GetDirectoryName(entries[0].Path)!, $"pass{savedProgress.Pass}.read"));
+            if (capture.Length != savedProgress.BytesInPass) throw new InvalidOperationException("Displayed bytes differ from the durable capture.");
+        }
         string resultStage = ReadProgressStage.Text;
         double resultValue = ReadBackupBar.Value;
         ShowReadProgress(new(1, "late callback") { Stage = BackupReadStage.Complete });

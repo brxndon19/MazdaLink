@@ -230,7 +230,7 @@ public partial class MainWindow : Window
             BackupResult result;
             try
             {
-                var progress = new Progress<ReadProgress>(ShowReadProgress);
+                var progress = readProgressCapture!;
                 result = await Task.Run(() => new ReadWorkflow(store, inspector).ReadBackup(link, expected, vault, progress, stop!.Token, family));
                 FinishReadProgress(true);
             }

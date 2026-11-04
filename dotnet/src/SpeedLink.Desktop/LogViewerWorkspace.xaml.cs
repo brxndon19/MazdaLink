@@ -30,6 +30,7 @@ public partial class LogViewerWorkspace : UserControl
     private static readonly string[] PreferredChannels = ["engine_rpm", "boost_pressure", "actual_lambda", "fuel_rail_pressure", "knock_retard", "relative_throttle_position"];
     internal int PlottedChannels => rows.Count(r => r.Selected);
     internal RecordedLog? Recording => log;
+    internal string? OpenedPath => FileText.ToolTip as string;
     internal void RequestOpen() => Open_Click(this, new());
     public LogViewerWorkspace()
     {

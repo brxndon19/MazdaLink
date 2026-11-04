@@ -43,6 +43,29 @@ public class ReadProgressTests
     }
 
     [Fact]
+    public void test_cancelled_inflight_block_retains_latest_durable_progress_before_display_delivery()
+    {
+        using var temp = new TempFolder();
+        using var cancel = new CancellationTokenSource();
+        int reads = 0;
+        using var peer = new TestEcu(Fixture.Rom) { ModifyResponse = (request, response) =>
+        {
+            if (request[0] == 0x23 && ++reads == 2) cancel.Cancel();
+            return response;
+        }};
+        var queued = new Capture();
+        var progress = new ReadProgressCapture(queued);
+        Assert.Throws<OperationCanceledException>(() => Fixture.Reader().ReadBackup(peer, ReadWorkflow.Identify(peer), temp.Path, progress, cancel.Token));
+        string capture = Assert.Single(Directory.GetFiles(temp.Path, "pass1.read", SearchOption.AllDirectories));
+        Assert.Equal(7936, new FileInfo(capture).Length);
+        Assert.Equal(new FileInfo(capture).Length, progress.Latest!.BytesInPass);
+        Assert.Equal(1, progress.Latest.Pass);
+        Assert.Equal(2, reads);
+        Assert.DoesNotContain(queued.Events, p => p.Stage is BackupReadStage.Verifying or BackupReadStage.Complete);
+        Assert.Empty(Directory.GetFiles(temp.Path, "rom.bin", SearchOption.AllDirectories));
+    }
+
+    [Fact]
     public void test_failed_block_does_not_advance_or_complete_progress()
     {
         using var temp = new TempFolder();
