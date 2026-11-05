@@ -19,7 +19,7 @@ public partial class MainWindow
     private void ApplyNavigation()
     {
         NavigationColumn.Width = new(navigationIsCollapsed ? 52 : 155);
-        foreach (var label in new[] { NavLabel0, NavLabel1, NavLabel2, NavLabel3, NavLabel4, NavLabel5 }) label.Visibility = navigationIsCollapsed ? Visibility.Collapsed : Visibility.Visible;
+        foreach (var label in new[] { NavLabel0, NavLabel1, NavLabel2, NavLabel3, NavLabel4, NavLabel5, NavLabel6 }) label.Visibility = navigationIsCollapsed ? Visibility.Collapsed : Visibility.Visible;
         NavigationToggle.ToolTip = navigationIsCollapsed ? "Expand navigation" : "Collapse navigation";
         NavigationToggle.Content = navigationIsCollapsed ? "☰" : "☰  Navigation";
         NavigationToggle.SetValue(System.Windows.Automation.AutomationProperties.NameProperty, navigationIsCollapsed ? "Show navigation labels" : "Hide navigation labels");

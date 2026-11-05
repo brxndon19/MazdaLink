@@ -17,9 +17,10 @@ public interface IBenchFlashTransport : IReadTransport
     string? CloseWarning { get; }
 }
 
-public enum BenchFlashStage { Preflight, ProgrammingSession, Erasing, Download, Transfer, Finalizing, Resetting, Reconnecting, Readback, Complete, Stopped, Failed, RecoveryRequired, VerificationRequired }
+public enum BenchFlashStage { Preflight, ProgrammingSession, Erasing, Download, Transfer, Finalizing, Resetting, Reconnecting, Readback, Complete, Stopped, Failed, RecoveryRequired, VerificationRequired, WrittenUnverified }
+internal enum FlashEcuState { Normal, Recovery }
 public sealed record BenchFlashProgress(BenchFlashStage Stage, string Message, double Fraction, int AcknowledgedBytes, bool CanCancel);
-public sealed record BenchFlashResult(string Folder, string Readback, string ImageSha256);
+public sealed record BenchFlashResult(string Folder, string? Readback, string ImageSha256);
 
 /// <summary>Immutable Gen 1 image/backup association, with ECU-specific boot bytes preserved.</summary>
 public sealed class BenchFlashPlan
@@ -180,10 +181,82 @@ public sealed class BenchFlashWorkflow
     public BenchFlashWorkflow(BackupStore? store = null, Action<TimeSpan>? resetWait = null)
     { this.store = store ?? new(); this.resetWait = resetWait ?? (delay => Thread.Sleep(delay)); }
     private bool used;
+
+    internal static EcuIdentity IdentifyForBackup(Func<IBenchFlashTransport> factory, string mode)
+        => InspectEcu(factory, mode, link =>
+        {
+            var identity = ReadWorkflow.Identify(link);
+            ReadWorkflow.CheckEngineStopped(link);
+            return identity;
+        });
+
+    internal static FlashEcuState CheckRecoveryState(Func<IBenchFlashTransport> factory, string mode)
+        => InspectEcu(factory, mode, link => ProbeRecovery(link.Exchange));
+
+    private static T InspectEcu<T>(Func<IBenchFlashTransport> factory, string mode, Func<IBenchFlashTransport, T> inspect)
+    {
+        var link = factory();
+        T result;
+        using (link)
+        {
+            if (link.Mode != mode) throw new TransportException("Transport/evidence mode mismatch.");
+            link.Initialize();
+            result = inspect(link);
+        }
+        if (link.CloseWarning is string warning) throw new TransportException("Adapter cleanup failed: " + warning);
+        return result;
+    }
+
+    private static void Unlock(byte session, Func<byte[], byte[]> exchange)
+    {
+        if (!exchange([0x10, session]).AsSpan().SequenceEqual(new byte[] { 0x50, session }))
+            throw new TransportException("Unexpected diagnostic session acknowledgement.");
+        var seed = exchange([0x27, 1]);
+        if (seed.Length != 5 || seed[0] != 0x67 || seed[1] != 1)
+            throw new TransportException("Invalid three-byte security seed.");
+        if (seed.AsSpan(2).IndexOfAnyExcept((byte)0) >= 0 &&
+            !exchange([0x27, 2, .. SecurityAccess.SeedKey(seed.AsSpan(2))]).AsSpan().SequenceEqual(new byte[] { 0x67, 2 }))
+            throw new TransportException("Unexpected security access acknowledgement.");
+    }
+
+    private static FlashEcuState ProbeRecovery(Func<byte[], byte[]> exchange, Action<byte>? unsupported = null)
+    {
+        foreach (var request in new byte[][] { [9, 2], [9, 4], [1, 12] })
+        {
+            var reply = Probe(request);
+            if (reply is null) continue;
+            bool normal = request[0] == 1
+                ? reply.Length == 4 && reply[0] == 0x41 && reply[1] == request[1]
+                : reply.Length > 3 && reply[0] == 0x49 && reply[1] == request[1] && reply[2] == 1 &&
+                  reply.AsSpan(3).TrimEnd((byte)0).IndexOfAnyInRange((byte)33, (byte)126) >= 0 &&
+                  reply.AsSpan(3).TrimEnd((byte)0).IndexOfAnyExceptInRange((byte)32, (byte)126) < 0;
+            if (normal) return FlashEcuState.Normal;
+            throw new TransportException("Unexpected reply to an ECU identification probe.");
+        }
+        Unlock(0x87, exchange);
+        // Gen 1 read-memory probe for exactly one byte at address zero.
+        var memory = Probe([0x23, 0, 0, 0, 0, 0, 1]);
+        if (memory is null) return FlashEcuState.Recovery;
+        if (memory.Length == 2 && memory[0] == 0x63) return FlashEcuState.Normal;
+        throw new TransportException("Unexpected reply to the Gen 1 recovery probe.");
+
+        byte[]? Probe(byte[] request)
+        {
+            try { return exchange(request); }
+            catch (NegativeResponseException error) when (error.Service == request[0] && error.Code == 0x11)
+            {
+                unsupported?.Invoke(request[0]);
+                return null;
+            }
+        }
+    }
     public BenchFlashResult Execute(BenchFlashPlan plan, Func<IBenchFlashTransport> factory, string vault,
         IProgress<BenchFlashProgress>? progress = null, CancellationToken cancellation = default, string evidenceMode = "hardware",
-        bool singleReadback = false)
-        => ExecuteCore(plan, null, factory, vault, progress, cancellation, evidenceMode, singleReadback);
+        bool singleReadback = false, bool skipReadback = false)
+    {
+        if (singleReadback && skipReadback) throw new ArgumentException("Choose one readback policy.");
+        return ExecuteCore(plan, null, factory, vault, progress, cancellation, evidenceMode, skipReadback ? 0 : singleReadback ? 1 : 2);
+    }
 
     public BenchFlashResult Recover(BenchRecoveryPlan recovery, bool samePhysicalEcuConfirmed, Func<IBenchFlashTransport> factory,
         string vault, IProgress<BenchFlashProgress>? progress = null, CancellationToken cancellation = default,
@@ -191,13 +264,13 @@ public sealed class BenchFlashWorkflow
     {
         if (!samePhysicalEcuConfirmed)
             throw new InvalidDataException("Confirm the same physical ECU and its original backup before recovery.");
-        return ExecuteCore(recovery.Stock, recovery, factory, vault, progress, cancellation, evidenceMode, false);
+        return ExecuteCore(recovery.Stock, recovery, factory, vault, progress, cancellation, evidenceMode, 2);
     }
 
     private BenchFlashResult ExecuteCore(BenchFlashPlan plan, BenchRecoveryPlan? recovery, Func<IBenchFlashTransport> factory, string vault,
-        IProgress<BenchFlashProgress>? progress, CancellationToken cancellation, string evidenceMode, bool singleReadback)
+        IProgress<BenchFlashProgress>? progress, CancellationToken cancellation, string evidenceMode, int readbackPasses)
     {
-        int readbackPasses = singleReadback ? 1 : 2;
+        bool singleReadback = readbackPasses == 1;
         if (used) throw new InvalidOperationException("Create a new workflow for every attempt. Resume and retransmission are unavailable.");
         used = true;
         if (evidenceMode is not ("hardware" or "simulator")) throw new ArgumentException("Invalid evidence mode.");
@@ -231,14 +304,7 @@ public sealed class BenchFlashWorkflow
         }
         void Exact(byte[] request, byte[] expected, CancellationToken cancel = default)
         { if (!Send(request, cancel).AsSpan().SequenceEqual(expected)) throw new TransportException("Unexpected acknowledgement in " + Stage + ". No request was repeated."); }
-        void Unlock(byte session, CancellationToken cancel = default)
-        {
-            Exact([0x10, session], [0x50, session], cancel);
-            var seed = Send([0x27, 1], cancel);
-            if (seed.Length != 5 || seed[0] != 0x67 || seed[1] != 1) throw new TransportException("Invalid three-byte security seed.");
-            if (seed.AsSpan(2).IndexOfAnyExcept((byte)0) >= 0)
-                Exact([0x27, 2, .. SecurityAccess.SeedKey(seed.AsSpan(2))], [0x67, 2], cancel);
-        }
+        byte[] PreflightExchange(byte[] request) => Send(request, cancellation);
         int CheckVoltage()
         {
             int mv = link!.BatteryMillivolts;
@@ -266,21 +332,9 @@ public sealed class BenchFlashWorkflow
         void CheckBootOnly()
         {
             CheckVoltage();
-            foreach (var request in new byte[][] { [9, 2], [9, 4], [1, 12] })
-                RequireUnsupported(request);
-            Unlock(0x87, cancellation);
-            RequireUnsupported(ReadProtocol.For(plan.Identity).ReadRequest(0, 1));
-
-            void RequireUnsupported(byte[] request)
-            {
-                try { Send(request, cancellation); }
-                catch (NegativeResponseException error) when (error.Service == request[0] && error.Code == 0x11)
-                {
-                    Log("boot_probe_rejected", new() { ["service"] = error.Service, ["nrc"] = error.Code });
-                    return;
-                }
-                throw new TransportException("The boot-only response pattern was not established. Nothing was erased.");
-            }
+            if (ProbeRecovery(PreflightExchange, service => Log("boot_probe_rejected", new() { ["service"] = service, ["nrc"] = 0x11 }))
+                != FlashEcuState.Recovery)
+                throw new TransportException("The ECU is responding in normal mode. Nothing was erased.");
         }
         try
         {
@@ -299,7 +353,7 @@ public sealed class BenchFlashWorkflow
             link.Initialize(); Log("adapter_opened", new() { ["adapter"] = link.Adapter, ["mode"] = link.Mode });
             if (recovery is null)
             {
-                CheckLiveIdentity(); Unlock(0x87, cancellation);
+                CheckLiveIdentity(); Unlock(0x87, PreflightExchange);
                 var calibrationBytes = ReadRange(plan.Profile.IdentityOffset, plan.FullCalibration.Length);
                 if (!calibrationBytes.AsSpan().SequenceEqual(Encoding.ASCII.GetBytes(plan.FullCalibration)))
                     throw new TransportException("Live ROM does not contain the exact expected calibration ID. Nothing was erased.");
@@ -318,7 +372,7 @@ public sealed class BenchFlashWorkflow
                 ["priorJournalSha256"] = recovery?.PriorJournalSha256 });
             CheckVoltage();
             Update(BenchFlashStage.ProgrammingSession, "Enter programming session", .08, true);
-            Unlock(0x85, cancellation);
+            Unlock(0x85, PreflightExchange);
             cancellation.ThrowIfCancellationRequested();
             // No cancellation or UI-driven adapter disposal through erase/program/reset.
             Update(BenchFlashStage.Erasing, "Erasing application; keep power and USB connected", .1, false);
@@ -338,12 +392,22 @@ public sealed class BenchFlashWorkflow
             Update(BenchFlashStage.Finalizing, "Finalize application transfer", .79, false); Exact([0x37], [0x77]);
             Update(BenchFlashStage.Resetting, "Reset ECU after acknowledged transfer", .8, false); Exact([0x11, 1], [0x51]);
             resetAcknowledged = true; CloseLink();
-            Update(BenchFlashStage.Reconnecting, "Reconnect to the application; full verification still required", .8, false);
+            Update(BenchFlashStage.Reconnecting, "Reconnect to the application and confirm ECU identity", .8, false);
             resetWait(TimeSpan.FromSeconds(3));
             link = factory();
             if (link.Mode != evidenceMode) throw new TransportException("Transport/evidence mode mismatch.");
             link.Initialize(); Log("adapter_reopened", new() { ["adapter"] = link.Adapter, ["mode"] = link.Mode });
             var verifiedIdentity = CheckLiveIdentity();
+            if (readbackPasses == 0)
+            {
+                CloseLink();
+                DurableStorage.NewJson(store.FileSystem, Path.Combine(RunFolder, "unverified-result.json"),
+                    new { plan.ImageSha256, readbackPasses, acknowledgedBytes = AcknowledgedBytes, identityConfirmed = true, verified = false });
+                Log("completed", new() { ["sha256"] = plan.ImageSha256, ["bytes"] = AcknowledgedBytes,
+                    ["readbackPasses"] = 0, ["verified"] = false });
+                Update(BenchFlashStage.WrittenUnverified, "Write acknowledged · ECU reconnected · readback skipped", 1, false);
+                return new(RunFolder, null, plan.ImageSha256);
+            }
             Update(BenchFlashStage.Readback, singleReadback ? "Compare one complete ROM readback with the intended image" : "Verify two complete ROM readbacks", .8, true);
             var readProgress = new InlineProgress<ReadProgress>(p => Update(BenchFlashStage.Readback,
                 p.Pass > 0 ? $"{p.Message} · {p.BytesInPass:N0} / {RomInspector.RomSize:N0} readback bytes" : p.Message,

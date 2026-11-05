@@ -1,5 +1,16 @@
 # Alpha validation scope
 
+## Flash & Recover workspace · 0.8.0-alpha.2
+
+- The standalone desktop test opens the sidebar workspace and hands off a
+  verified Gen 1 backup from Connection. It writes a moved target file using
+  an original backup stored in a separate folder.
+- Recovery tests distinguish normal, bootloader and unconfirmed replies,
+  find the exact saved backup for an interrupted journal, and verify a
+  two-pass stock restore in simulation.
+- The skip-readback test confirms reset and reconnection, checks that no
+  post-reset ROM reads were sent, and verifies that the result stays unverified.
+
 ## Gen 1 flashing and recovery · 0.8.0-alpha.1
 
 - All nine bundled Gen 1 ROM layouts pass the simulated write and stock-recovery

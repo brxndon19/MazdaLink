@@ -58,7 +58,9 @@ Post-read reconnect guidance and recoverable display/recording input errors.
 ROM/offline checked; real-ECU logging validation pending.
 Flashing and stock recovery support all nine bundled Gen 1 ROM layouts.
 Gen 2 flashing is planned for an upcoming release.
-Tools opens Gen 1 flashing and recovery. Help contains the flashing guide.
+Flash & Recover opens from the sidebar. Help contains the flashing guide.
+Find verified backups by VIN or chassis ID and calibration, or by interrupted journal.
+Check ECU state before recovery. Normal writes can skip readback and remain unverified.
 Normal writes passed on one Gen 1 bench ECU with both wired adapters.
 Tactrix passed an interrupted-write stock recovery on that same bench ECU.
 Mongoose physical write and recovery qualification is pending.

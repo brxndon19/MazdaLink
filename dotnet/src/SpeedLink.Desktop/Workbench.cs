@@ -13,7 +13,7 @@ public partial class MainWindow
         var report = await EditorPane.ExerciseOffline(path, folder, () => { Navigate(2); Navigate(3); Navigate(1); });
         if (transport is not null || busy) throw new InvalidOperationException("Offline workbench accessed a transport.");
         var document = EditorPane.Document;
-        foreach (int page in Enumerable.Range(0, 6))
+        foreach (int page in Enumerable.Range(0, Pages.Items.Count))
         {
             Navigate(page); UpdateLayout();
             if (Pages.SelectedIndex != page || !ReferenceEquals(EditorPane.Document, document)) throw new InvalidOperationException("Workspace navigation lost the editor.");
@@ -45,6 +45,8 @@ public partial class MainWindow
     }
     private void Navigate(int page)
     {
+        if (flashWorkspace?.HardwareInUse == true && page != FlashPage) return;
+        if (page == FlashPage && FlashTab is not null) ShowFlashWorkspace();
         Pages.SelectedIndex = page;
         EditorPane?.SetWorkspaceActive(page == 1);
         foreach (var button in Navigation.Children.OfType<RadioButton>()) button.IsChecked = (string)button.Tag == page.ToString(System.Globalization.CultureInfo.InvariantCulture);

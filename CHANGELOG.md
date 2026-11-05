@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.0-alpha.2
+
+- Add **Flash & Recover** below Connection and a shortcut after a verified Gen 1 backup.
+- Find the original backup by VIN or chassis ID and calibration for a normal write. Remember backup locations across versions and match recovery backups to the exact interrupted journal.
+- Show saved interrupted runs by date and calibration and accept older run folders. **Check ECU state** distinguishes normal, recovery and unconfirmed replies and finds the matching backup when recovery mode is confirmed. Recheck boot mode before erase.
+- Offer two, one or zero full readbacks for normal writes. Skipped readbacks produce an explicitly unverified result. Recovery still requires two.
+
 ## 0.8.0-alpha.1
 
 - Add **Tools → Gen 1 flashing and recovery…** for every bundled Gen 1 ROM layout. Verify the original backup, target image, connected ECU identity, supply and retained boot before a normal write.

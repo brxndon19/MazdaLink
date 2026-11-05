@@ -28,8 +28,8 @@ flashing and recovery use the dedicated J2534 programming path.
 5. Disconnect and reconnect before testing the [logger](LOGGER.md). Load the
    matching current ROM, start with **Essentials**, record a short CSV and note
    the measured scan rate and any rejected channels or interruptions.
-6. For Gen 1 programming, disconnect and open **Tools → Gen 1 flashing and
-   recovery…**. Select the registered experimental Mongoose entry and follow the
+6. For Gen 1 programming, disconnect and open **Flash & Recover** in the
+   sidebar. Select the registered experimental Mongoose entry and follow the
    [flashing guide](FLASHING.md).
 
 The picker accepts registered Mongoose-Plus ISO/CAN3 / ISO3 entries that advertise

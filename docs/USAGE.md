@@ -18,8 +18,9 @@ its labels; **View → Navigation labels** controls the same setting. Your expli
 choice is remembered. Hover over an icon for its name and purpose. Use
 **Editor** to edit a file, **Connection** to read an ECU, **Logger** to record
 live data, **Recordings** to review logs, **ROM checks** to inspect a file, or
-**Backups** to find saved operations. **Tools → Gen 1 flashing and recovery…**
-opens programming for the nine bundled Gen 1 layouts. Use **Help → Gen 1 flashing
+**Backups** to find saved operations. **Flash & Recover** under **Connection**
+opens programming for the nine bundled Gen 1 layouts. A verified Gen 1 read also
+offers **Open in Flash & Recover**. Use **Help → Gen 1 flashing
 guide** for the write and recovery steps. Gen 2 flashing is planned for an upcoming
 release. [Flashing guide](FLASHING.md)
 

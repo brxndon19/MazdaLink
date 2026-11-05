@@ -36,14 +36,14 @@ public partial class MainWindow
     }
     private void WorkspaceMenu_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is MenuItem { Tag: string tag } && int.TryParse(tag, out int page) && page is >= 0 and < 6) Navigate(page);
+        if (sender is MenuItem { Tag: string tag } && int.TryParse(tag, out int page) && page >= 0 && page < Pages.Items.Count) Navigate(page);
     }
     private void Application_KeyDown(object sender, KeyEventArgs e)
     {
-        if (Keyboard.Modifiers != ModifierKeys.Control) return;
+        if (Keyboard.Modifiers != ModifierKeys.Control || flashWorkspace?.HardwareInUse == true) return;
         if (e.Key == Key.O) ApplicationOpenRom_Click(sender, e);
         else if (e.Key == Key.S && ApplicationSaveMenu.IsEnabled) ApplicationSave_Click(sender, e);
-        else if (e.Key is >= Key.D1 and <= Key.D6) Navigate(e.Key - Key.D1);
+        else if (e.Key is >= Key.D1 and <= Key.D7) Navigate(e.Key - Key.D1);
         else return;
         e.Handled = true;
     }

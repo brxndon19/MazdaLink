@@ -13,7 +13,8 @@ disabled in this build. See the [supported ROM list](SUPPORTED_ROMS.md) and the
    Close other applications using the adapter. Switch the ignition **ON** with
    the engine **OFF** and connect a stable battery support supply. SpeedLink
    checks for 12–15 V at the adapter.
-2. In **Connection**, identify the ECU and run **Read & verify backup**. Keep the
+2. If this ECU has no saved verified backup, identify it in **Connection** and
+   run **Read & verify backup** with ignition on and engine off. Keep the
    full backup directory, including `rom.bin`, its manifest, journal and both
    read captures. Use a backup from the same physical ECU, captured while it
    had the stock ROM if you want a factory restore. Recovery restores the
@@ -24,24 +25,32 @@ disabled in this build. See the [supported ROM list](SUPPORTED_ROMS.md) and the
 
 ## Write a ROM
 
-1. Disconnect the active connection in SpeedLink. Open **Tools → Gen 1 flashing
-   and recovery…**, choose **Write ROM**, and select the intended ROM and the
-   original verified backup's `rom.bin`.
-2. Choose **Check image & backup**. SpeedLink checks the bundled layout,
-   checksum, program signature and differences allowed by the definition.
-   Select the adapter, confirm the setup and choose **Write ROM**.
-3. SpeedLink matches the connected ECU's identity, checks stopped-engine RPM,
+1. Open **Flash & Recover** below **Connection** and choose **Write ROM**.
+   After a verified Gen 1 backup, **Open in Flash & Recover** carries it over
+   from Connection. Disconnect any active Connection session before programming.
+2. Select the adapter and the ROM to write, then choose **Identify ECU & find
+   backup**. SpeedLink matches the VIN or chassis ID and calibration and shows
+   the verified original it found. The target ROM can be moved or renamed.
+   **Find backup folder…** adds an older SpeedLink installation, its data
+   folder, or a full original backup folder. SpeedLink remembers the location
+   across versions. Use an existing verified backup when one is available.
+3. Review the match and confirm the setup before choosing **Write ROM**.
+   SpeedLink checks the bundled layout, checksum, program signature and
+   differences allowed by the definition.
+4. SpeedLink matches the connected ECU's identity again, checks stopped-engine RPM,
    reads the complete calibration ID, and compares the retained first 32 KiB
    against the backup before erase. It rewrites the complete 992 KiB
    application and preserves the retained boot and identity bytes.
-4. Keep power and USB connected through erase, transfer and reset. Watch the
+5. Keep power and USB connected through erase, transfer and reset. Watch the
    current stage and acknowledged byte count. **Stop** is available before
    erase and during readback. After reset, the default is two full readbacks.
-   **One full readback instead of two** is available for normal writing. Each
-   selected pass must match the intended 1 MiB image.
-5. Wait for **Complete**. On the verified bench ECU, each readback took about
-   25 minutes, so the default verification took about 50 minutes. The run
-   folder retains the outcome and the captures.
+   For normal writes, **After writing** also offers **One full readback** and
+   **Skip readback**. Each selected pass must match the intended 1 MiB image.
+6. Wait for the result. With readbacks, **Complete** means the captured ROM
+   matched the intended image. With **Skip readback**, SpeedLink checks ECU
+   identification after reset and reports **Write acknowledged · readback skipped**.
+   The written bytes are unverified. You can verify them later through Connection.
+   On the tested ECU, each full pass took about 25 minutes.
 
 ## Recover an interrupted write
 
@@ -53,12 +62,16 @@ disabled in this build. See the [supported ROM list](SUPPORTED_ROMS.md) and the
 2. For **Recovery required**, keep the same physical ECU attached. Once the
    failed operation has ended and the adapter is closed, turn the ignition off
    and wait for the ECU to shut down, then turn the ignition back on without
-   starting the engine. Reopen **Tools → Gen 1 flashing and recovery…** and
-   choose **Recover interrupted write to stock**.
-3. Select the failed run's `journal.jsonl` and the original backup's
-   `rom.bin`. Choose **Check journal & backup**, select the adapter, confirm
-   physical ECU continuity and choose **Recover stock**.
-4. SpeedLink requires positive boot-session responses and explicit
+   starting the engine. Open **Flash & Recover → Recover interrupted write**.
+3. SpeedLink selects the saved interrupted run when there is only one.
+   If several runs are listed, choose by date and calibration. **Browse older
+   run…** accepts the original run folder.
+4. Select the adapter and choose **Check ECU state**. Once recovery mode is
+   confirmed, SpeedLink looks up the exact verified backup using the saved
+   run's recorded hash and identity. **Normal mode** and **ECU state
+   unconfirmed** keep recovery disabled. Confirm the ECU is the same physical
+   unit, then choose **Recover stock**.
+5. SpeedLink rechecks the ECU before erase. It requires positive boot-session responses and explicit
    service-not-supported responses for normal application probes. Silence
    alone cannot arm recovery. A qualified recovery starts a fresh erase and
    writes the full original application from block one. It requires two exact

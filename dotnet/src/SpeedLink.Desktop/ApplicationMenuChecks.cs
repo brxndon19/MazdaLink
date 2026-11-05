@@ -27,13 +27,13 @@ public partial class MainWindow
             throw new InvalidOperationException("Gen 1 flashing or the built-in guide is missing from the menus.");
         if (ApplicationSaveMenu.IsEnabled || EditorPane.UndoButton.IsEnabled || EditorPane.CompareButton.IsEnabled)
             throw new InvalidOperationException("Editing is available without a ROM.");
-        var labels = new[] { NavLabel0, NavLabel1, NavLabel2, NavLabel3, NavLabel4, NavLabel5 };
+        var labels = new[] { NavLabel0, NavLabel1, NavLabel2, NavLabel3, NavLabel4, NavLabel5, NavLabel6 };
         if (navigationIsCollapsed || labels.Any(l => !l.IsVisible) || !NavigationLabelsMenu.IsChecked || NavigationColumn.ActualWidth is < 140 or > 160)
             throw new InvalidOperationException("Fresh navigation does not explain its destinations.");
         foreach (var button in Navigation.Children.OfType<RadioButton>())
             if (string.IsNullOrWhiteSpace(AutomationProperties.GetName(button)) || button.ToolTip is not string tip || tip.Length < 20)
                 throw new InvalidOperationException("An icon lacks a descriptive accessible name or tooltip.");
-        foreach (int page in Enumerable.Range(0, 6))
+        foreach (int page in Enumerable.Range(0, Pages.Items.Count))
         {
             Navigate(page); await MenuIdle();
             if (!ApplicationMenu.IsVisible || ApplicationMenu.ActualHeight < 20 || menu.Any(m => !m.IsVisible) ||

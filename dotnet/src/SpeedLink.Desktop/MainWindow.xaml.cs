@@ -37,6 +37,9 @@ public partial class MainWindow : Window
     internal MainWindow(string? testVault, RomInspector? editorInspector = null, TuningCodeGuard? editorGuard = null)
     {
         vault = testVault ?? Path.Combine(AppContext.BaseDirectory, "data");
+        flashBackups = new(vault, testVault is null
+            ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SpeedLink", "BackupSources")
+            : Path.Combine(testVault, "BackupSources"));
         definitionLibrary = new(Path.Combine(vault, "definitions")); definitionSnapshot = definitionLibrary.Load();
         UiTheme.Ensure(); InitializeComponent();
         if (editorInspector is not null && editorGuard is not null)
@@ -72,7 +75,11 @@ public partial class MainWindow : Window
     }
     private void Controls()
     {
-        bool idle = !busy && !closing && !exportingReport;
+        bool flashUsingAdapter = flashWorkspace?.HardwareInUse == true;
+        bool idle = !busy && !closing && !exportingReport && !flashUsingAdapter;
+        ApplicationMenu.IsEnabled = Navigation.IsEnabled = NavigationToggle.IsEnabled = !flashUsingAdapter;
+        flashWorkspace?.SetConnectionUnavailable(busy || closing || exportingReport || transport is not null);
+        FlashBackupButton.IsEnabled = idle && handoffBackup is not null;
         DefinitionsButton.IsEnabled = idle && transport is null;
         CrashReportsButton.IsEnabled = idle;
         SessionText.Text = transport is null ? "Offline" : identity?.Calibration ?? "Adapter connected";
@@ -103,7 +110,7 @@ public partial class MainWindow : Window
     }
     private async Task RunCore(Func<Task> action)
     {
-        if (busy)
+        if (busy || flashWorkspace?.HardwareInUse == true)
             return;
         busy = true;
         stop?.Dispose();
@@ -237,6 +244,7 @@ public partial class MainWindow : Window
             catch (OperationCanceledException) { FinishReadProgress(false, stopped: true); throw; }
             catch { FinishReadProgress(false); throw; }
             BackupText.Text = "Verified backup: " + result.Path;
+            OfferBackupForFlash(result);
             Log("Verified backup saved: " + result.Path);
             if (!result.Inspection.ProfileRecognized)
                 Log("Unknown ROM saved. The two reads match; checksum validation is unavailable for this layout.");
@@ -396,6 +404,13 @@ public partial class MainWindow : Window
     private bool closeApproved;
     private async void Window_Closing(object? sender, CancelEventArgs e)
     {
+        if (flashWorkspace?.IsWorking == true)
+        {
+            e.Cancel = true;
+            Navigate(FlashPage);
+            flashWorkspace.ShowWorkingMessage();
+            return;
+        }
         if (!closeApproved && !EditorPane.MayClose()) { e.Cancel = true; return; }
         if (!closeApproved) SaveLoggerSettings();
         closeApproved = true;
@@ -429,8 +444,10 @@ public partial class MainWindow : Window
     {
         Show();
         UpdateLayout();
-        if (new System.Windows.Automation.Peers.TabControlAutomationPeer(Pages).GetChildren()?.Count != 6) throw new InvalidOperationException("Workspace automation containers missing.");
-        if (Pages.Items.Count != 6 || transport is not null || image is not null || !ConnectButton.IsEnabled || ReadButton.IsEnabled || CorrectButton.IsEnabled)
+        if (new System.Windows.Automation.Peers.TabControlAutomationPeer(Pages).GetChildren()?.Count != Pages.Items.Count)
+            throw new InvalidOperationException("Workspace automation containers missing.");
+        if (Pages.Items.Count != FlashPage + 1 || !ReferenceEquals(Pages.Items[FlashPage], FlashTab) ||
+            transport is not null || image is not null || !ConnectButton.IsEnabled || ReadButton.IsEnabled || CorrectButton.IsEnabled)
             throw new InvalidOperationException("Unexpected startup state.");
         if (AdapterBox.Items.Count != 3 || AdapterBox.SelectedIndex != 0 || typeof(ReadWorkflow).Assembly.GetType("SpeedLink.Core.Simulator") is not null)
             throw new InvalidOperationException("Unexpected connection modes.");
@@ -498,7 +515,7 @@ public partial class MainWindow : Window
                 version = Version,
                 runtimeVersion = Environment.Version.ToString(),
                 framework = "WPF / .NET 10",
-                pages = 6,
+                pages = Pages.Items.Count,
                 loggerChannels = loggerRows.Count,
                 loggerProfiles = LoggerDefinition.Known.Count,
                 editorDefinitions = definitionSnapshot.Editors.Count,

@@ -8,7 +8,7 @@ flashing and recovery. Gen 2 flashing is planned for an upcoming release.
 | Guide | Contents |
 | --- | --- |
 | [Dump a ROM / request support](DUMP_A_ROM.md) | Guided adapter setup, two-pass reading, verification and ROM contribution |
-| [Gen 1 flashing and recovery](FLASHING.md) | Prepare a verified backup, write a ROM, and recover a failed application transfer |
+| [Gen 1 Flash & Recover](FLASHING.md) | Find a saved backup by ECU identity, choose a readback policy, check boot mode and recover an interrupted write |
 | [ROM editor overview](editor/README.md) | Screenshots, features and a short editing workflow |
 | [ROM editor guide](EDITOR.md) | First edit, single values, small tables, MAF curves, layout, map help, comparison and saving |
 | [Map-help conventions](TUNING_HELP.md) | Units, sign conventions, multipliers, corrections and interpretation limits |

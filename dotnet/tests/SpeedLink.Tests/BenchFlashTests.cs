@@ -8,6 +8,38 @@ namespace SpeedLink.Tests;
 
 public class BenchFlashTests
 {
+    [Fact]
+    public void skipped_readback_reconnects_without_reading_flash_or_claiming_verification()
+    {
+        using var temp = new TempFolder();
+        var state = new PeerState();
+        var workflow = new BenchFlashWorkflow(resetWait: _ => { });
+        var result = workflow.Execute(Plan(temp), state.Open, temp.Path, evidenceMode: "simulator", skipReadback: true);
+        Assert.Null(result.Readback);
+        Assert.Equal(BenchFlashStage.WrittenUnverified, workflow.Stage);
+        Assert.Equal(BenchFlashPlan.Length, workflow.AcknowledgedBytes);
+        var afterReset = state.Requests.SkipWhile(p => p[0] != 0x11).Skip(1).ToArray();
+        Assert.Equal(new byte[] { 0x09, 0x09, 0x01 }, afterReset.Select(p => p[0]));
+        Assert.False(File.Exists(Path.Combine(result.Folder, "verified-result.json")));
+        var journal = new BackupStore().InspectJournal(Path.Combine(result.Folder, "journal.jsonl"));
+        Assert.True(journal.Complete);
+        Assert.False(journal.LastDetails!["verified"]!.GetValue<bool>());
+    }
+
+    [Fact]
+    public void ecu_state_probe_classifies_normal_and_boot_and_refuses_silence()
+    {
+        var state = new PeerState();
+        Assert.Equal(FlashEcuState.Normal, BenchFlashWorkflow.CheckRecoveryState(state.Open, "simulator"));
+        state.BootOnly = true;
+        Assert.Equal(FlashEcuState.Recovery, BenchFlashWorkflow.CheckRecoveryState(state.Open, "simulator"));
+        state.Fault = (request, response) => request[0] == 0x10 ? null : response;
+        Assert.Throws<TransportException>(() => BenchFlashWorkflow.CheckRecoveryState(state.Open, "simulator"));
+        Assert.All(state.Peers, p => Assert.True(p.Disposed));
+        Assert.DoesNotContain(state.Requests, p => p[0] is 0xB1 or 0x34 or 0x36 or 0x37 or 0x11 ||
+            p.AsSpan().SequenceEqual(new byte[] { 0x10, 0x85 }));
+    }
+
     private const string Calibration = "L3M6EG000L3T60A1", Chassis = "GG3P123456";
     private static readonly byte[] Stock = Fixture.Image(Fixture.Profiles.Single(p => p.Identity == Calibration));
     private static BenchFlashPlan Plan(TempFolder temp, string? image = null)
@@ -167,7 +199,7 @@ public class BenchFlashTests
         var recovery = new BenchFlashWorkflow(resetWait: _ => { });
         var result = recovery.Recover(recover, true, peer.Open, temp.Path, evidenceMode: "simulator");
         Assert.Equal(BenchFlashStage.Complete, recovery.Stage);
-        Assert.Equal(original, File.ReadAllBytes(result.Readback));
+        Assert.Equal(original, File.ReadAllBytes(result.Readback!));
         Assert.Equal(original, peer.Memory);
         Assert.True(File.Exists(Path.Combine(Path.GetDirectoryName(result.Readback)!, "pass2.read")));
     }
@@ -195,7 +227,7 @@ public class BenchFlashTests
         var recover = SimRecovery(Path.Combine(flow.RunFolder!, "journal.jsonl"), backup);
         peer.BootOnly = true;
         var result = new BenchFlashWorkflow(resetWait: _ => { }).Recover(recover, true, peer.Open, temp.Path, evidenceMode: "simulator");
-        Assert.Equal(original, File.ReadAllBytes(result.Readback));
+        Assert.Equal(original, File.ReadAllBytes(result.Readback!));
         Assert.Equal(original, File.ReadAllBytes(Path.Combine(Path.GetDirectoryName(result.Readback)!, "pass2.read")));
     }
 
@@ -243,7 +275,7 @@ public class BenchFlashTests
             string data = commands[blockIndexes[block] + 1];
             Assert.Equal("36" + Convert.ToHexString(original.AsSpan(BenchFlashPlan.Start + block * BenchFlashPlan.Chunk, BenchFlashPlan.Chunk)) + "\r", data);
         }
-        Assert.Equal(original, File.ReadAllBytes(result.Readback));
+        Assert.Equal(original, File.ReadAllBytes(result.Readback!));
         using var report = JsonDocument.Parse(File.ReadAllText(Path.Combine(result.Folder, "verified-result.json")));
         Assert.Equal(singleReadback ? 1 : 2, report.RootElement.GetProperty("readbackPasses").GetInt32());
     }
@@ -275,7 +307,7 @@ public class BenchFlashTests
         var state = new PeerState(); var flow = new BenchFlashWorkflow(resetWait: _ => { });
         var edit = flow.Execute(plan, state.Open, Path.Combine(temp.Path, "edit"), evidenceMode: "simulator", singleReadback: true);
         Assert.Equal(modified, state.Memory);
-        Assert.Equal(modified, File.ReadAllBytes(edit.Readback));
+        Assert.Equal(modified, File.ReadAllBytes(edit.Readback!));
         Assert.Equal("pass1.read", Path.GetFileName(edit.Readback));
         var readbackFolder = Path.GetDirectoryName(edit.Readback)!;
         Assert.False(File.Exists(Path.Combine(readbackFolder, "backup.json")));

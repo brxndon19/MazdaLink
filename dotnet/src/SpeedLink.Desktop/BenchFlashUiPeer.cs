@@ -34,6 +34,7 @@ internal sealed class BenchFlashUiPeerState(byte[] baseline, EcuIdentity identit
     private readonly byte[] memory = baseline.ToArray();
     private int cursor = 0x8000;
     private bool loseNextTransfer, bootOnly;
+    internal bool ProbesUnavailable { get; set; }
     internal void SimulateInterruptedWrite() => loseNextTransfer = true;
     public IBenchFlashTransport Open() => new Peer(this);
     private sealed class Peer(BenchFlashUiPeerState state) : IBenchFlashTransport
@@ -49,6 +50,7 @@ internal sealed class BenchFlashUiPeerState(byte[] baseline, EcuIdentity identit
         public byte[] Exchange(byte[] p)
         {
             if (disposed) throw new IOException("Closed synthetic peer.");
+            if (state.ProbesUnavailable) throw new TransportException("Synthetic timeout.");
             if (state.bootOnly && p[0] is 0x09 or 0x01 or 0x23) throw new NegativeResponseException(p[0], 0x11);
             if (p.AsSpan().SequenceEqual(new byte[] { 9, 2 })) return [0x49, 2, 1, .. Encoding.ASCII.GetBytes(state.Identity.VehicleIdentifier!)];
             if (p.AsSpan().SequenceEqual(new byte[] { 9, 4 })) return [0x49, 4, 1, .. Encoding.ASCII.GetBytes(state.Identity.Calibration!)];

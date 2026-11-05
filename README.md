@@ -4,7 +4,7 @@ Open-source ROM reading, data logging, ROM editing, and Gen 1 flashing and recov
 
 [![C# checks](https://github.com/mrphyslaw/SpeedLink/actions/workflows/checks-dotnet.yml/badge.svg)](https://github.com/mrphyslaw/SpeedLink/actions/workflows/checks-dotnet.yml)
 
-**[Download v0.8.0-alpha.1](https://github.com/mrphyslaw/SpeedLink/releases/tag/v0.8.0-alpha.1)** · A single Windows EXE with the runtime included.
+**[Download v0.8.0-alpha.2](https://github.com/mrphyslaw/SpeedLink/releases/tag/v0.8.0-alpha.2)** · A single Windows EXE with the runtime included.
 
 **Watch the 4-minute SpeedLink demo (4:11)**
 
@@ -13,7 +13,6 @@ https://github.com/user-attachments/assets/91f3d616-09c2-4cf5-926d-4642d296aaaa
 See verified backups, real-ROM editing, 2D/3D views, saving and ROM checks,
 logging and recorded-log review, definitions and built-in help.
 **Real-ROM editing shown; ECU reading and logging simulated.**
-[Download the 1080p MP4](https://github.com/mrphyslaw/SpeedLink/releases/download/v0.7.0-alpha.5/SpeedLink-Getting-Started-Demo.mp4) (approximately 56 MB).
 
 Use the permanent File, Edit, View, Tools and Help menus throughout the app. Sidebar icons show their workspace names by default; collapse them when you want more map space. Open several maps in independently resizable panes or separate Windows windows. Auto fit preserves readable text and uses available cell spacing. Replace the EXE and keep your existing `data` folder. See [changes](CHANGELOG.md), the [editor guide](docs/EDITOR.md) and [reporting problems](docs/TROUBLESHOOTING.md).
 
@@ -24,8 +23,12 @@ forward. **View → Map layout and display → Tile maps side by side** restores
 SpeedLink can dump unknown 1 MiB MZR DISI ROMs, create two-pass verified backups,
 log stock-ECU data, review recordings and edit the ten supported stock ROM layouts.
 **Flashing and stock recovery are Gen 1 only**, covering all nine bundled Gen 1
-ROM layouts. Open **Tools → Gen 1 flashing and recovery…** and use the original
-verified backup from the same ECU. **Gen 2 flashing is planned for an upcoming
+ROM layouts. Open **Flash & Recover** below **Connection**. Pick the ROM to
+write and SpeedLink looks up the ECU's verified original by VIN or chassis ID
+and calibration. Recovery lists saved runs by date and calibration, checks the
+ECU state, and finds the exact backup automatically. Normal writes offer two, one, or zero full
+readbacks. The zero-readback result is marked unverified. Recovery requires
+two matching readbacks. **Gen 2 flashing is planned for an upcoming
 release.** SpeedLink ships without ROM files or adapter drivers.
 [Flashing and recovery guide](docs/FLASHING.md)
 

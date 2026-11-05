@@ -21,6 +21,24 @@ public sealed class BenchRecoveryPlan
 
     private static BenchRecoveryPlan LoadCore(string journalPath, BenchFlashPlan stock, string requiredMode)
     {
+        var (binding, journalHash) = ReadBinding(journalPath, requiredMode);
+        if (binding["calibration"]?.GetValue<string>() != stock.FullCalibration ||
+            binding["backupSha256"]?.GetValue<string>() != stock.BackupSha256 ||
+            binding["bootSha256"]?.GetValue<string>() != stock.BootSha256 ||
+            binding["vehicleIdentitySha256"]?.GetValue<string>() != stock.VehicleIdentityHash)
+            throw new InvalidDataException("Recovery requires the exact original backup recorded in this journal.");
+        return new(stock, journalHash);
+    }
+
+    internal static (string Calibration, string BackupHash) Describe(string journalPath, string requiredMode)
+    {
+        var binding = ReadBinding(journalPath, requiredMode).Binding;
+        return (binding["calibration"]?.GetValue<string>() ?? throw new InvalidDataException("The journal has no calibration."),
+            binding["backupSha256"]?.GetValue<string>() ?? throw new InvalidDataException("The journal has no original backup hash."));
+    }
+
+    private static (JsonObject Binding, string JournalHash) ReadBinding(string journalPath, string requiredMode)
+    {
         if (Path.GetFileName(journalPath) != "journal.jsonl")
             throw new InvalidDataException("Select the interrupted flash journal.");
         var store = new BackupStore();
@@ -57,12 +75,8 @@ public sealed class BenchRecoveryPlan
         if (!journal.Valid || journal.Complete || journal.Mode != requiredMode ||
             journal.Operation is not ("local_bench_flash" or "local_bench_recovery") ||
             !eraseIntent || resetAcknowledged || binding is null ||
-            binding["calibration"]?.GetValue<string>() != stock.FullCalibration ||
-            binding["backupSha256"]?.GetValue<string>() != stock.BackupSha256 ||
-            binding["bootSha256"]?.GetValue<string>() != stock.BootSha256 ||
-            binding["vehicleIdentitySha256"]?.GetValue<string>() != stock.VehicleIdentityHash ||
             RomInspector.Hash(store.FileSystem.Read(journalPath)) != journalHash)
-            throw new InvalidDataException("Recovery requires an intact interrupted erase/write journal tied to this exact backup.");
-        return new(stock, journalHash);
+            throw new InvalidDataException("Select an intact journal from an interrupted erase or write.");
+        return (binding, journalHash);
     }
 }
