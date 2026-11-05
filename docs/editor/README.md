@@ -2,7 +2,8 @@
 
 An offline editor for the ten bundled Mazdaspeed/MPS stock ROM layouts, built
 into the same Windows app as the reader and logger. No adapter is needed to edit
-a file. ECU programming remains disabled in this alpha. The experimental Gen 2
+a file. The [flashing workflow](../FLASHING.md) supports all nine bundled Gen 1
+ROMs. The experimental Gen 2
 L3CGEE000 profile has separate [integrity checks and validation limits](../GEN2.md).
 
 ## Find your way around

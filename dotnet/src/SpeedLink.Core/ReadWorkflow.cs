@@ -98,14 +98,27 @@ public sealed class ReadWorkflow
             throw new TransportException($"Engine is running ({rpm:g} RPM). Switch it off before reading.");
     }
     public BackupResult ReadBackup(IReadTransport transport, EcuIdentity expected, string vault, IProgress<ReadProgress>? progress = null, CancellationToken cancellation = default, ReadFamily unknownFamily = ReadFamily.Gen1)
+        => Capture(transport, expected, vault, progress, cancellation, unknownFamily, null);
+
+    public string VerifyKnownImage(IReadTransport transport, EcuIdentity expected, string vault, ReadOnlySpan<byte> expectedImage,
+        IProgress<ReadProgress>? progress = null, CancellationToken cancellation = default)
     {
+        if (expectedImage.Length != RomInspector.RomSize)
+            throw new ArgumentException("Verification requires the complete expected ROM.", nameof(expectedImage));
+        return Capture(transport, expected, vault, progress, cancellation, ReadFamily.Gen1, expectedImage.ToArray()).Path;
+    }
+
+    private BackupResult Capture(IReadTransport transport, EcuIdentity expected, string vault, IProgress<ReadProgress>? progress,
+        CancellationToken cancellation, ReadFamily unknownFamily, byte[]? expectedImage)
+    {
+        int passes = expectedImage is null ? 2 : 1;
         if (transport.Mode == "hardware")
         {
             if (transport.ReadAttempted)
                 throw new TransportException("Reconnect and identify before another read.");
             transport.ReadAttempted = true;
         }
-        var (folder, journal) = store.CreateOperation(vault, transport.Mode, "read_backup");
+        var (folder, journal) = store.CreateOperation(vault, transport.Mode, expectedImage is null ? "read_backup" : "verify_known_image");
         transport.Diagnostics?.AttachJournal(journal.Path);
         transport.Diagnostics?.Record("read.started", new { chunkBytes = transport.ReadChunkSize });
         BackupResult result;
@@ -114,7 +127,8 @@ public sealed class ReadWorkflow
             try
             {
                 cancellation.ThrowIfCancellationRequested();
-                progress?.Report(new(0, "Preparing backup · checking ECU and read access…") { Stage = BackupReadStage.Preparing });
+                string action = expectedImage is null ? "backup" : "readback";
+                progress?.Report(new(0, $"Preparing {action} · checking ECU and read access…") { Stage = BackupReadStage.Preparing });
                 var identity = Identify(transport);
                 if (!identity.MatchesVehicle(expected))
                     throw new TransportException("ECU identity changed. Reconnect and identify again.");
@@ -148,10 +162,11 @@ public sealed class ReadWorkflow
                 if (chunk is < 1 or > 3968)
                     throw new TransportException("Unsupported read chunk size.");
                 chunk = Math.Min(chunk, protocol.MaximumBlock);
-                for (int pass = 1; pass <= 2; pass++)
+                for (int pass = 1; pass <= passes; pass++)
                 {
                     transport.Diagnostics?.Record("read.pass_started", new { pass });
-                    progress?.Report(new((pass - 1) / 2.0, $"Reading pass {pass} of 2") { Pass = pass });
+                    string passMessage = $"Reading pass {pass} of {passes}";
+                    progress?.Report(new((double)(pass - 1) / passes, passMessage) { Pass = pass });
                     data = new byte[RomInspector.RomSize];
                     using var file = store.FileSystem.CreateNew(System.IO.Path.Combine(folder, $"pass{pass}.read"));
                     for (int address = 0; address < data.Length; address += chunk)
@@ -178,7 +193,9 @@ public sealed class ReadWorkflow
                             ["bytes"] = count,
                             ["sha256"] = RomInspector.Hash(block)
                         });
-                        progress?.Report(new(((pass - 1) * RomInspector.RomSize + address + count) / (2.0 * RomInspector.RomSize), $"Reading pass {pass} of 2") { Pass = pass, BytesInPass = address + count });
+                        if (expectedImage is not null && !block.AsSpan().SequenceEqual(expectedImage.AsSpan(address, count)))
+                            throw new InvalidDataException($"Readback differs from the intended image in the block at 0x{address:X6}.");
+                        progress?.Report(new(((pass - 1) * RomInspector.RomSize + address + count) / ((double)passes * RomInspector.RomSize), passMessage) { Pass = pass, BytesInPass = address + count });
                     }
                     hashes.Add(RomInspector.Hash(data));
                     journal.Append("read_pass_complete", new()
@@ -188,14 +205,26 @@ public sealed class ReadWorkflow
                     });
                 }
                 cancellation.ThrowIfCancellationRequested();
-                progress?.Report(new(1, "Verifying and saving backup…") { Stage = BackupReadStage.Verifying, Pass = 2, BytesInPass = RomInspector.RomSize });
-                if (hashes[0] != hashes[1])
+                progress?.Report(new(1, $"Verifying and saving {action}…") { Stage = BackupReadStage.Verifying, Pass = passes, BytesInPass = RomInspector.RomSize });
+                if (expectedImage is null && hashes[0] != hashes[1])
                     throw new TransportException("The two ROM reads differ. Both captures were retained; no verified backup was created.");
                 var inspection = inspector.Inspect(data);
-                var path = store.Seal(folder, data, identity with { ReadProtocolName = protocol.Family.ToString() }, inspection, hashes[0], hashes[1], transport.Mode);
+                string path;
+                if (expectedImage is null)
+                {
+                    path = store.Seal(folder, data, identity with { ReadProtocolName = protocol.Family.ToString() }, inspection, hashes[0], hashes[1], transport.Mode);
+                }
+                else
+                {
+                    path = Path.Combine(folder, "pass1.read");
+                    if (!inspection.ProfileValid || inspection.ChecksumValid != true ||
+                        !store.FileSystem.Read(path).AsSpan().SequenceEqual(expectedImage))
+                        throw new InvalidDataException("The saved readback differs from the intended image or failed its integrity check.");
+                    store.FileSystem.MarkReadOnly(path);
+                }
                 journal.Append("completed", new()
                 {
-                    ["rom"] = path,
+                    [expectedImage is null ? "rom" : "readback"] = path,
                     ["sha256"] = hashes[0],
                     ["profileValid"] = inspection.ProfileValid
                 });
@@ -211,7 +240,8 @@ public sealed class ReadWorkflow
                 throw;
             }
         }
-        progress?.Report(new(1, "Backup verified · two matching reads") { Stage = BackupReadStage.Complete, Pass = 2, BytesInPass = RomInspector.RomSize });
+        string completed = expectedImage is null ? "Backup verified · two matching reads" : "Complete readback matches the intended image";
+        progress?.Report(new(1, completed) { Stage = BackupReadStage.Complete, Pass = passes, BytesInPass = RomInspector.RomSize });
         return result;
     }
 }

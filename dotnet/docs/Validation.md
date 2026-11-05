@@ -1,5 +1,15 @@
 # C# validation
 
+## Gen 1 programming — 0.8.0-alpha.1
+
+- Synthetic tests cover write and stock recovery for all nine bundled Gen 1
+  layouts, and reject Gen 2 before opening a programming transport. Fault
+  cases exercise preflight, ambiguous acknowledgements, cancellation, journal
+  failures, readback mismatch and adapter request guards.
+- The standalone EXE exercises file validation, arming, progress, locking,
+  interruption and recovery through the desktop window with synthetic data.
+  See the [hardware results](../../docs/VALIDATION.md) for bench coverage.
+
 ## Logger workflow follow-up checks — 0.7.0-alpha.9
 
 - The latest-recording shortcut is exercised across every logger profile after

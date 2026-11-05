@@ -21,7 +21,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Source archive failed.' }
 & (Join-Path $PSScriptRoot 'Verify-SourceArchive.ps1') -Archive $archive -Repository $repository -Commit $commit
 $hashes = @{}
 foreach ($name in @('SpeedLink.exe', $archiveName)) { $hashes[$name] = (Get-FileHash -LiteralPath (Join-Path $folder $name) -Algorithm SHA256).Hash.ToLowerInvariant() }
-$manifest = [ordered]@{ schemaVersion=1; version=$version; tag="v$version"; sourceCommit=$commit; sdk=$sdk; runtime=$runtime; architecture='win-x86'; files=$hashes; ecuProgrammingEnabled=$false; realEcuAcceptance='pending' }
+$manifest = [ordered]@{ schemaVersion=1; version=$version; tag="v$version"; sourceCommit=$commit; sdk=$sdk; runtime=$runtime; architecture='win-x86'; files=$hashes; ecuProgrammingEnabled=$true; programmingFamily='Gen1'; realEcuAcceptance='limited-bench' }
 $manifest | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $folder 'release.json') -Encoding utf8NoBOM
 $hashes['release.json'] = (Get-FileHash -LiteralPath (Join-Path $folder 'release.json') -Algorithm SHA256).Hash.ToLowerInvariant()
 @($hashes.Keys | Sort-Object | ForEach-Object { "$($hashes[$_])  $_" }) | Set-Content -LiteralPath (Join-Path $folder 'SHA256SUMS.txt') -Encoding utf8NoBOM

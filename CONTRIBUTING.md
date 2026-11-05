@@ -4,8 +4,9 @@ Release packaging, failure artifacts and reviewed dependency updates are describ
 in [maintenance](docs/MAINTENANCE.md). Unexpected crashes must be captured locally
 without uploading data, copying firmware or silently continuing after a fatal error.
 
-SpeedLink supports ROM reading, logging and offline editing. ECU programming
-remains disabled. Keep that scope explicit when proposing changes.
+SpeedLink supports ROM reading, logging, offline editing, and flashing and
+recovery for the nine bundled Gen 1 layouts. Gen 2 programming is planned and
+requires independent qualification.
 
 The current app uses C#/.NET and WPF. Use the SDK pinned in `dotnet/global.json`.
 From `dotnet/`, run:
@@ -30,13 +31,12 @@ code without guessed repair. Verify the durable file readback, preserve original
 and run `RomSaveIntegrityTests` across every supported editor profile. Definition
 imports and alternate UI paths must retain the same mandatory save operation.
 
-Offline ECU models belong in `dotnet/tests/SpeedLink.Tests`. Keep them outside
-production code so they
-are not included in the executable or exposed as a user connection mode.
+Keep protocol models in `dotnet/tests/SpeedLink.Tests`. The standalone desktop
+smoke test uses its own synthetic peer with no adapter access.
 
-The physical transport has a request allowlist checked before any serial output.
-Keep programming and DTC-clearing requests blocked. An offline protocol model or
-simulator is not proof that a real ECU can be programmed or recovered.
+Keep reader and logger allowlists read-only. Restrict programming requests to
+the dedicated Gen 1 workflow and record physical qualification separately from
+synthetic test results.
 
 Do not commit firmware dumps, customer backups, VINs, credentials, commercial
 assemblies, vendor drivers or local research archives. Share a minimal synthetic

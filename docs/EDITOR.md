@@ -2,7 +2,8 @@
 
 Edit a supported ROM without an adapter. SpeedLink keeps the original file and
 exports each revision as a new file with mandatory ROM-specific checksum/integrity checks.
-ECU programming remains disabled.
+To write an export to a supported Gen 1 ECU, use the original verified backup
+from that ECU and follow the [flashing guide](FLASHING.md).
 
 **Checksum correction is automatic and mandatory on every ROM export, including
 saves without table edits. There is no setting to disable it.** Gen 1 saves always

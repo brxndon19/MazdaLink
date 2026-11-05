@@ -22,6 +22,7 @@
     <EmbeddedResource Include="../../../docs/LOGGER.md" LogicalName="SpeedLink.LoggerHelp.md" />
     <EmbeddedResource Include="../../../docs/EDITOR.md" LogicalName="SpeedLink.EditorHelp.md" />
     <EmbeddedResource Include="../../../docs/GEN2.md" LogicalName="SpeedLink.Gen2Help.md" />
+    <EmbeddedResource Include="../../../docs/FLASHING.md" LogicalName="SpeedLink.FlashingHelp.md" />
     <EmbeddedResource Include="../../../docs/TROUBLESHOOTING.md" LogicalName="SpeedLink.SupportHelp.md" />
     <EmbeddedResource Include="../../../docs/ADAPTERS.md" LogicalName="SpeedLink.AdapterHelp.md" />
     <EmbeddedResource Include="../../third_party/*" LogicalName="SpeedLink.Notices.%(Filename)%(Extension)" />

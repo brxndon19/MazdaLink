@@ -1,10 +1,10 @@
 # SpeedLink
 
-Open-source ROM reading, data logging and offline ROM editing for Mazdaspeed and Mazda MPS.
+Open-source ROM reading, data logging, ROM editing, and Gen 1 flashing and recovery for Mazdaspeed and Mazda MPS.
 
 [![C# checks](https://github.com/mrphyslaw/SpeedLink/actions/workflows/checks-dotnet.yml/badge.svg)](https://github.com/mrphyslaw/SpeedLink/actions/workflows/checks-dotnet.yml)
 
-**[Download v0.7.0-alpha.9](https://github.com/mrphyslaw/SpeedLink/releases/tag/v0.7.0-alpha.9)** — a single Windows EXE, with no installer or .NET installation required.
+**[Download v0.8.0-alpha.1](https://github.com/mrphyslaw/SpeedLink/releases/tag/v0.8.0-alpha.1)** · A single Windows EXE with the runtime included.
 
 **Watch the 4-minute SpeedLink demo (4:11)**
 
@@ -23,8 +23,14 @@ forward. **View → Map layout and display → Tile maps side by side** restores
 
 SpeedLink can dump unknown 1 MiB MZR DISI ROMs, create two-pass verified backups,
 log stock-ECU data, review recordings and edit the ten supported stock ROM layouts.
-ECU access remains read-only: **flashing is disabled**. ROM files and adapter drivers
-are not bundled. L3M6EG000 has a two-pass hardware ROM capture; broader ECU/adapter coverage and real-ECU logging validation remain pending.
+**Flashing and stock recovery are Gen 1 only**, covering all nine bundled Gen 1
+ROM layouts. Open **Tools → Gen 1 flashing and recovery…** and use the original
+verified backup from the same ECU. **Gen 2 flashing is planned for an upcoming
+release.** SpeedLink ships without ROM files or adapter drivers.
+[Flashing and recovery guide](docs/FLASHING.md)
+
+Tactrix Openport 2.0 and vLinker FS have physical write coverage.
+Mongoose-Plus ISO/CAN3 is available for experimental Gen 1 flashing and recovery.
 
 Connect & identify accepts standard VINs and supported short chassis-number
 replies, including space/null-padded identifiers reported by some ECUs. A chassis
@@ -236,7 +242,11 @@ Related RomRaider definitions are available in [MazdaSpeedDefs](https://github.c
 - **Still pending:** broader Mazda ECU read coverage, physical sensor readings,
   running-engine behavior and achievable vehicle logging rates. The 346 channel/profile
   vehicle validation checks remain pending.
-- **Planned:** ECU flashing. Live programming is disabled in this release.
+- **Gen 1 programming:** Nine bundled layouts pass the offline write and recovery
+  matrix. Both supported adapters completed edited and stock writes on one
+  L3M6EG000 bench ECU. Tactrix also completed recovery after a controlled
+  interruption. Broader hardware qualification and Gen 2 flashing are upcoming.
+  [Validation scope](docs/VALIDATION.md)
 
 Bench testing uses simulated ECU replies over real adapters. A matching pair of
 ROM reads verifies consistency; it does not establish factory provenance or

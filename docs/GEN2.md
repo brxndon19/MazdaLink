@@ -2,7 +2,8 @@
 
 L3CGEE000 adds a Gen 2 editor definition and a stock-ROM logger. Reading uses
 a separate Gen 2 application protocol. Real ECU acceptance, measured sensor
-values and update rates remain unverified. ECU programming is disabled.
+values and update rates remain unverified. Gen 2 flashing is planned for an
+upcoming release. [The current flashing workflow](FLASHING.md) supports Gen 1 only.
 
 ## Read a ROM
 

@@ -21,6 +21,10 @@ public partial class MainWindow
         var menu = ApplicationMenu.Items.OfType<MenuItem>().ToArray();
         if (!menu.Select(m => m.Header.ToString()!.Replace("_", "")).SequenceEqual(["File", "Edit", "View", "Tools", "Help"]))
             throw new InvalidOperationException("The permanent application menus are incomplete.");
+        if (!menu[3].Items.OfType<MenuItem>().Any(item => Equals(item.Header, "Gen 1 _flashing and recovery…")) ||
+            !menu[4].Items.OfType<MenuItem>().Any(item => Equals(item.Tag, "Gen 1 flashing and recovery")) ||
+            !Resource("SpeedLink.FlashingHelp.md").Contains("Gen 2 flashing is planned", StringComparison.Ordinal))
+            throw new InvalidOperationException("Gen 1 flashing or the built-in guide is missing from the menus.");
         if (ApplicationSaveMenu.IsEnabled || EditorPane.UndoButton.IsEnabled || EditorPane.CompareButton.IsEnabled)
             throw new InvalidOperationException("Editing is available without a ROM.");
         var labels = new[] { NavLabel0, NavLabel1, NavLabel2, NavLabel3, NavLabel4, NavLabel5 };

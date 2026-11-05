@@ -1,19 +1,19 @@
 # Adapter status and testing candidates
 
-Hardware support is separate from ROM/profile coverage. Bench qualification uses
-simulated ECU replies over real adapters; real Mazda ECU acceptance remains
-pending. ECU access is read-only and flashing is disabled.
+Hardware support is separate from ROM/profile coverage. For programming, normal
+write checks used one L3M6EG000 bench ECU with both adapters. Tactrix also passed
+controlled interruption and recovery on that ECU. [Gen 1 flashing guide](FLASHING.md)
 
 | Adapter | SpeedLink status |
 | --- | --- |
-| Vgate vLinker FS USB | Available; isolated-bench reader and logger checks passed |
-| Tactrix Openport 2.0 | Available through its installed J2534 driver; isolated-bench reader and logger checks passed |
-| Mongoose-Plus ISO/CAN3 | Experimental reader/logger option; hardware testing pending |
+| Vgate vLinker FS USB | Reader and logger available. Gen 1 writing bench-tested. Recovery available with offline coverage and physical recovery pending. |
+| Tactrix Openport 2.0 | Reader and logger available through its installed J2534 driver. Gen 1 writing and controlled recovery bench-tested. |
+| Mongoose-Plus ISO/CAN3 | Experimental reader/logger and Gen 1 flashing/recovery. A user reported a successful dump. Physical programming is pending qualification. |
 
 ## Mongoose-Plus ISO/CAN3
 
-The experimental option reuses the J2534 reader/logger transport. It is ready
-for testing; no Mongoose hardware or real-ECU qualification is claimed.
+The experimental option uses the J2534 reader/logger transport. Gen 1
+flashing and recovery use the dedicated J2534 programming path.
 
 1. Install the manufacturer's Mongoose-Plus ISO/CAN3 Windows driver, including
    its 32-bit J2534-1 04.04 component. Close other diagnostic applications.
@@ -28,6 +28,9 @@ for testing; no Mongoose hardware or real-ECU qualification is claimed.
 5. Disconnect and reconnect before testing the [logger](LOGGER.md). Load the
    matching current ROM, start with **Essentials**, record a short CSV and note
    the measured scan rate and any rejected channels or interruptions.
+6. For Gen 1 programming, disconnect and open **Tools → Gen 1 flashing and
+   recovery…**. Select the registered experimental Mongoose entry and follow the
+   [flashing guide](FLASHING.md).
 
 The picker accepts registered Mongoose-Plus ISO/CAN3 / ISO3 entries that advertise
 ISO15765. This adapter has its own list; Openport/Tactrix entries remain on their
@@ -72,8 +75,9 @@ keep raw captures and the full backup private unless a private route is agreed.
 6. Obtain real-ECU reader/logger acceptance before describing that combination
    as vehicle validated. Adapter failures must not trigger automatic resends.
 
-No Mongoose hardware has been tested by this project yet. The experimental
-option does not enable ECU programming or qualify other Mongoose variants.
+Physical Mongoose logging, Gen 1 programming and recovery still need
+qualification. The experimental programming option covers the ISO/CAN3 or ISO3
+registration.
 
 Manufacturer references: [driver downloads](https://opusivs-au.com/support/downloads/)
 and [J2534 driver discovery](https://opusivs-au.com/support/oem-customer-support/how-to-program-with-opus-ivss-passthru-sae-j2534-dll/discovery-of-the-dll/).

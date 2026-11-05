@@ -242,7 +242,8 @@ public sealed class BackupStore
         catch { journal.Dispose(); throw; }
         return (folder, journal);
     }
-    public JournalInspection InspectJournal(string path)
+    public JournalInspection InspectJournal(string path) => InspectJournal(path, null);
+    internal JournalInspection InspectJournal(string path, Action<IReadOnlyList<JsonObject>>? observe)
     {
         var previous = new string('0', 64);
         var rows = new List<JsonObject>();
@@ -272,6 +273,7 @@ public sealed class BackupStore
             if (version is not (null or 1 or 2))
                 throw new InvalidDataException("Unsupported journal version.");
             var pending = version == 2 && FileSystem.Exists(path + ".incomplete");
+            observe?.Invoke(rows);
             return new(path, true, rows[^1]["event"]!.GetValue<string>() == "completed" && !pending, rows.Count,
                 rows[0]["details"]?["operation"]?.GetValue<string>() ?? "unknown", rows[0]["details"]?["mode"]?.GetValue<string>() ?? "unknown",
                 rows[^1]["event"]!.GetValue<string>(), rows[^1]["details"]!.AsObject(), pending);

@@ -12,7 +12,7 @@ function fixture() {
   const names = ['SpeedLink.exe', `SpeedLink-${tag}-source.zip`];
   for (const name of names) writeFileSync(join(folder, name), 'synthetic packaging test');
   const files = Object.fromEntries(names.map(name => [name, digest(name)]));
-  writeFileSync(join(folder, 'release.json'), JSON.stringify({ schemaVersion: 1, version: tag.slice(1), tag, sourceCommit: sha, files, architecture: 'win-x86', ecuProgrammingEnabled: false }));
+  writeFileSync(join(folder, 'release.json'), JSON.stringify({ schemaVersion: 1, version: tag.slice(1), tag, sourceCommit: sha, files, architecture: 'win-x86', ecuProgrammingEnabled: true, programmingFamily: 'Gen1' }));
   writeFileSync(join(folder, 'SHA256SUMS.txt'), [...names, 'release.json'].map(name => `${digest(name)}  ${name}`).join('\n') + '\n');
   return folder;
 }
@@ -53,12 +53,20 @@ for (const failure of ['upload', 'digest', 'host', 'inventory', 'existing']) tes
     if (failure === 'host') assert.equal(fake.calls.some(c => c.host === 'example.com'), false);
   } finally { rmSync(folder, { recursive: true }); }
 });
-for (const failure of ['changed executable', 'wrong commit', 'wrong tag', 'extra file', 'missing hashes']) test(`rejects ${failure}`, () => {
+for (const failure of ['changed executable', 'wrong commit', 'wrong tag', 'extra file', 'missing hashes', 'Gen 2 programming']) test(`rejects ${failure}`, () => {
   const folder = fixture();
   try {
     if (failure === 'changed executable') writeFileSync(join(folder, 'SpeedLink.exe'), 'different');
     if (failure === 'extra file') writeFileSync(join(folder, 'image.bin'), 'not allowed');
     if (failure === 'missing hashes') writeFileSync(join(folder, 'SHA256SUMS.txt'), '');
+    if (failure === 'Gen 2 programming') {
+      const manifestPath = join(folder, 'release.json');
+      const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+      manifest.programmingFamily = 'Gen2';
+      writeFileSync(manifestPath, JSON.stringify(manifest));
+      const sums = [...Object.keys(manifest.files), 'release.json'].map(name => `${createHash('sha256').update(readFileSync(join(folder, name))).digest('hex')}  ${name}`);
+      writeFileSync(join(folder, 'SHA256SUMS.txt'), sums.join('\n') + '\n');
+    }
     assert.throws(() => verifyPackage(folder, failure === 'wrong tag' ? 'v0.6.0-alpha.4' : tag, failure === 'wrong commit' ? 'b'.repeat(40) : sha));
   } finally { rmSync(folder, { recursive: true }); }
 });

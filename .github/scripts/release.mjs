@@ -6,7 +6,7 @@ import { pathToFileURL } from 'node:url';
 export function verifyPackage(folder, tag, commit) {
   const manifest = JSON.parse(readFileSync(join(folder, 'release.json'), 'utf8'));
   if (!/^v\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?$/.test(tag) || !/^[a-f0-9]{40}$/.test(commit)) throw Error('Invalid tag or commit');
-  if (manifest.schemaVersion !== 1 || manifest.tag !== tag || `v${manifest.version}` !== tag || manifest.sourceCommit !== commit || manifest.architecture !== 'win-x86' || manifest.ecuProgrammingEnabled !== false) throw Error('Release identity mismatch');
+  if (manifest.schemaVersion !== 1 || manifest.tag !== tag || `v${manifest.version}` !== tag || manifest.sourceCommit !== commit || manifest.architecture !== 'win-x86' || manifest.ecuProgrammingEnabled !== true || manifest.programmingFamily !== 'Gen1') throw Error('Release identity mismatch');
   const expected = ['SpeedLink.exe', `SpeedLink-${tag}-source.zip`];
   if (Object.keys(manifest.files).sort().join() !== [...expected].sort().join()) throw Error('Unexpected package inventory');
   const digest = name => createHash('sha256').update(readFileSync(join(folder, name))).digest('hex');
@@ -28,7 +28,7 @@ export async function publishRelease({ repo, folder, tag, commit, token, notes, 
   };
   const releases = await api('/releases?per_page=100');
   if (releases.some(r => r.tag_name === manifest.tag)) throw Error('Release already exists; never replace published assets');
-  const release = await api('/releases', 'POST', { tag_name: manifest.tag, target_commitish: manifest.sourceCommit, name: `SpeedLink ${manifest.tag}`, draft: true, prerelease: manifest.version.includes('-'), body: `${notes}\n\nSingle Windows EXE. Source, SHA-256 checksums and release identity included. Build provenance is available from this release workflow. ECU programming remains disabled; real ECU acceptance remains pending.` });
+  const release = await api('/releases', 'POST', { tag_name: manifest.tag, target_commitish: manifest.sourceCommit, name: `SpeedLink ${manifest.tag}`, draft: true, prerelease: manifest.version.includes('-'), body: `${notes}\n\nSingle Windows EXE with matching source, SHA-256 checksums and build provenance. Flashing and recovery support Gen 1 only. Gen 2 flashing is planned for an upcoming release.` });
   for (const name of readdirSync(folder).sort()) {
     const url = new URL(release.upload_url.split('{')[0]);
     if (url.protocol !== 'https:' || url.hostname !== 'uploads.github.com') throw Error('Unexpected upload host');

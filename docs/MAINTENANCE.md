@@ -4,7 +4,8 @@
 
 Every change runs locked restore, unit tests, mandatory integrity checks for every
 supported editor ROM, synthetic desktop checks and standalone EXE checks.
-ECU programming remains disabled. These checks do not establish real ECU behavior.
+The standalone programming check exercises Gen 1 writing and recovery with a
+synthetic ECU. Physical coverage is tracked separately in [validation](VALIDATION.md).
 
 In **Actions → CSharp checks → the failed run**, download its `checks-…` artifact.
 It retains synthetic test reports and screenshots for 14 days, including files

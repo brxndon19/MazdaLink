@@ -1,6 +1,6 @@
 # SpeedLink — C#/.NET
 
-ROM reading, offline editing and data logging for Mazdaspeed and Mazda MPS, built with .NET 10 and WPF for Windows. ECU programming is disabled.
+ROM reading, offline editing, data logging, and Gen 1 flashing and recovery for Mazdaspeed and Mazda MPS, built with .NET 10 and WPF for Windows.
 
 Connect a Vgate vLinker FS USB or Tactrix Openport 2.0 and select it in the adapter list. For vLinker, also select its COM port. Switch ignition on with the engine stopped, then choose **Connect & identify** followed by **Read & verify backup**.
 
@@ -16,7 +16,9 @@ Install the manufacturer's Windows driver and close other diagnostic apps before
 
 The vLinker temporarily uses 2000000 baud during reads and restores 115200 on a clean disconnect. After reconnecting USB, start with 115200. If the app was interrupted while the adapter stayed connected, select 2000000 to reconnect. Baud selection is explicit; the port is never probed automatically. Tactrix uses its J2534 driver and needs no serial baud selection. Both adapters use 500 kbit/s CAN.
 
-Offline ECU models are developer test fixtures; there is no Simulator connection in the application. ECU flashing remains planned.
+The standalone programming smoke test uses generated ECU replies. The public
+programming workflow accepts only the nine bundled Gen 1 layouts.
+[Flashing guide](../docs/FLASHING.md)
 
 Mongoose-Plus ISO/CAN3 is an experimental J2534 reader/logger option. Select it
 and its registered 32-bit 04.04 driver; no serial settings are needed. Hardware

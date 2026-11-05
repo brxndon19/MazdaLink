@@ -1,5 +1,5 @@
 name: Problem / diagnostic report
-description: Report a connection, ROM read, logger, editor or app problem with a support ZIP.
+description: Report a connection, ROM read, Gen 1 programming, logger, editor or app problem.
 title: "[Problem] Brief description"
 body:
   - type: markdown
@@ -9,6 +9,7 @@ body:
         In SpeedLink, choose **Connection → Export support report…**, select the failed session and save the ZIP.
         You can export after restarting without reconnecting. For an unexpected app crash, use **Crash reports → Save crash ZIP…** in the top bar. Review attachments: this issue is public.
         The ZIP retains factory security access; ROM payloads and recordings are excluded.
+        For flashing or recovery, record the stage and acknowledged bytes. Keep the raw write run folder and original backup private.
   - type: dropdown
     id: operation
     attributes:
@@ -16,6 +17,8 @@ body:
       options:
         - Connect & identify
         - Read & verify backup
+        - Gen 1 flash
+        - Gen 1 stock recovery
         - Live logging
         - Review a recording
         - Edit or save a ROM
@@ -45,7 +48,7 @@ body:
   - type: textarea
     id: steps
     attributes:
-      label: Steps and read progress
+      label: Steps and progress
       description: List what you selected, the last successful step and whether ROM-read progress appeared. Mention whether it happens every time.
     validations:
       required: true

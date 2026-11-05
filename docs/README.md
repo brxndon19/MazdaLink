@@ -1,13 +1,14 @@
 # SpeedLink documentation
 
-SpeedLink combines ROM reading, offline ROM editing and stock-ECU logging.
-Start with the workflow you need. ECU programming remains disabled.
+SpeedLink combines ROM reading, offline editing, stock-ECU logging, and Gen 1
+flashing and recovery. Gen 2 flashing is planned for an upcoming release.
 
 ## Using SpeedLink
 
 | Guide | Contents |
 | --- | --- |
 | [Dump a ROM / request support](DUMP_A_ROM.md) | Guided adapter setup, two-pass reading, verification and ROM contribution |
+| [Gen 1 flashing and recovery](FLASHING.md) | Prepare a verified backup, write a ROM, and recover a failed application transfer |
 | [ROM editor overview](editor/README.md) | Screenshots, features and a short editing workflow |
 | [ROM editor guide](EDITOR.md) | First edit, single values, small tables, MAF curves, layout, map help, comparison and saving |
 | [Map-help conventions](TUNING_HELP.md) | Units, sign conventions, multipliers, corrections and interpretation limits |
@@ -21,7 +22,7 @@ Start with the workflow you need. ECU programming remains disabled.
 | [Definition import](DEFINITIONS.md) | Import editor/logger updates, persistence and bundled fallback |
 | [Logger coverage](../definitions/logging/All_ROM_Coverage.md) | Included and excluded parameters across all ten profiles |
 
-The app includes Getting started, Editor, Logger and Report a problem guides under **Help**.
+The app includes Getting started, Editor, Logger, Gen 1 flashing, and Report a problem guides under **Help**.
 **Help → Editor guide** opens the editing guide; **Map info** / F1 explains
 the selected map. Navigation shows workspace names by default; **☰ Navigation**
 or **View → Navigation labels** toggles its compact form.

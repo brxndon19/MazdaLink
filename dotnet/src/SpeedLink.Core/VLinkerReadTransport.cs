@@ -150,7 +150,7 @@ public class ElmTransport : IReadTransport
     }
 }
 
-public sealed class VLinkerReadTransport : ElmTransport
+public sealed partial class VLinkerReadTransport : ElmTransport
 {
     private string serialIdentity = "";
     // Host USB-UART rate. ATSP6 configures the separate 500 kbit/s CAN link.
@@ -245,6 +245,10 @@ public sealed class VLinkerReadTransport : ElmTransport
     public override byte[] Exchange(byte[] request)
     {
         DiagnosticProtocol.CheckReadOnly(request, ReadChunkSize);
+        return ExchangeRead(request, 6);
+    }
+    private byte[] ExchangeRead(byte[] request, double responseSeconds)
+    {
         if (!Ready || Failed)
             throw new TransportException("Initialize a fresh connection before reading.");
         try
@@ -253,7 +257,12 @@ public sealed class VLinkerReadTransport : ElmTransport
             if (Prompt(3, 65536).Trim().ToUpperInvariant() != "DATA")
                 throw new TransportException("Adapter did not request the read payload.");
             WriteExact(Encoding.ASCII.GetBytes(Convert.ToHexString(request) + "\r"));
-            return DiagnosticProtocol.FinalResponse(request, DiagnosticProtocol.ParseSegmented(Prompt(6, 65536)));
+            string response = Prompt(responseSeconds, 65536);
+            IReadOnlyList<byte[]> packets;
+            try { packets = DiagnosticProtocol.ParseSegmented(response); }
+            catch (TransportException) when (request[0] == 0x23)
+            { throw new TransportException("Invalid adapter reply during ROM read. Request was not repeated."); }
+            return DiagnosticProtocol.FinalResponse(request, packets);
         }
         catch (NegativeResponseException) { throw; } // A complete NRC reply retains framing synchronization.
         catch { Failed = true; throw; }
@@ -304,13 +313,7 @@ public sealed class VLinkerReadTransport : ElmTransport
                 catch (NegativeResponseException error) { negative = error; }
                 // '!' cannot repeat a diagnostic request if the natural prompt races this write. A CR can.
                 // Interrupt only the idle receive tail, then consume its prompt and verify adapter-only identity.
-                WriteExact("!"u8.ToArray());
-                string footer = Prompt(3, 4096).Trim();
-                if (footer is not ("" or "STOPPED")) throw new TransportException("Unexpected logger completion footer.");
-                string adapter = Command("ATI", 3).Trim();
-                if (adapter == "?") adapter = Command("ATI", 3).Trim(); // A raced prompt buffered '!'; this retries only adapter identification.
-                if (adapter != serialIdentity)
-                    throw new TransportException("Logger completion did not restore a synchronized adapter prompt.");
+                FinishReceiveTail();
                 diagnostics?.Record("serial.logger_completed", new { expectedResponseLength, elapsedMs = (Clock.Elapsed - started).TotalMilliseconds, idleWaitEnded = true });
                 if (negative is not null) throw negative;
                 return reply!;
@@ -319,6 +322,16 @@ public sealed class VLinkerReadTransport : ElmTransport
         }
         catch (NegativeResponseException) { throw; }
         catch { Failed = true; throw; }
+    }
+    private void FinishReceiveTail()
+    {
+        WriteExact("!"u8.ToArray());
+        string footer = Prompt(3, 4096).Trim();
+        if (footer is not ("" or "STOPPED")) throw new TransportException("Unexpected receive completion footer.");
+        string adapter = Command("ATI", 3).Trim();
+        if (adapter == "?") adapter = Command("ATI", 3).Trim(); // Only adapter identification is repeated.
+        if (adapter != serialIdentity)
+            throw new TransportException("Receive completion did not restore a synchronized adapter prompt.");
     }
     private static byte[] ValidateLoggerReply(byte[] request, int expectedLength, IReadOnlyList<byte[]> packets)
     {

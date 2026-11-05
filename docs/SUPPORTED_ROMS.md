@@ -41,11 +41,18 @@ Some older ROMs do not expose every baseline identifier through the checked path
 See [coverage and exclusions](../definitions/logging/All_ROM_Coverage.md).
 All real-ECU logging checks remain pending. Unknown ROMs remain readable.
 
+## Flashing and recovery
+
+All nine **Gen 1** layouts in the table support writing and stock recovery with
+the bundled definition and a verified original backup from the same ECU.
+L3CGEE000 is Gen 2. Gen 2 flashing is planned for an upcoming release.
+[Flashing and recovery guide](FLASHING.md)
+
 ## Validation limits
 
 File-layout checks can be tested against reference images and synthetic data.
 The shared reader has been tested through real adapters against a simulated ECU.
 L3M6EG000 has a hardware backup with two matching 1 MiB passes through vLinker FS.
 A user has also reported a successful Mongoose ECU dump; formal adapter and
-vehicle qualification remains incomplete. A definition's existence does not establish
-on-car read compatibility or authorize flashing. Live programming stays disabled.
+vehicle qualification remains incomplete. The physical programming results
+currently cover one L3M6EG000 bench ECU. [Validation scope](VALIDATION.md)

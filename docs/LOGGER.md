@@ -57,7 +57,8 @@ running-engine sampling behavior still require validation.
 
 Logging can run with the engine running. **ROM backup reads require the engine
 stopped**. They use a different diagnostic session. A connection used for a ROM
-read must be disconnected before logging. SpeedLink never flashes the ECU.
+read must be disconnected before logging. ECU programming is a separate
+[Gen 1 workflow](FLASHING.md).
 
 The live calibration identifier must match the logger profile. SpeedLink accepts
 the short calibration ID and its known complete ECU identity, such as
@@ -123,9 +124,9 @@ with its age. Expired or rejected values are cleared. Recordings retain the actu
 per-channel sample statuses and timestamps. Stopped charts show stopped status
 immediately; their traces remain available as history.
 
-No ROM,
-commercial software or driver is bundled. ECU flashing and modified-ROM
-logging extensions remain outside this release.
+SpeedLink ships without ROM files or adapter drivers. The logger uses the
+supported stock interfaces. Use the [separate Gen 1 workflow](FLASHING.md)
+for flashing and recovery.
 
 See the [per-ROM coverage](../definitions/logging/All_ROM_Coverage.md) and
 [ECU test checklist](../definitions/logging/All_ROM_ECU_Checklist.csv) for each

@@ -1,5 +1,22 @@
 # Alpha validation scope
 
+## Gen 1 flashing and recovery · 0.8.0-alpha.1
+
+- All nine bundled Gen 1 ROM layouts pass the simulated write and stock-recovery
+  matrix. Native boot and programming handler replay independently covers all
+  nine, with physical erase/program effects and reset modeled.
+- The L3M6EG000 bench ECU passed repeated uninterrupted stock and edited writes
+  on Tactrix Openport 2.0 and vLinker FS, with full readback comparison and a
+  later cold-start stock check.
+- The same ECU passed a controlled Tactrix interruption after one acknowledged
+  application block, cold power cycle, boot-only detection, stock rewrite,
+  normal reset and two exact 1 MiB readbacks. The retained first 32 KiB matched.
+- vLinker FS physical interruption recovery, the other eight layouts on real
+  ECUs, power loss during erase, and in-vehicle programming remain pending.
+  Mongoose write and recovery have synthetic desktop and transport coverage.
+  Its physical programming tests remain pending.
+  Gen 2 flashing is planned for an upcoming release. [Flashing guide](FLASHING.md)
+
 ## Logging restart and performance — 0.7.0-alpha.8
 
 - Required desktop tests cover all ten profiles: three consecutive recorded

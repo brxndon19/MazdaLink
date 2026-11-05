@@ -61,6 +61,7 @@ jobs:
       - run: ./tools/Publish-Windows.ps1 -Output publish
       - run: ./tools/Test-CrashUi.ps1 -Output TestResults/CrashUi -Executable ./publish/SpeedLink.exe
       - run: ./tools/Test-SupportUi.ps1 -Output TestResults/Standalone_Support -Executable ./publish/SpeedLink.exe
+      - run: ./tools/Test-Gen1FlashingUi.ps1 -Output TestResults/Standalone_Gen1Flashing -Executable ./publish/SpeedLink.exe
       - name: Check standalone editor menus
         run: |
           $folder = Join-Path (Get-Location) 'TestResults/Standalone_Menus'
@@ -81,7 +82,7 @@ jobs:
             throw 'Standalone startup failed.'
           }
           $result = Get-Content -LiteralPath $report -Raw | ConvertFrom-Json
-          if ($result.passed -ne $true -or $result.simulatorAvailable -ne $false -or $result.liveProgrammingEnabled -ne $false -or $result.mongooseSelectionVerified -ne $true) { throw 'Unexpected standalone smoke-test result.' }
+          if ($result.passed -ne $true -or $result.simulatorAvailable -ne $false -or $result.liveProgrammingEnabled -ne $true -or $result.programmingFamily -ne 'Gen1' -or $result.programmingTargets.Count -ne 9 -or $result.programmingTargets -contains 'L3CGEE000' -or $result.mongooseSelectionVerified -ne $true -or $result.experimentalProgrammingAdapters -notcontains 'Mongoose-Plus ISO/CAN3') { throw 'Unexpected standalone smoke-test result.' }
           $expectedRuntime = ([xml](Get-Content -LiteralPath Directory.Build.props -Raw)).Project.PropertyGroup.RuntimeFrameworkVersion
           $expectedVersion = ([xml](Get-Content -LiteralPath Directory.Build.props -Raw)).Project.PropertyGroup.Version
           if ($result.version -ne $expectedVersion) { throw 'Application version differs from package version.' }

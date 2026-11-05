@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.0-alpha.1
+
+- Add **Tools → Gen 1 flashing and recovery…** for every bundled Gen 1 ROM layout. Verify the original backup, target image, connected ECU identity, supply and retained boot before a normal write.
+- Restore the original stock image after an interrupted write using the same ECU's verified backup and the failed run journal. Check the retained boot server and require two full readbacks after reset.
+- Add built-in and repository flashing and recovery guides. Gen 2 flashing is planned for an upcoming release. Gen 2 reading, editing and logging retain their existing scope.
+- Add experimental Gen 1 flashing and recovery for Mongoose-Plus ISO/CAN3 through its installed J2534 04.04 driver. Physical programming qualification is pending.
+
 ## 0.7.0-alpha.9
 
 - Make **View recording…** open the session just saved. Keep the last saved recording available after live-only logging, recover cleanly if a file was moved, and disable the shortcut while a recording is still being written.

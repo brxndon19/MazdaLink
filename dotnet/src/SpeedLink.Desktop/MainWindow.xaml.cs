@@ -381,6 +381,7 @@ public partial class MainWindow : Window
         var documents = new Dictionary<string, string> { ["Getting started"] = "SpeedLink.Help.md", ["Adapters / testing"] = "SpeedLink.AdapterHelp.md", ["Report a problem"] = "SpeedLink.SupportHelp.md", ["Logger"] = "SpeedLink.LoggerHelp.md", ["Editor"] = "SpeedLink.EditorHelp.md", ["Gen 2 (experimental)"] = "SpeedLink.Gen2Help.md", ["GNU GPL license"] = "SpeedLink.LICENSE", ["Known-ROM checks"] = "SpeedLink.Profiles.md" };
         foreach (var name in Assembly.GetExecutingAssembly().GetManifestResourceNames().Where(x => x.StartsWith("SpeedLink.Notices.", StringComparison.Ordinal)))
             documents["Notices / " + name[18..]] = name;
+        documents["Gen 1 flashing and recovery"] = "SpeedLink.FlashingHelp.md";
         var panel = new DockPanel { Margin = new Thickness(16) };
         var chooser = new ComboBox { ItemsSource = documents.Keys, Margin = new Thickness(0, 0, 0, 12) };
         DockPanel.SetDock(chooser, Dock.Top);
@@ -514,7 +515,11 @@ public partial class MainWindow : Window
                 mongooseHardwareTested = false,
                 registeredDriverNames = DriverBox.Items.Cast<J2534Driver>().Select(item => item.Name).ToArray(),
                 simulatorAvailable = false,
-                liveProgrammingEnabled = false,
+                liveProgrammingEnabled = true,
+                programmingFamily = "Gen1",
+                experimentalProgrammingAdapters = new[] { "Mongoose-Plus ISO/CAN3" },
+                programmingTargets = RomInspector.KnownProfiles.Where(profile => BenchFlashWorkflow.IsNativeWriterVerified(profile.Calibration))
+                    .Select(profile => profile.Calibration).ToArray(),
                 noRomBundled = true,
                 bundledHelpVerified = true,
                 openedImageSha256 = image is null ? null : RomInspector.Hash(image),

@@ -8,6 +8,35 @@ public partial class App : Application
         base.OnStartup(e);
         InstallCrashReporting();
         if (await RunCrashChecks(e.Args)) return;
+        if (e.Args.Contains("--gen1-flash-smoke", StringComparer.Ordinal))
+        {
+            ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            string Get(string key)
+            {
+                int at = Array.IndexOf(e.Args, key);
+                return at >= 0 && at + 1 < e.Args.Length ? e.Args[at + 1] : throw new ArgumentException("Missing " + key);
+            }
+            BenchFlashWindow? flash = null;
+            try
+            {
+                string output = Get("--output");
+                var fixture = await Task.Run(() => BenchFlashUiPeerState.Create(output));
+                flash = new BenchFlashWindow(System.IO.Path.Combine(output, "data"), fixture.Peer.Open,
+                    (fixture.Inspector, fixture.CodeGuard)) { ShowActivated = false };
+                MainWindow = flash;
+                var report = await flash.Smoke(fixture.Backup, fixture.Backup, output, fixture.Peer.SimulateInterruptedWrite);
+                System.IO.File.WriteAllText(Get("--smoke-report"), System.Text.Json.JsonSerializer.Serialize(report));
+                flash.Close();
+                Shutdown(0);
+            }
+            catch (Exception error)
+            {
+                System.IO.File.WriteAllText(Get("--smoke-report"), System.Text.Json.JsonSerializer.Serialize(new { passed = false, error = error.ToString() }));
+                flash?.Close();
+                Shutdown(1);
+            }
+            return;
+        }
         if (e.Args.Contains("--menus-smoke", StringComparer.Ordinal) || e.Args.Contains("--support-smoke", StringComparer.Ordinal))
         {
             ShutdownMode = ShutdownMode.OnExplicitShutdown;

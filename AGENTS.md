@@ -36,5 +36,8 @@
 - Raw ECU backups must preserve the captured bytes exactly. Apply checksum
   correction to editor exports; retain immutable original read captures.
 
-ECU programming remains disabled. Do not publish ROM binaries, private research,
-customer data, proprietary material or local evidence paths.
+ECU programming is limited to the bundled Gen 1 profiles and the separate
+programming workflow. Keep the reader and logger allowlists read-only and keep
+Gen 2 programming disabled until independently qualified. Do not publish ROM
+binaries, private research, customer data, proprietary material or local evidence
+paths.

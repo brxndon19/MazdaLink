@@ -1,5 +1,11 @@
 # Report a problem
 
+For a Gen 1 flash or recovery failure, record the stage, acknowledged byte
+count, adapter, calibration and exact error. Keep the write run folder and the
+original verified backup private. Follow the [recovery guide](FLASHING.md)
+before issuing another write. Include a reviewed support ZIP if one is
+available for a related connection session.
+
 SpeedLink saves diagnostic details automatically whenever you choose **Connect &
 identify**. Capture begins before the adapter driver opens. You do not need to
 enable a debug mode or successfully connect first.

@@ -10,8 +10,8 @@ Editing and logging support are separate from reading support.
 
 This workflow is for Mazda MZR DISI ECUs using a compatible Gen 1 or Gen 2 1 MiB read protocol.
 An unknown calibration is welcome; a different ECU family or ROM size may need
-a different reader. SpeedLink is an alpha, and real Mazda ECU validation is
-still pending. ECU programming is disabled.
+a different reader. If you intend to flash a supported Gen 1 ECU, keep the
+complete backup folder and follow the [flashing guide](FLASHING.md).
 
 ## 1. Get ready
 

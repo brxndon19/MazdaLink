@@ -30,6 +30,7 @@ public sealed class NativeJ2534Channel : IJ2534Channel
 
     private readonly string libraryPath;
     private readonly IDiagnosticSink? diagnostics;
+    private readonly BenchRequestPermit? programmingPermit;
     private int readCalls, emptyReads, messagesWithTimeout, extraDataIndexMismatches;
     private uint lastReadStatus, lastMessageCount, lastRxStatus, lastDataSize, lastExtraDataIndex;
     private double lastReadDurationMs, maxReadDurationMs;
@@ -56,10 +57,15 @@ public sealed class NativeJ2534Channel : IJ2534Channel
     public string AdapterName { get; }
     public bool Experimental { get; }
 
-    public NativeJ2534Channel(J2534Driver driver, IDiagnosticSink? diagnostics = null)
+    public NativeJ2534Channel(J2534Driver driver, IDiagnosticSink? diagnostics = null) : this(driver, diagnostics, null)
+    {
+    }
+
+    internal NativeJ2534Channel(J2534Driver driver, IDiagnosticSink? diagnostics, BenchRequestPermit? programmingPermit)
     {
         libraryPath = Path.GetFullPath(driver.LibraryPath);
         this.diagnostics = diagnostics;
+        this.programmingPermit = programmingPermit;
         diagnostics?.Record("driver.selected", new { driver.Name, driverFile = Path.GetFileName(libraryPath), processBits = IntPtr.Size * 8 });
         // Trust the registered installation, never a DLL supplied by a ROM or backup.
         var registered = J2534Drivers.Discover(driver.Kind).FirstOrDefault(item => item.LibraryPath.Equals(libraryPath, StringComparison.OrdinalIgnoreCase));
@@ -144,6 +150,20 @@ public sealed class NativeJ2534Channel : IJ2534Channel
         diagnostics?.Record("driver.channel", new { bitrate, requestId = $"0x{requestId:X}", responseId = $"0x{responseId:X}", protocol = "ISO15765", flowControlFilter = true, padding = true });
     }
 
+    internal int ReadBatteryMillivolts()
+    {
+        EnsureConnected();
+        nint output = Marshal.AllocHGlobal(4);
+        try
+        {
+            Marshal.WriteInt32(output, 0);
+            Check(ioctl!(device, 3, 0, output), "Read J2534 supply voltage");
+            int value = Marshal.ReadInt32(output);
+            if (value is < 0 or > 32000) throw new TransportException("Invalid adapter supply reading.");
+            return value;
+        }
+        finally { Marshal.FreeHGlobal(output); }
+    }
     public void ClearReceive()
     {
         EnsureConnected();
@@ -154,12 +174,13 @@ public sealed class NativeJ2534Channel : IJ2534Channel
     }
     public void Write(byte[] request)
     {
-        DiagnosticProtocol.CheckReadOnly(request, 3968);
+        if (programmingPermit is null) DiagnosticProtocol.CheckReadOnly(request, 3968);
+        else programmingPermit.Consume(request);
         EnsureConnected();
         var packet = Packet(requestId, request);
         uint count = 1;
         WriteRequests++;
-        Check(write!(channel, ref packet, ref count, 1000), "Send read-only diagnostic request");
+        Check(write!(channel, ref packet, ref count, 1000), "Send diagnostic request");
         if (count != 1)
             throw new TransportException("J2534 did not accept exactly one request. No retry was attempted.");
     }

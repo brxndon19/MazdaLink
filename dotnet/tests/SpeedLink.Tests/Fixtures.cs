@@ -363,6 +363,8 @@ internal class FakeSerial : ISerialConnection
             reply = Firmware + "\r>";
         else if (command == "STI")
             reply = IdentityPrefix + "STN1170 v4.3.2\r>";
+        else if (command == "ATRV")
+            reply = "13.50V\r>";
         else if (command.StartsWith("AT", StringComparison.Ordinal) || command.StartsWith("ST", StringComparison.Ordinal))
             reply = "OK\r>";
         else if (command == "0902")
