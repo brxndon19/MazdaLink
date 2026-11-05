@@ -20,7 +20,8 @@ You need a Windows PC and either:
 - **Vgate vLinker FS USB**, with its manufacturer's Windows driver installed.
 - **Tactrix Openport 2.0**, with the Tactrix Windows driver installed.
 - **Mongoose-Plus ISO/CAN3 (experimental)**, with its 32-bit J2534-1 04.04
-  manufacturer driver. Hardware validation is pending; see [testing instructions](ADAPTERS.md).
+  manufacturer driver. A user reported a successful dump. See the
+  [adapter testing instructions](ADAPTERS.md) for qualification status.
 
 Download **SpeedLink.exe** from Releases into a writable folder. You do not
 need an installer, a separate .NET installation, or a ROM definition.

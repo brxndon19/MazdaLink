@@ -1,5 +1,14 @@
 # Alpha validation scope
 
+## Tuning help · 0.8.0-alpha.3
+
+- All 8,385 bundled editor entries have descriptions. This pass clarified 107
+  descriptions on boost, protection and RPM controls. Definition content outside
+  description elements matches the prior release.
+- Synthetic editor workflows open BCS Correction Mode help on all ten layouts,
+  check its guide link, and verify that switching to an unrelated map clears
+  the link. The ten-profile ROM-save integrity matrix passed.
+
 ## Flash & Recover workspace · 0.8.0-alpha.2
 
 - The standalone desktop test opens the sidebar workspace and hands off a

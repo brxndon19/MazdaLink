@@ -1,19 +1,20 @@
 # Bundled tuning definitions
 
-These ten XML files are supported snapshots from the local MazdaSpeedDefs
-repository, incorporated under its MIT license (LICENSE in this folder). They
+These ten XML files are SpeedLink snapshots of the MazdaSpeedDefs definitions,
+incorporated under its MIT license (LICENSE in this folder). They
 are embedded into the executable. No ROM image or commercial software is bundled.
 
 Source: https://github.com/mrphyslaw/MazdaSpeedDefs
 
-The first editor requires an exact definition identity, the existing SpeedLink
+The editor requires an exact definition identity, the SpeedLink
 boot/checksum-layout checks and a program-area signature. Program signatures
 cover the recognized program area with defined numeric controls, named switch bits and
 the correction word masked out. Table edits remain supported; other program
 modifications are rejected. SHA-256 signatures contain no ROM payload. Static axes are display metadata. A
 BitwiseSwitch's sizex counts named bits within shared storage, not sequential
 data elements. All named bits are exposed individually and neighboring bits
-are preserved. See ../../docs/EDITOR.md for usage and current limits.
+are preserved. See the [editor guide](../../docs/EDITOR.md) for usage and current
+limits and the [tuning guide](../../docs/TUNING_HELP.md) for control explanations.
 
 L3CGEE000 retains the supported native addresses and geometry. Its help clarifies
 knock-reference arithmetic and encoded injector coefficients. Its code checksum

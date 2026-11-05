@@ -118,10 +118,8 @@ redacted. They are limited to 32 KiB and the newest ten per storage location.
 The normal location is `data/crashes` beside the EXE, with a per-user Local AppData
 fallback if that location is not writable. Replacing the EXE preserves reports.
 
-Unexpected fatal errors stop the app rather than continuing in an unknown state.
-Existing backups, saved projects and recovery drafts are retained; actions since
-the last saved draft may be missing. Use the editor's recovery command after
-restarting. A crash report is not a replacement for a project backup.
+Unexpected fatal errors close the app. After restarting, reopen the most recent
+ROM copy you saved or the original backup. Unsaved editor changes can be lost.
 Power loss, forced process termination, native driver crashes, stack overflow,
 exhausted memory or unavailable storage can prevent a report from being written.
-For connection failures, also export the normal adapter support ZIP described below.
+For connection failures, also export the adapter support ZIP described above.

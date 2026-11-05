@@ -21,7 +21,8 @@ disabled in this build. See the [supported ROM list](SUPPORTED_ROMS.md) and the
    exact contents of that backup.
 3. For an edited ROM, open that backup in **Editor**, make the changes and
    choose **Save copy…**. SpeedLink corrects and verifies the ROM checksum
-   before export. Keep the original backup unchanged.
+   before export. Keep the original backup unchanged. Use **Map info** and the
+   [tuning guide](TUNING_HELP.md) to check what a control changes before editing.
 
 ## Write a ROM
 

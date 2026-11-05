@@ -56,8 +56,18 @@ public partial class EditorWorkspace
         // Changing maps while the window is open must replace both help and units.
         var injector = document.Definition.Tables.First(t => t.Name.StartsWith("Injector Base Pulsewidth - ", StringComparison.Ordinal));
         OpenTable(injector); UpdateLayout();
-        if (HelpUnitsText.Text != "Values: " + injector.Units || HelpText.Text != injector.Description)
+        if (HelpUnitsText.Text != "Values: " + injector.Units || HelpText.Text != injector.Description ||
+            !GuideTopic.IsVisible || GuideLink.NavigateUri?.Fragment != "#injector-pulsewidth")
             throw new InvalidOperationException("Map information retained the previous map's units or description.");
+        var boost = document.Definition.Tables.Single(t => t.Name == "BCS Correction Mode");
+        OpenTable(boost); UpdateLayout(); infoWindow.UpdateLayout();
+        if (!GuideTopic.IsVisible || GuideLink.NavigateUri?.Fragment != "#boost-and-wastegate-control" || HelpText.Text != boost.Description)
+            throw new InvalidOperationException("BCS Correction Mode help did not link to the boost guide.");
+        CaptureWindow(infoWindow, Path.Combine(folder, "BoostModeHelp.png"));
+        var unrelated = document.Definition.Tables.First(t => t.Category == "Idle");
+        OpenTable(unrelated); UpdateLayout();
+        if (GuideTopic.IsVisible || GuideLink.NavigateUri is not null)
+            throw new InvalidOperationException("Map information retained the previous guide topic.");
         OpenTable(sample); UpdateLayout(); infoWindow.UpdateLayout();
         CaptureWindow(infoWindow, Path.Combine(folder, "MapInformation.png"));
         var active = MapTabs.SelectedItem; MapTabs.SelectedIndex = -1; await Settle(); CheckNoMapHelp();

@@ -130,8 +130,9 @@ local paths; review reports before sharing them.
 - **Tactrix:** select the installed J2534 driver. No COM port or baud selection
   is needed. Registered Openport-compatible entries remain available.
 - **Mongoose-Plus ISO/CAN3 (experimental):** choose its experimental adapter
-  option and registered 32-bit 04.04 driver. Reading/logging are available for
-  user testing; hardware validation is pending. See the [adapter guide](ADAPTERS.md).
+  option and registered 32-bit 04.04 driver. A user reported a successful dump.
+  Logging and Gen 1 flashing and recovery are also available for experimental
+  testing. See the [adapter guide](ADAPTERS.md) for qualification status.
 
 ## Find help and definition updates
 

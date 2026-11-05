@@ -70,7 +70,20 @@
      </StackPanel>
     </Border>
    </Grid>
-   <Border x:Name="DetailsPanel" Grid.Column="2" Visibility="Collapsed" Background="{DynamicResource PanelBrush}" Padding="14"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel><TextBlock x:Name="MapTitle" FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap"/><TextBlock x:Name="HelpUnitsText" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,10,0,0"/><TextBlock x:Name="HelpAxesText" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="0,4,0,0"/><TextBlock x:Name="HelpText" Text="Choose a map." TextWrapping="Wrap" Margin="0,12"/><Expander Header="Storage details"><TextBlock x:Name="StorageText" TextWrapping="Wrap" Margin="0,8,0,0"/></Expander></StackPanel></ScrollViewer></Border>
+   <Border x:Name="DetailsPanel" Grid.Column="2" Visibility="Collapsed" Background="{DynamicResource PanelBrush}" Padding="14">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+     <StackPanel>
+      <TextBlock x:Name="MapTitle" FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap"/>
+      <TextBlock x:Name="HelpUnitsText" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,10,0,0"/>
+      <TextBlock x:Name="HelpAxesText" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="0,4,0,0"/>
+      <TextBlock x:Name="HelpText" Text="Choose a map." TextWrapping="Wrap" Margin="0,12"/>
+      <TextBlock x:Name="GuideTopic" Visibility="Collapsed" TextWrapping="Wrap" Margin="0,0,0,10">
+       <Hyperlink x:Name="GuideLink" Foreground="{DynamicResource AmberBrush}" RequestNavigate="GuideLink_RequestNavigate"><Run x:Name="GuideLinkText"/></Hyperlink>
+      </TextBlock>
+      <Expander Header="Storage details"><TextBlock x:Name="StorageText" TextWrapping="Wrap" Margin="0,8,0,0"/></Expander>
+     </StackPanel>
+    </ScrollViewer>
+   </Border>
    <GridSplitter x:Name="ChangesSplitter" Grid.Column="3" Width="5" HorizontalAlignment="Stretch" Background="{DynamicResource ShellBrush}" Visibility="Collapsed"/>
    <Border x:Name="ChangesPanel" Grid.Column="4" Background="{DynamicResource PanelBrush}" Padding="8" Visibility="Collapsed"><DockPanel><TextBlock DockPanel.Dock="Top" Text="Changed maps" FontWeight="SemiBold" Margin="0,0,0,8"/><ListBox x:Name="ChangesList" DisplayMemberPath="Name" SelectionChanged="Changes_Selected"/></DockPanel></Border>
   </Grid>

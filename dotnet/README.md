@@ -6,7 +6,8 @@ Connect a Vgate vLinker FS USB or Tactrix Openport 2.0 and select it in the adap
 
 A definition is not required to dump a ROM. Two matching full 1 MiB reads are required before a verified backup is sealed. Original captures, manifest and durable journal are retained in the `data` folder beside the executable. Keep the whole backup folder.
 
-**Editor** opens the nine supported stock layouts for offline editing.
+**Editor** opens all ten bundled layouts for offline editing, including the
+experimental Gen 2 L3CGEE000 profile.
 **ROM checks → Inspect ROM…** opens known or unknown complete 1 MiB images for
 inspection. Known layouts have guarded checks and separate checksum-corrected-copy
 export; unknown layouts have no guessed checksum. Vehicle match and factory
@@ -20,26 +21,32 @@ The standalone programming smoke test uses generated ECU replies. The public
 programming workflow accepts only the nine bundled Gen 1 layouts.
 [Flashing guide](../docs/FLASHING.md)
 
-Mongoose-Plus ISO/CAN3 is an experimental J2534 reader/logger option. Select it
-and its registered 32-bit 04.04 driver; no serial settings are needed. Hardware
-validation is pending. See the [adapter testing guide](../docs/ADAPTERS.md).
+Mongoose-Plus ISO/CAN3 is experimental for reading, logging, and Gen 1 flashing
+and recovery. Select its registered 32-bit J2534 04.04 driver. A user reported a
+successful dump. Logging and programming still need physical qualification.
+See the [adapter testing guide](../docs/ADAPTERS.md).
 
-The **Logger** workspace provides stock logging for all nine defined ROMs with both adapters:
-35–38 selectable parameters on Gen 1 and 20 on Gen 2, display units, measured sample rates, up to six synchronized plots
-and CSV recording. Load the ECU's current matching ROM backup for MAP calibration.
+The **Logger** workspace provides 33–38 parameters for each of the nine Gen 1
+profiles and 20 for L3CGEE000 Gen 2. It shows measured host sample rates and
+supports selectable units, up to six synchronized plots and CSV recording.
+Load the ECU's current matching ROM backup for MAP calibration.
 Live ECU calibration identity must match. See the [logger guide](../docs/LOGGER.md).
 ROM reads require an engine-stopped connection; logging uses the normal application
-session and can run with the engine running. Real-ECU logger validation is pending.
+session and can run with the engine running. Read-only query and recording
+workflows passed on one L3M6EG000 bench ECU. Running-engine rates and physical
+sensor accuracy remain to be checked.
 
 ## Offline ROM editing
 
-Open **Editor**. The nine bundled tuning
+Open **Editor**. The ten bundled tuning
 definitions provide grid editing, 2D curves, rotatable 3D surfaces, comparison,
 selection arithmetic, clipboard, interpolation and undo/redo. Single values use
 a dedicated value/state card; small grids and previews stay proportional to the
 data. Fit map, the draggable preview divider and floating panels control the
-workspace. Map info / F1 opens contextual help. Saves create new
-verified copies with mandatory checksum correction. Original files are preserved.
+workspace. Map info or F1 opens contextual help, with links to relevant
+[tuning guide](../docs/TUNING_HELP.md) topics. Saves create new verified copies.
+Gen 1 exports correct and verify the checksum. L3CGEE000 exports validate the
+native code sum and markers and reject invalid code. Original files are preserved.
 Program-area signatures reject incompatible patched layouts while allowing
 changes to defined tuning controls. See the [editor guide](../docs/EDITOR.md).
 
@@ -67,7 +74,10 @@ building the solution. These use fixtures and do not access adapters or an ECU.
 
 ## Validation
 
-This alpha has passed offline and isolated-adapter checks. The [measured results](docs/Validation.md) and regression case matrix distinguish offline, physical-adapter/ECU-model and real-ECU coverage. Real Mazda ECU validation remains pending. Hardware tests require an isolated, terminated vLinker FS/Tactrix bench with no vehicle or ECU attached.
+The [C# results](docs/Validation.md) and [hardware validation scope](../docs/VALIDATION.md)
+distinguish offline tests, physical adapters connected to a simulated ECU and
+tests on a powered Mazda ECU. Use an isolated, terminated bus without a vehicle
+or ECU attached when running an ECU simulator through physical adapters.
 
 ## License
 

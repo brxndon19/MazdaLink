@@ -1,5 +1,14 @@
 # C# validation
 
+## Tuning help — 0.8.0-alpha.3
+
+- The ten synthetic editor workflows check that Map info retains the selected
+  map's description and units, opens the matching guide topic for BCS and
+  injector controls, and clears the link when the next map has no topic.
+- The 615 core tests include the ten-profile ROM-save integrity matrix.
+  See [validation scope](../../docs/VALIDATION.md) for the definition review
+  and separate hardware results.
+
 ## Gen 1 programming — 0.8.0-alpha.1
 
 - Synthetic tests cover write and stock recovery for all nine bundled Gen 1

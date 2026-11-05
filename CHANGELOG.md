@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.0-alpha.3
+
+- Clarify boost-solenoid correction, protective fuel cut and rev-limiter help across all ten bundled ROM definitions.
+- Link selected Map info popups to the relevant tuning guide sections. The guide explains how base duty and both correction stages fit together, with signed duty and pressure examples.
+- Refresh editor, logger, adapter, crash recovery and validation documentation to match the current app and bench coverage.
+
 ## 0.8.0-alpha.2
 
 - Add **Flash & Recover** below Connection and a shortcut after a verified Gen 1 backup.

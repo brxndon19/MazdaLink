@@ -22,7 +22,7 @@ scan (L3M6EG000: 30 identifiers, 26 wire requests). Gen 2 retains 19 separate
 identifiers. Selection and calculated dependencies determine the actual plan.
 [Alias fixtures](Mode01_Aliases.vectors.json) cover 45 bounded native cases.
 
-The checks execute bounded original ROM routines with synthetic RAM. They do not establish real-ECU session acceptance, physical values or rates. All 346 included ROM/channel combinations still need ECU testing. No ROM image is included.
+The native checks execute bounded original ROM routines with synthetic RAM. Separately, read-only query and recording workflows passed on one L3M6EG000 bench ECU with vLinker FS and Tactrix. Physical values and running-engine rates for the 346 ROM/channel combinations remain to be checked. [Bench measurements](../../docs/LOGGER_PERFORMANCE.md)
 
 ## Parameters excluded from the current profiles
 

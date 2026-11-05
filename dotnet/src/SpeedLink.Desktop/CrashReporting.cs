@@ -42,7 +42,7 @@ public partial class App
         CaptureFailure(args.Exception, "User interface", true);
         args.Handled = true;
         // Do not run window-closing save handlers or continue in an unknown state. Existing drafts stay intact.
-        try { if (!crashProbe) MessageBox.Show("SpeedLink encountered an unexpected error and must close. Saved backups and existing recovery drafts are retained. Restart SpeedLink to review a local crash report.", "SpeedLink", MessageBoxButton.OK, MessageBoxImage.Error); }
+        try { if (!crashProbe) MessageBox.Show("SpeedLink encountered an unexpected error and must close. Restart SpeedLink to review a local crash report and reopen your last saved ROM copy.", "SpeedLink", MessageBoxButton.OK, MessageBoxImage.Error); }
         finally { Environment.Exit(70); }
     }
     private void OfferCrashReports(Window owner)
@@ -80,7 +80,7 @@ internal sealed class CrashReportWindow : Window
         var panel = new DockPanel { Margin = new(18) }; Content = panel;
         var header = new StackPanel(); DockPanel.SetDock(header, Dock.Top); panel.Children.Add(header);
         header.Children.Add(new TextBlock { Text = afterRestart ? "SpeedLink recorded an unexpected error" : "Saved local crash reports", FontSize = 21, FontWeight = FontWeights.SemiBold });
-        header.Children.Add(new TextBlock { Text = "Review and save a support ZIP to attach to a problem report. Nothing is sent automatically. Backups and existing recovery drafts are unchanged; the last unsaved actions may be missing.", TextWrapping = TextWrapping.Wrap, Margin = new(0, 10, 0, 0) });
+        header.Children.Add(new TextBlock { Text = "Review and save a support ZIP to attach to a problem report. Nothing is sent automatically. To resume editing, reopen your last saved ROM copy or original backup. Unsaved changes can be lost.", TextWrapping = TextWrapping.Wrap, Margin = new(0, 10, 0, 0) });
         header.Children.Add(chooser);
         var footer = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new(0, 12, 0, 0) };
         DockPanel.SetDock(footer, Dock.Bottom); panel.Children.Add(footer);

@@ -210,9 +210,10 @@ It is unavailable until a map is selected.
 Value units and input axes appear above the tuning explanation. Descriptions
 distinguish targets, limits, multipliers and signed corrections, with examples
 where established. Unconfirmed physical units are identified explicitly. Expand
-**Storage details** for the address, type and dimensions. Imported definitions
-supply their own descriptions and units. See [map-help conventions](TUNING_HELP.md)
-for examples of interpreting corrections and coefficients.
+**Storage details** for the address, type and dimensions. When a control has a
+guide topic, the popup links directly to it. Imported definitions supply their
+own descriptions and units. See the [tuning guide](TUNING_HELP.md) for examples
+of interpreting corrections and coefficients.
 
 ## Save a revision
 

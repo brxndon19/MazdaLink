@@ -6,8 +6,9 @@ Editor exports always apply the profile's mandatory checksum/integrity policy;
 checksum correction and verification cannot be disabled when saving an edited ROM.
 See the [editor save requirement](EDITOR.md).
 
-This list also controls **optional file inspection and checksum correction**, not read
-permission. Unknown images can be backed up and reopened normally.
+All ten layouts below have bundled editor definitions. File inspection uses the
+same list to select a known integrity policy. Unknown images can be backed up and
+reopened for file inspection with size and SHA-256 checks.
 
 ## Known inspection layouts
 
@@ -33,13 +34,16 @@ checksum is not guessed. Read success does not require a passing known-ROM check
 
 All ten layouts above also have a logger profile. L38KEH000 and the three
 L39S variants have 38 parameters; L3M7EF000, L33XEH000 and L3P4EM000 have 35; L35HEH000 has 36.
-L3M6EG000 offers 33 parameters over 30 requests, with five baseline parameters unavailable.
+L3M6EG000 offers 33 parameters across 30 enhanced identifiers, with five baseline
+parameters unavailable. Standard batching can reduce all-channel polling to 26 requests per scan.
 L3CGEE000 offers 20 parameters; see [Gen 2 coverage and integrity limits](GEN2.md).
 Its native sum covers code only; editable calibration bytes are excluded and invalid code is rejected without repair.
 Each profile has independent ROM evidence and its own MAP calibration bindings.
 Some older ROMs do not expose every baseline identifier through the checked path.
 See [coverage and exclusions](../definitions/logging/All_ROM_Coverage.md).
-All real-ECU logging checks remain pending. Unknown ROMs remain readable.
+Query acceptance and recording passed on one L3M6EG000 bench ECU with vLinker FS
+and Tactrix. Physical sensor accuracy, running-engine rates and broader coverage
+remain to be checked. [Logger performance](LOGGER_PERFORMANCE.md)
 
 ## Flashing and recovery
 

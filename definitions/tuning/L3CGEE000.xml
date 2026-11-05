@@ -349,7 +349,7 @@
         <data>14.709727095</data>
         <data>15.8584257123</data>
       </table>
-      <description>Manifold pressure threshold for protective fuel cut, by engine speed and barometric pressure. The protection delay and RPM qualification still apply.</description>
+      <description>Manifold pressure threshold for protective fuel cut by RPM and barometric pressure. The pressure is absolute. The protection delay and RPM qualification still apply.</description>
     </table>
     <table type="3D" name="Overload Protection Fuel Cut" category="Absolute Limits" storageaddress="0xcdc94" storagetype="float" endian="big" sizex="14" userlevel="1" sizey="8">
       <scaling units="load" expression="x*1+(0)" to_byte="(x-(0))/1" format="0.0000" fineincrement="0.01" coarseincrement="1" />
@@ -379,7 +379,7 @@
         <data>176</data>
         <data>212</data>
       </table>
-      <description>Load threshold for protective fuel cut, by engine speed and intake-air temperature. The protection delay and RPM qualification still apply.</description>
+      <description>Relative engine-load threshold for protective fuel cut by RPM and intake-air temperature. The protection delay and RPM qualification still apply.</description>
     </table>
     <table type="2D" name="Overload Timing Mode - Load Threshold" category="Absolute Limits" storageaddress="0xe181c" storagetype="float" endian="big" sizex="14" userlevel="1">
       <scaling units="load" expression="x*1+(0)" to_byte="(x-(0))/1" format="0.0000" fineincrement="0.01" coarseincrement="1" />
@@ -403,7 +403,7 @@
     </table>
     <table type="1D" name="Rev Limiter Normal" category="Absolute Limits" storageaddress="0xcd944" storagetype="float" endian="big" sizex="1" userlevel="1">
       <scaling units="RPM" expression="x*1+(0)" to_byte="(x-(0))/1" format="0.0000" fineincrement="0.01" coarseincrement="1" />
-      <description>Normal-condition maximum engine RPM before fuel cut.</description>
+      <description>Sets the fuel-cut RPM threshold for normal operation.</description>
     </table>
     <table type="1D" name="RPM Range Upper Limit Check" category="Absolute Limits" storageaddress="0xf8240" storagetype="float" endian="big" sizex="1" userlevel="1">
       <scaling units="RPM" expression="x*1+(0)" to_byte="(x-(0))/1" format="0.0000" fineincrement="0.01" coarseincrement="1" />
@@ -675,7 +675,7 @@
       <state name="Engine load" data="00" />
       <state name="Boost pressure" data="01" />
       <scaling units="Mode" expression="x*1+(0)" to_byte="(x-(0))/1" format="0" fineincrement="1" coarseincrement="1" />
-      <description>Engine load (0) corrects boost-solenoid duty using the difference between actual and target engine load, with overboost correction when its pressure limit is exceeded. Boost pressure (1, or any nonzero value) uses the difference between actual and target pressure. This selection does not enable the separate alternate targeting strategy.</description>
+      <description>Chooses the error used to accumulate boost-control solenoid duty correction. Engine load (0) uses actual minus target load and switches to the overboost correction when it is latched. Boost pressure (1) uses actual minus target manifold pressure. Both modes use load error for the initial duty correction.</description>
     </table>
     <table type="1D" name="BCS DC Accumulated Correction Limit - Decrease" category="Boost Control" storageaddress="0xe7edc" storagetype="float" endian="big" sizex="1" userlevel="1">
       <scaling units="duty % points" expression="x*2+(0)" to_byte="(x-(0))/2" format="0.0" fineincrement="0.1" coarseincrement="1" />
@@ -695,7 +695,7 @@
         <data>1.01526416411</data>
         <data>1.30533963957</data>
       </table>
-      <description>Added to accumulated duty correction each update while overboost is latched in load-error mode. Positive values add duty; negative values subtract duty. Correction limits apply. Uses nearest edge outside axes.</description>
+      <description>Adds duty percentage points to the accumulated correction while overboost is latched in load mode. The input is how far manifold pressure is above the overboost limit. Negative values reduce duty.</description>
     </table>
     <table type="2D" name="BCS DC Adjustment Barometer" category="Boost Control" storageaddress="0xe8040" storagetype="float" endian="big" sizex="8" userlevel="1">
       <scaling units="% of base" expression="x*1+(0)" to_byte="(x-(0))/1" format="0.0000" fineincrement="0.01" coarseincrement="1" />
@@ -741,7 +741,7 @@
         <data>1.01526416411</data>
         <data>1.30533963957</data>
       </table>
-      <description>Accumulated duty-point correction from actual pressure minus target pressure. Used when BCS Correction Mode is nonzero. Positive values add duty; negative values subtract duty. Correction and final-duty limits apply. Uses nearest edge outside axes.</description>
+      <description>Adds duty percentage points to the accumulated correction each update in pressure mode, using actual minus target manifold pressure. The accumulated correction and the final duty request have separate limits.</description>
     </table>
     <table type="2D" name="BCS DC Adjustment IAT" category="Boost Control" storageaddress="0xe8020" storagetype="float" endian="big" sizex="8" userlevel="1">
       <scaling units="% of base" expression="x*1+(0)" to_byte="(x-(0))/1" format="0.0000" fineincrement="0.01" coarseincrement="1" />
@@ -4913,7 +4913,7 @@
         <data>0.231999993324</data>
         <data>0.463999986649</data>
       </table>
-      <description>Added to accumulated duty correction each controller update, from actual load minus target load. Positive values add duty; negative values subtract duty. Accumulated and combined limits apply. Uses nearest edge outside axes.</description>
+      <description>Adds duty percentage points to the accumulated correction each update in load mode, using actual minus target load. While overboost is latched, the overboost adjustment table supplies this step instead.</description>
     </table>
     <table type="2D" name="BCS DC Adjustment - Load Target Correction - Initial" category="Load Targeting" storageaddress="0xe7fc8" storagetype="float" endian="big" sizex="11" userlevel="1">
       <scaling units="duty % points" expression="x*2+(0)" to_byte="(x-(0))/2" format="0.0000" fineincrement="0.01" coarseincrement="1" />
@@ -4930,7 +4930,7 @@
         <data>0.231999993324</data>
         <data>0.463999986649</data>
       </table>
-      <description>Initial duty-point correction from actual load minus target load. Positive values add duty; negative values subtract duty. Combined correction limits apply. Uses nearest edge outside axes.</description>
+      <description>Adds an immediate duty correction from actual minus target load in either BCS Correction Mode. Positive values add duty percentage points. The ECU limits this term together with the accumulated correction.</description>
     </table>
     <table type="1D" name="Per Gear Requested Load - Temperature Blend End" category="Load Targeting" storageaddress="0xee378" storagetype="float" endian="big" sizex="1" userlevel="1">
       <scaling units="°F" expression="x*1.8+(32)" to_byte="(x-(32))/1.8" format="0.0000" fineincrement="0.01" coarseincrement="1" />

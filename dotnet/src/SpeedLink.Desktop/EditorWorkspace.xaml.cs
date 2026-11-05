@@ -209,6 +209,7 @@ public partial class EditorWorkspace : UserControl
         {
             int[] selection = SelectedIndices().Where(i => table is not null && i >= 0 && i < table.Count).ToArray();
             MapGrid.Columns.Clear(); MapGrid.ItemsSource = null; ChoiceBox.Visibility = Visibility.Collapsed;
+            RefreshGuideTopic(document?.Definition, table);
             if (document is null || table is null)
             {
                 MapTitle.Text = "Select a map"; RefreshAxes(); HelpText.Text = "Choose a map from the list.";

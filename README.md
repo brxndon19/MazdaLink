@@ -4,7 +4,7 @@ Open-source ROM reading, data logging, ROM editing, and Gen 1 flashing and recov
 
 [![C# checks](https://github.com/mrphyslaw/SpeedLink/actions/workflows/checks-dotnet.yml/badge.svg)](https://github.com/mrphyslaw/SpeedLink/actions/workflows/checks-dotnet.yml)
 
-**[Download v0.8.0-alpha.2](https://github.com/mrphyslaw/SpeedLink/releases/tag/v0.8.0-alpha.2)** · A single Windows EXE with the runtime included.
+**[Download v0.8.0-alpha.3](https://github.com/mrphyslaw/SpeedLink/releases/tag/v0.8.0-alpha.3)** · A single Windows EXE with the runtime included.
 
 **Watch the 4-minute SpeedLink demo (4:11)**
 
@@ -84,7 +84,7 @@ existing timing and data precision.
 | Dump an unknown ROM and help add support | [Guided ROM-dump workflow](docs/DUMP_A_ROM.md) |
 | Edit a ROM: map grid, 2D curves and 3D surfaces | [Editor overview and screenshots](docs/editor/README.md) |
 | Editing operations, comparison and saving | [Editor guide](docs/EDITOR.md) |
-| Understand map units, corrections and thresholds | [Map-help conventions](docs/TUNING_HELP.md) |
+| Understand map units, corrections and thresholds | [Tuning guide](docs/TUNING_HELP.md) |
 | See the logger, record parameters and review logs | [Logger overview and screenshots](docs/logger/README.md) |
 | Logger setup, rates, units and troubleshooting | [Logger guide](docs/LOGGER.md) |
 | Check ROM/profile compatibility | [Supported ROMs](docs/SUPPORTED_ROMS.md) |
@@ -218,8 +218,6 @@ Related RomRaider definitions are available in [MazdaSpeedDefs](https://github.c
 
 ## Status and development
 
-**Current release: [v0.7.0-alpha.8](https://github.com/mrphyslaw/SpeedLink/releases/tag/v0.7.0-alpha.8), a Windows Workbench alpha.**
-
 - **Available:** ROM reading, two-pass verified backups, known-ROM checks and
   checksum correction to a separate file; live logging, charts, CSV recording
   and saved-log viewing; offline ROM editing, comparison, 2D/3D views and undo/redo.
@@ -229,7 +227,7 @@ Related RomRaider definitions are available in [MazdaSpeedDefs](https://github.c
   No logging patch is required. See [coverage and exclusions](definitions/logging/All_ROM_Coverage.md).
 - **Fixed:** logger matching accepts known complete ECU calibration IDs, including
   `L3P4EM000L3T6051`. Renaming a ROM file is unnecessary.
-- **Checked:** 558 C# tests, 2,631 native-derived logger vectors and 45 standard-batch equivalence cases. Ten-profile
+- **Checked:** 615 C# tests, 2,631 native-derived logger vectors and 45 standard-batch equivalence cases. Ten-profile
   editor checks cover direct cell entry, comparison, undo/redo and byte-identical
   no-edit exports. L3CGEE000 adds 379 native logger instruction checks and complete
   reference-ROM cell/axis comparisons. See [validation](docs/VALIDATION.md).
@@ -251,9 +249,9 @@ Related RomRaider definitions are available in [MazdaSpeedDefs](https://github.c
   interruption. Broader hardware qualification and Gen 2 flashing are upcoming.
   [Validation scope](docs/VALIDATION.md)
 
-Bench testing uses simulated ECU replies over real adapters. A matching pair of
-ROM reads verifies consistency; it does not establish factory provenance or
-compatibility with another vehicle. Unknown ROMs remain readable without a definition.
+Validation distinguishes simulated ECU replies over real adapters from tests
+on a powered ECU. Matching ROM reads verify the captured bytes across both
+passes. Unknown calibration IDs can be read with a compatible read protocol.
 
 See [usage notes](docs/USAGE.md), [build instructions](docs/BUILD.md), and
 [contributing](CONTRIBUTING.md) for more information. Help and license notices

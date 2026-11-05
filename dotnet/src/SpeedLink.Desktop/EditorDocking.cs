@@ -1,10 +1,13 @@
 using System.IO;
 using System.Globalization;
+using System.ComponentModel;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Navigation;
 using SpeedLink.Core;
 
 namespace SpeedLink.Desktop;
@@ -113,6 +116,53 @@ public partial class EditorWorkspace
         if (infoWindow?.WindowState == WindowState.Minimized) infoWindow.WindowState = WindowState.Normal;
         infoWindow?.Activate();
     }
+
+    private void RefreshGuideTopic(TuningDefinition? definition, TuningTable? map)
+    {
+        (string Title, string Anchor)? topic = map?.Name switch
+        {
+            "BCS Correction Mode" or "BCS DC Base" or "BCS Throttle Input" or
+            "BCS DC Adjustment - Load Target Correction - Initial" or "BCS DC Adjustment - Load Target Correction - Incremental" or
+            "BCS DC Adjustment Boost Target Correction (Boost Targeting Mode)" or "BCS DC Adjustment - Boost Limit Exceeded" or
+            "BCS DC Accumulated Correction Limit - Increase" or "BCS DC Accumulated Correction Limit - Decrease" or
+            "BCS DC Adjustment Limit - Increase" or "BCS DC Adjustment Limit - Decrease" or
+            "Overboost Pressure Limit - Base" or "Overboost Pressure Limit Hysteresis" or "Boost Limit Barometer Adjustment" or
+            "MAP Targets (Boost Targeting Mode)" or "Load Targets (Alternate Mode)"
+                => ("Boost and wastegate control", "boost-and-wastegate-control"),
+            "Overboost Protection Fuel Cut" or "Overload Protection Fuel Cut" or "Rev Limiter Normal" or
+            "Cold Coolant Rev Limiter - 1" or "Cold Coolant Rev Limiter - 2" or
+            "Absolute Rev Limiter - 1" or "Absolute Rev Limiter - 2" or "Absolute Rev Limiter - 3"
+                => ("Load limits and fuel cut", "load-limits-and-fuel-cut"),
+            "Knock Retard Additive" or "Knock Retard Multiplier"
+                => ("Knock reference and spark timing", "knock-reference-and-spark-timing"),
+            "Injector Base Pulsewidth - 1" or "Injector Base Pulsewidth - 2" or "Injector Pulsewidth Offset" or "Injector Short Pulsewidth Correction"
+                => ("Injector pulsewidth", "injector-pulsewidth"),
+            "MAF Calibration" or "MAF Calibration 1" or "MAF Calibration 2" or "Closed Loop AFR Target" or
+            "MAP Scale Additive - DTC Reporting" or "MAP Scale Additive - ECU Boost Mgmt" or "MAP Scale Additive - Logging"
+                => ("Sensor scaling and feedback", "sensor-scaling-and-feedback"),
+            _ => null
+        };
+        // A local definition can replace the help for the same map name.
+        if (topic is not { } section || definition is null || map is null ||
+            !TuningDefinition.Known.Any(known => known.Calibration == definition.Calibration && known.Tables.Any(bundled =>
+                bundled.Name == map.Name && bundled.Category == map.Category && bundled.Description == map.Description)))
+        {
+            GuideTopic.Visibility = Visibility.Collapsed;
+            GuideLink.NavigateUri = null;
+            return;
+        }
+        GuideLinkText.Text = "Tuning guide · " + section.Title;
+        GuideLink.NavigateUri = new("https://github.com/mrphyslaw/SpeedLink/blob/main/docs/TUNING_HELP.md#" + section.Anchor);
+        GuideTopic.Visibility = Visibility.Visible;
+    }
+
+    private void GuideLink_RequestNavigate(object sender, RequestNavigateEventArgs e)
+    {
+        e.Handled = true;
+        try { Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true }); }
+        catch (Win32Exception) { MessageBox.Show(infoWindow, "Open the SpeedLink tuning guide on GitHub in your browser.", "Could not open the browser"); }
+    }
+
     private void ApplyLayout()
     {
         bool hidden = FocusButton.IsChecked;

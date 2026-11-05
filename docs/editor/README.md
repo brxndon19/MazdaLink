@@ -90,8 +90,8 @@ and paste retain full precision. Axis names and units label the list's two colum
 ![Five compact value and state panes visible together](images/single-values.png)
 
 Single-value maps use small wrapping cards, normally about 300 pixels wide,
-with standard-size number fields and a single baseline row. Resize the card
-individual cards from their edges or corners; positions and sizes are restored for that calibration.
+with standard-size number fields and a single baseline row. Resize individual
+cards from their edges or corners. Positions and sizes restore for that calibration.
 Full help is available from the
 **ⓘ** button beside the title or F1. Type a value and choose **Apply**
 or press Enter. Apply/Cancel appear only while typing. Escape or **Cancel**
@@ -146,7 +146,8 @@ reducing the map's height. Reusing the control brings that map's help forward.
 remains available too. Map info is disabled until a map is selected.
 Value units and input axes stay visible above the explanation. Help distinguishes
 targets and thresholds from multipliers and signed corrections, with simple
-examples. [Map-help conventions](../TUNING_HELP.md) explain the common units.
+examples. Controls with a guide topic link to it directly. The
+[tuning guide](../TUNING_HELP.md) explains common units and related controls.
 **Storage details** expands address, data type and dimensions; long content can
 be scrolled. Cell tooltips and the status strip show comparison values.
 Axis titles and breakpoint headers have a distinct blue-gray band and bright

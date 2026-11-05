@@ -25,7 +25,7 @@ Axis labels beside their breakpoints and linked row/column highlighting.
 Axis titles center on visible rows and columns, excluding unused table space.
 Distinct axis header bands and borders separate inputs from editable values.
 Tuner-focused map help with visible units, arithmetic and correction examples.
-Map info in each pane and F1 open help for that map.
+Map info and F1 open help for that map, with links to relevant tuning guide topics.
 Import editor/logger definition updates and restore bundled copies.
 Automatic adapter diagnostics and support ZIP export, including failed connections.
 Local crash reports with next-launch review and support ZIP export; nothing sent automatically.
@@ -55,7 +55,7 @@ Complete-reply handling avoids idle waits; display redraws do not cap acquisitio
 Verified standard batches retain stock Gen 1 precision; Gen 2 uses its own protocol.
 Both wired adapters passed sustained read-only logging on one L3M6EG000 bench ECU.
 Post-read reconnect guidance and recoverable display/recording input errors.
-ROM/offline checked; real-ECU logging validation pending.
+Further ECU profiles, physical sensor accuracy and running-engine rates need validation.
 Flashing and stock recovery support all nine bundled Gen 1 ROM layouts.
 Gen 2 flashing is planned for an upcoming release.
 Flash & Recover opens from the sidebar. Help contains the flashing guide.

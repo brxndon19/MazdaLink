@@ -2,14 +2,12 @@
 
 For a visual tour, see the [logger overview and screenshots](logger/README.md).
 
-The logger draft covers nine Gen 1 ROMs with 33–38 parameters, plus experimental Gen 2
-L3CGEE000 with 20. It uses the
-factory application's read-identifier interface; a logging patch is not required.
-The ROM encoders and offline conversions have been checked. Real-ECU acceptance,
-sensor readings and achievable logging rates still need testing.
+The logger covers nine Gen 1 ROMs with 33–38 parameters, plus experimental Gen 2
+L3CGEE000 with 20. It uses the factory application's read-identifier interface
+with stock ROMs. The encoders and offline conversions have been checked.
 
 Both vLinker FS and Tactrix logger paths have passed isolated bench tests across
-all seven profiles, including sustained requests, fault handling, desktop
+the original seven Gen 1 profiles, including sustained requests, fault handling, desktop
 recording and USB interruption/reconnect checks. These tests use simulated ECU
 replies through real adapters. See the [validation results](../dotnet/docs/Validation.md).
 
@@ -196,9 +194,11 @@ Real ECU sensor values and rates are pending.
 
 ## L3M6EG000 stock interface
 
-This profile offers 33 parameters over 30 sequential requests. Native encoder,
-identifier-copy and conversion checks use synthetic inputs; real ECU logging
-acceptance and measured values/rates remain pending. Five baseline parameters
+This profile offers 33 parameters across 30 enhanced identifiers. Standard
+batching can reduce the all-channel plan to 26 requests per scan. Native encoder,
+identifier-copy and conversion checks use synthetic inputs. Read-only queries and
+recording passed on one powered L3M6EG000 bench ECU. Physical sensor accuracy and
+running-engine rates still need testing. Five baseline parameters
 are not offered: desired fuel rail pressure, fuel injection amount, ambient
 temperature, catalyst temperature and neutral switch. The stock status encoder
 does not populate the neutral bit, so it is unavailable instead of a false zero.

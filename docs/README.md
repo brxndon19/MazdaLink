@@ -11,7 +11,7 @@ flashing and recovery. Gen 2 flashing is planned for an upcoming release.
 | [Gen 1 Flash & Recover](FLASHING.md) | Find a saved backup by ECU identity, choose a readback policy, check boot mode and recover an interrupted write |
 | [ROM editor overview](editor/README.md) | Screenshots, features and a short editing workflow |
 | [ROM editor guide](EDITOR.md) | First edit, single values, small tables, MAF curves, layout, map help, comparison and saving |
-| [Map-help conventions](TUNING_HELP.md) | Units, sign conventions, multipliers, corrections and interpretation limits |
+| [Tuning guide](TUNING_HELP.md) | Map units, boost and wastegate control, protection thresholds, knock and injector calculations |
 | [Logger overview](logger/README.md) | Live-data and recorded-log screenshots, features and a quick start |
 | [Logger](LOGGER.md) | Adapter setup, ROM binding, parameters, units, charts, CSV recording and log viewing |
 | [Logger performance](LOGGER_PERFORMANCE.md) | Max polling, measured adapter rates, reply completion and validation limits |
