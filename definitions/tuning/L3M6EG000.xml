@@ -707,10 +707,10 @@
       <description>Load above which the higher filtered load estimate can be held. Other activation and release conditions apply.</description>
     </table>
     <table type="Switch" name="BCS Correction Mode" category="Boost Control" storageaddress="0x3023a" storagetype="uint8" endian="big" sizex="1" userlevel="1">
-      <state name="Load error" data="00" />
-      <state name="Pressure error" data="01" />
+      <state name="Engine load" data="00" />
+      <state name="Boost pressure" data="01" />
       <scaling units="Mode" expression="x*1+(0)" to_byte="(x-(0))/1" format="0" fineincrement="1" coarseincrement="1" />
-      <description>Chooses the error used to accumulate boost-control solenoid duty correction. Load error (0) uses actual minus target load and switches to the overboost correction when it is latched. Pressure error (1) uses actual minus target manifold pressure. Both modes use load error for the initial duty correction.</description>
+      <description>Chooses the error used to accumulate boost-control solenoid duty correction. Engine load (0) uses actual minus target load and switches to the overboost correction when it is latched. Boost pressure (1) uses actual minus target manifold pressure. Both modes use load error for the initial duty correction.</description>
     </table>
     <table type="1D" name="BCS DC Accumulated Correction Limit - Decrease" category="Boost Control" storageaddress="0x30260" storagetype="float" endian="big" sizex="1" userlevel="1">
       <scaling units="duty % points" expression="x*2+(0)" to_byte="(x-(0))/2" format="0.0" fineincrement="0.1" coarseincrement="1" />

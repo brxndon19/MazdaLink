@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.0-alpha.4
+
+- Use **Engine load** and **Boost pressure** for BCS Correction Mode across all ten bundled ROMs. Update L3M6EG000 Map info and the tuning guide to match. Both choices retain their existing ECU mode values.
+
 ## 0.8.0-alpha.3
 
 - Clarify boost-solenoid correction, protective fuel cut and rev-limiter help across all ten bundled ROM definitions.

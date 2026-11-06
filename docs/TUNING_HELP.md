@@ -45,9 +45,7 @@ command. The ECU combines several terms to produce that command.
 2. **Load Target Correction - Initial** looks up a duty correction from
    `actual load − target load`. This term uses load error in either mode.
 3. **BCS Correction Mode** chooses what adds to the accumulated correction on
-   each update. `L3M6EG000` labels the choices **Load error** and **Pressure
-   error**. Other bundled calibrations label them **Engine load** and **Boost
-   pressure**.
+   each update. Choose **Engine load** or **Boost pressure**.
 
    | Mode | Input to the accumulated correction | Map that supplies the step |
    | --- | --- | --- |
