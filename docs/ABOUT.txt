@@ -25,7 +25,7 @@ Axis labels beside their breakpoints and linked row/column highlighting.
 Axis titles center on visible rows and columns, excluding unused table space.
 Distinct axis header bands and borders separate inputs from editable values.
 Tuner-focused map help with visible units, arithmetic and correction examples.
-Map info and F1 open help for that map, with links to relevant tuning guide topics.
+Map info and F1 open help for that map, with links into the bundled offline tuning guide.
 Import editor/logger definition updates and restore bundled copies.
 Automatic adapter diagnostics and support ZIP export, including failed connections.
 Local crash reports with next-launch review and support ZIP export; nothing sent automatically.
@@ -33,7 +33,7 @@ Tested GitHub release packages with matching source, hashes and build provenance
 Factory seed/key exchanges retained; ROM payloads excluded; VIN/chassis IDs and personal data redacted.
 Getting started, Editor, Logger and Report a problem guides included under Help.
 Every editor save applies mandatory ROM-specific integrity checks. Originals preserved.
-Gen 2 code and markers are validated; no arbitrary checksum repair is offered.
+Gen 2 exports validate the program and markers and correct the native code sum as needed.
 A definition is not required to dump a ROM.
 
 Adapters: Vgate vLinker FS (USB), Tactrix Openport 2.0
@@ -41,7 +41,7 @@ Experimental: Mongoose-Plus ISO/CAN3 reading, logging and Gen 1 programming.
 Stock-ROM logger: nine Gen 1 profiles with 33–38 parameters; Gen 2 with 20.
 L3M6EG000: 863 editor controls, mandatory checksum correction, 33 stock logger parameters.
 Per-ECU identification bytes preserved unchanged in ROM exports.
-Experimental Gen 2 L3CGEE000: 287 tuning entries and 155 DTC reporting controls.
+Experimental Gen 2 L3CGEE000: 293 tuning entries, including six MAP controls, and 155 DTC reporting controls.
 Compatible unknown Gen 2 dumping uses a separate, bounded read protocol.
 Known short and complete ECU calibration IDs recognized for logging.
 Parameter selection, up to six synchronized charts, CSV and recorded-log viewer.

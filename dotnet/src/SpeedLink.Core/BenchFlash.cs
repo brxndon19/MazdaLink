@@ -68,7 +68,9 @@ public sealed class BenchFlashPlan
     }
     internal bool MatchesCalibration(string? reported) => reported == Profile.Calibration || reported == FullCalibration;
     internal bool MatchesLive(EcuIdentity live) => MatchesCalibration(live.Calibration) && live.Vin == Identity.Vin && live.ChassisId == Identity.ChassisId;
-    internal string VehicleIdentityHash => RomInspector.Hash(Encoding.ASCII.GetBytes(Identity.VehicleIdentifierLabel + "\n" + Identity.VehicleIdentifier));
+    internal string VehicleIdentityHash => HashVehicleIdentity(Identity);
+    internal static string HashVehicleIdentity(EcuIdentity identity) =>
+        RomInspector.Hash(Encoding.ASCII.GetBytes(identity.VehicleIdentifierLabel + "\n" + identity.VehicleIdentifier));
 
     public static BenchFlashPlan Load(string imagePath, string backupPath, string requiredMode = "hardware")
         => LoadCore(imagePath, backupPath, requiredMode, new(), new());
@@ -92,7 +94,7 @@ public sealed class BenchFlashPlan
         return plan;
     }
 
-    private static EcuIdentity ReadIdentity(JsonObject identity, string mode)
+    internal static EcuIdentity ReadIdentity(JsonObject identity, string mode)
     {
         string? Field(string name) => identity[name]?.GetValue<string>();
         return new(mode, "saved baseline", Field("vin"), Field("calibration")) { ChassisId = Field("chassisId") };

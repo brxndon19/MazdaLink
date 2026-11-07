@@ -4,7 +4,8 @@ In **Editor**, open a map and click **Map info** or **ⓘ** in its pane. You can
 also press **F1** or choose **View → Map layout and display → Map information…**.
 The popup explains the selected control and shows its units and input axes.
 When this guide covers the control, a link in the popup opens the relevant
-section. Addresses and data types are under **Storage details**.
+section inside SpeedLink, including offline. You can also open **Help → Tuning
+guide** from any workspace. Addresses and data types are under **Storage details**.
 
 The sections below explain the bundled calibrations. Check the active ROM's map
 help for its axes, units and conditions. Imported definitions supply their own
@@ -35,6 +36,53 @@ configuration or scaled by other maps; its description retains those qualificati
 
 ## Boost and wastegate control
 
+### Set up boost pressure mode
+
+The bundled factory ROMs ship with **BCS Correction Mode** set to **Engine
+load**. The walkthrough uses Gen 1 **L3M6EG000**, where the pressure mode has
+been traced through the wastegate command in firmware. Vehicle behavior
+remains unverified.
+
+1. In the Editor, open **Boost Control → BCS Correction Mode** and select
+   **Boost pressure**. Keep **BCS Throttle Input** at its existing setting.
+   Check whether the RPM × throttle tables are using **Measured TPS** or
+   **Target TPS** before choosing which cells to edit.
+2. In **Boost Control / Targets → MAP Targets (Boost Targeting Mode)**, enter
+   the manifold-pressure target for the RPM and throttle cells you want to
+   tune. The values are in **psi absolute**. Add local barometric pressure to
+   your gauge target. For example, 10 psi of gauge boost at 14.5 psia barometric
+   pressure is a target of 24.5 psia. Start with pressures already validated on
+   your setup. Check the surrounding cells too, because the ECU interpolates
+   between them and the factory pressure table contains zero-valued cells.
+3. Start with your proven **BCS DC Base** and the stock **BCS DC Adjustment Boost
+   Target Correction (Boost Targeting Mode)** curve. Keep the load requests
+   and overboost protections at their known-good settings. **Load Targets
+   (Alternate Mode)** belongs to a separately enabled strategy.
+4. Log RPM, the relevant throttle input, manifold absolute pressure, barometric
+   pressure, and commanded wastegate duty where those channels are available.
+   Compare actual MAP to the matching target cells in the same units. Use
+   **BCS DC Base** to bring a steady pull closer to target. Use the correction
+   curve to tune how quickly duty responds to pressure error. The ECU can look
+   up a pressure correction and still clear the accumulated term or override
+   the final duty. If duty stops changing while error persists, check whether
+   the controller is active and whether a correction or duty limit is reached.
+   Change one map at a time so you can see its effect in the log.
+
+On stock **L3M6EG000**, about 1.015 psi under target adds 0.30 duty percentage
+points per active update. About 1.015 psi over target subtracts 0.60 points.
+The firmware schedules this controller every **25 ms nominally** (40 Hz).
+Four active updates at that same over-target error remove 2.4 points from the
+accumulated term in about 100 ms, subject to the limits. The period comes from
+the ROM scheduler. Live timing and pressure response remain unmeasured.
+
+The L3M6EG000 enable threshold is based on **gauge boost** and RPM. At
+1,500 RPM the stock threshold to start accumulating correction is about
+7.7 psi gauge. Once enabled, it can stay active down to about 4.8 psi gauge
+at that same RPM, depending on other ECU conditions. A below-threshold test
+can show an active table lookup with zero accumulated correction.
+
+### How the ECU combines the corrections
+
 The boost-control solenoid (**BCS**) controls the wastegate through a duty-cycle
 command. The ECU combines several terms to produce that command.
 
@@ -57,9 +105,8 @@ command. The ECU combines several terms to produce that command.
    limits the initial and accumulated terms together before applying them to
    the duty request. The final duty has its own bounds.
 
-The factory images for the bundled definitions use load mode. The dropdown
-writes `0` or `1`. The ECU also interprets other nonzero stored values as
-pressure mode. Load mode uses the ECU's airflow-based estimate of engine load.
+The dropdown writes `0` or `1`. The ECU also interprets other nonzero stored
+values as pressure mode. Load mode uses the ECU's airflow-based estimate of engine load.
 The same manifold pressure can correspond to different air charge as intake
 temperature changes.
 
@@ -117,12 +164,18 @@ has its own activation conditions and the final pulse is subject to later limits
 
 **MAF Calibration** maps sensor voltage to airflow. Where a ROM exposes multiple
 curves, check the map description for when each one is selected. **Closed Loop
-AFR Target** uses lambda where labeled `lambda`. A target is a commanded value.
-Use a measured channel when you want to see the sensor response.
+AFR Target** uses lambda where labeled `lambda`. The three **Open Loop Part
+Throttle AFR Target** maps in Gen 2 L3CGEE000 also use lambda. Enter 0.80 for
+lambda 0.80, which is about 11.8:1 on a 14.7:1 gasoline-equivalent scale. A
+target is a commanded value. Use a measured channel to see the sensor response.
 
-For MAP sensor conversion, the map named **MAP Scale Additive** is actually
-subtracted after the multipliers. Its help states the formula and the remaining
-physical-unit qualification. The name alone is not sufficient to infer a sign.
+For MAP sensor conversion, the Gen 1 map named **MAP Scale Additive** supplies
+the amount subtracted after the multipliers. Gen 2 L3CGEE000 exposes separate
+sets of **MAP Scale Base Multiplier**, **MAP Scale Second Multiplier** and
+**MAP Scale Subtractive Offset** for control and diagnostics and for logging.
+Both sets calculate `kPa = max(0, volts × base multiplier × second multiplier − offset)`.
+If the sensor changes, use its known pressure-versus-voltage curve to calibrate
+both sets and compare against a known pressure reference.
 
 The examples use illustrative numbers to explain the calculations. See the
 [validation scope](VALIDATION.md) for the available ECU test evidence.

@@ -57,16 +57,25 @@ public partial class EditorWorkspace
         var injector = document.Definition.Tables.First(t => t.Name.StartsWith("Injector Base Pulsewidth - ", StringComparison.Ordinal));
         OpenTable(injector); UpdateLayout();
         if (HelpUnitsText.Text != "Values: " + injector.Units || HelpText.Text != injector.Description ||
-            !GuideTopic.IsVisible || GuideLink.NavigateUri?.Fragment != "#injector-pulsewidth")
+            !GuideTopic.IsVisible || GuideLink.Tag as string != "Injector pulsewidth")
             throw new InvalidOperationException("Map information retained the previous map's units or description.");
         var boost = document.Definition.Tables.Single(t => t.Name == "BCS Correction Mode");
         OpenTable(boost); UpdateLayout(); infoWindow.UpdateLayout();
-        if (!GuideTopic.IsVisible || GuideLink.NavigateUri?.Fragment != "#boost-and-wastegate-control" || HelpText.Text != boost.Description)
+        if (!GuideTopic.IsVisible || GuideLink.Tag as string != "Boost and wastegate control" || HelpText.Text != boost.Description)
             throw new InvalidOperationException("BCS Correction Mode help did not link to the boost guide.");
+        GuideLink.RaiseEvent(new RoutedEventArgs(System.Windows.Documents.Hyperlink.ClickEvent));
+        var guide = infoWindow.OwnedWindows.OfType<Window>().Single();
+        await Settle();
+        var guideText = ((DockPanel)guide.Content).Children.OfType<TextBox>().Single();
+        int boostHeading = guideText.Text.IndexOf("## Boost and wastegate control", StringComparison.Ordinal);
+        int headingLine = guideText.GetLineIndexFromCharacterIndex(boostHeading);
+        if (headingLine < guideText.GetFirstVisibleLineIndex() || headingLine > guideText.GetLastVisibleLineIndex() || guideText.GetFirstVisibleLineIndex() <= 0)
+            throw new InvalidOperationException("The bundled tuning guide did not open at the boost section.");
+        guide.Close();
         CaptureWindow(infoWindow, Path.Combine(folder, "BoostModeHelp.png"));
         var unrelated = document.Definition.Tables.First(t => t.Category == "Idle");
         OpenTable(unrelated); UpdateLayout();
-        if (GuideTopic.IsVisible || GuideLink.NavigateUri is not null)
+        if (GuideTopic.IsVisible || GuideLink.Tag is not null)
             throw new InvalidOperationException("Map information retained the previous guide topic.");
         OpenTable(sample); UpdateLayout(); infoWindow.UpdateLayout();
         CaptureWindow(infoWindow, Path.Combine(folder, "MapInformation.png"));

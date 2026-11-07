@@ -12,7 +12,7 @@
       <memmodel>PowerPC VLE</memmodel>
       <filesize>1024kb</filesize>
       <author>mrphyslaw</author>
-      <version>0.21 experimental</version>
+      <version>0.22 experimental</version>
       <noramoffset />
     </romid>
     <checksum type="MAZDAL3CG" />
@@ -1438,7 +1438,7 @@
       <description>Airflow boundary for long-term fuel-trim learning ranges. Factory hysteresis and operating conditions also affect range selection. Keep the boundaries in ascending order; matching upper boundaries leave those ranges inactive.</description>
     </table>
     <table type="3D" name="Open Loop Part Throttle AFR Target Knock Present" category="Fueling" storageaddress="0xd55ec" storagetype="float" endian="big" sizex="14" userlevel="1" sizey="29">
-      <scaling units="AFR (14.7:1 equivalent)" expression="x*1+(0)" to_byte="(x-(0))/1" format="0.0000" fineincrement="0.01" coarseincrement="1" />
+      <scaling units="lambda" expression="x*1+(0)" to_byte="(x-(0))/1" format="0.0000" fineincrement="0.01" coarseincrement="1" />
       <table type="Static X Axis" name="Engine Speed (RPM)" sizex="14">
         <data>500</data>
         <data>1000</data>
@@ -1489,7 +1489,7 @@
       <description>Knock-related-mode open-loop lambda target by RPM and load. Overload takes priority over knock-related mode. Used when the WOT curve is not selected. Lower values command richer fueling. Uses nearest edge outside axes.</description>
     </table>
     <table type="3D" name="Open Loop Part Throttle AFR Target Normal" category="Fueling" storageaddress="0xd4f94" storagetype="float" endian="big" sizex="14" userlevel="1" sizey="29">
-      <scaling units="AFR (14.7:1 equivalent)" expression="x*1+(0)" to_byte="(x-(0))/1" format="0.0000" fineincrement="0.01" coarseincrement="1" />
+      <scaling units="lambda" expression="x*1+(0)" to_byte="(x-(0))/1" format="0.0000" fineincrement="0.01" coarseincrement="1" />
       <table type="Static X Axis" name="Engine Speed (RPM)" sizex="14">
         <data>500</data>
         <data>1000</data>
@@ -1540,7 +1540,7 @@
       <description>Normal-mode open-loop lambda target by RPM and load. Overload takes priority over knock-related mode. Used when the WOT curve is not selected. Lower values command richer fueling. Uses nearest edge outside axes.</description>
     </table>
     <table type="3D" name="Open Loop Part Throttle AFR Target Overload" category="Fueling" storageaddress="0xd5c44" storagetype="float" endian="big" sizex="14" userlevel="1" sizey="29">
-      <scaling units="AFR (14.7:1 equivalent)" expression="x*1+(0)" to_byte="(x-(0))/1" format="0.0000" fineincrement="0.01" coarseincrement="1" />
+      <scaling units="lambda" expression="x*1+(0)" to_byte="(x-(0))/1" format="0.0000" fineincrement="0.01" coarseincrement="1" />
       <table type="Static X Axis" name="Engine Speed (RPM)" sizex="14">
         <data>500</data>
         <data>1000</data>
@@ -5642,6 +5642,30 @@
         <data>4.992000103</data>
       </table>
       <description>Airflow represented by each MAF sensor voltage. The same curve is used during initialization and normal operation. Keep the upper range within the sensor and housing capacity.</description>
+    </table>
+    <table type="1D" name="MAP Scale Base Multiplier - Control and Diagnostics" category="Sensor Calibration" storageaddress="0x40314" storagetype="float" endian="big" sizex="1" userlevel="1">
+      <scaling units="Multiplier" expression="x" to_byte="x" format="0.000000" fineincrement="0.001" coarseincrement="1" />
+      <description>Multiplies the MAP sensor voltage before the pressure offset is subtracted. Keep the matching control and logging values aligned to the sensor calibration. SpeedLink corrects the native code checksum on export.</description>
+    </table>
+    <table type="1D" name="MAP Scale Base Multiplier - Logging" category="Sensor Calibration" storageaddress="0x44358" storagetype="float" endian="big" sizex="1" userlevel="1">
+      <scaling units="Multiplier" expression="x" to_byte="x" format="0.000000" fineincrement="0.001" coarseincrement="1" />
+      <description>Multiplies the MAP sensor voltage before the pressure offset is subtracted. Keep the matching control and logging values aligned to the sensor calibration. The stock diagnostic output still tops out at 255 kPa. SpeedLink corrects the native code checksum on export.</description>
+    </table>
+    <table type="1D" name="MAP Scale Second Multiplier - Control and Diagnostics" category="Sensor Calibration" storageaddress="0x40310" storagetype="float" endian="big" sizex="1" userlevel="1">
+      <scaling units="Multiplier" expression="x" to_byte="x" format="0.000000" fineincrement="0.001" coarseincrement="1" />
+      <description>Multiplies the MAP sensor voltage before the pressure offset is subtracted. Keep the matching control and logging values aligned to the sensor calibration. SpeedLink corrects the native code checksum on export.</description>
+    </table>
+    <table type="1D" name="MAP Scale Second Multiplier - Logging" category="Sensor Calibration" storageaddress="0x44354" storagetype="float" endian="big" sizex="1" userlevel="1">
+      <scaling units="Multiplier" expression="x" to_byte="x" format="0.000000" fineincrement="0.001" coarseincrement="1" />
+      <description>Multiplies the MAP sensor voltage before the pressure offset is subtracted. Keep the matching control and logging values aligned to the sensor calibration. The stock diagnostic output still tops out at 255 kPa. SpeedLink corrects the native code checksum on export.</description>
+    </table>
+    <table type="1D" name="MAP Scale Subtractive Offset - Control and Diagnostics" category="Sensor Calibration" storageaddress="0x4030c" storagetype="float" endian="big" sizex="1" userlevel="1">
+      <scaling units="kPa" expression="x" to_byte="x" format="0.000000" fineincrement="0.001" coarseincrement="1" />
+      <description>Subtracts this many kPa after both voltage multipliers. Keep the matching control and logging values aligned to the sensor calibration. SpeedLink corrects the native code checksum on export.</description>
+    </table>
+    <table type="1D" name="MAP Scale Subtractive Offset - Logging" category="Sensor Calibration" storageaddress="0x44350" storagetype="float" endian="big" sizex="1" userlevel="1">
+      <scaling units="kPa" expression="x" to_byte="x" format="0.000000" fineincrement="0.001" coarseincrement="1" />
+      <description>Subtracts this many kPa after both voltage multipliers. Keep the matching control and logging values aligned to the sensor calibration. The stock diagnostic output still tops out at 255 kPa. SpeedLink corrects the native code checksum on export.</description>
     </table>
     <table type="2D" name="High RPM Shift Retard - RPM" category="Shift Related" storageaddress="0xe3094" storagetype="float" endian="big" sizex="11" userlevel="1">
       <scaling units="deg" expression="x*1+(0)" to_byte="(x-(0))/1" format="0.0000" fineincrement="0.01" coarseincrement="1" />

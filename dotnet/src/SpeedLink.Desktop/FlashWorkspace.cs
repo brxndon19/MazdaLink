@@ -34,6 +34,7 @@ internal sealed class FlashWorkspace : UserControl
     private readonly TextBlock readyLabel = new() { TextWrapping = TextWrapping.Wrap };
     private readonly ComboBox readback = new() { MinWidth = 220, ItemsSource = new[] { "Two full readbacks (default)", "One full readback", "Skip readback" }, SelectedIndex = 0 };
     private readonly TextBlock summary = new() { TextWrapping = TextWrapping.Wrap }, status = new() { TextWrapping = TextWrapping.Wrap }, detail = new() { TextWrapping = TextWrapping.Wrap, Foreground = UiTheme.Muted };
+    private readonly TextBlock verificationStatus = new() { TextWrapping = TextWrapping.Wrap, Foreground = UiTheme.Muted };
     private readonly ProgressBar bar = new() { Minimum = 0, Maximum = 100, Height = 16, Margin = new(0, 10, 0, 10) };
     private readonly TextBox events = new() { IsReadOnly = true, TextWrapping = TextWrapping.Wrap, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, MinHeight = 150 };
     private readonly List<Control> inputs = [];
@@ -136,6 +137,10 @@ internal sealed class FlashWorkspace : UserControl
         stop.MinWidth = 80; stop.Click += (_, _) => { cancel?.Cancel(); stop.IsEnabled = false; }; actions.Children.Add(stop);
         var open = new Button { Content = "Open run folder", Margin = new(8, 0, 0, 0) };
         open.Click += (_, _) => { if (workflow?.RunFolder is string folder) Process.Start(new ProcessStartInfo(folder) { UseShellExecute = true }); }; actions.Children.Add(open);
+        var verifyWrite = new Button { Content = "Verify last write…", Margin = new(8, 0, 0, 0) };
+        verifyWrite.Click += async (_, _) => await VerifyLastWrite();
+        actions.Children.Add(verifyWrite); inputs.Add(verifyWrite);
+        top.Children.Add(verificationStatus);
         top.Children.Add(bar); status.FontWeight = FontWeights.SemiBold; top.Children.Add(status); detail.Margin = new(0, 6, 0, 10); top.Children.Add(detail);
         events.MaxHeight = 220;
         top.Children.Add(events);
@@ -219,7 +224,7 @@ internal sealed class FlashWorkspace : UserControl
     private void RefreshInterruptedRuns()
     {
         var runs = new List<InterruptedRun>();
-        foreach (string journal in library.InterruptedJournals(vault, evidenceMode))
+        foreach (string journal in library.FlashJournals(vault, evidenceMode))
         {
             try { runs.Add(DescribeRun(journal)); }
             catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException or InvalidOperationException) { }
@@ -271,6 +276,37 @@ internal sealed class FlashWorkspace : UserControl
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException)
         { backupText.Text = "Could not add the backup folder · " + error.Message; }
+    }
+
+    private async Task VerifyLastWrite(Func<string?>? chooseBackup = null)
+    {
+        if (IsWorking) return;
+        loading = true; Refresh();
+        verificationStatus.Text = "Checking the latest flash run…";
+        try
+        {
+            var run = await Task.Run(() =>
+            {
+                string? journal = library.FlashJournals(vault, evidenceMode).FirstOrDefault();
+                if (journal is null) throw new InvalidDataException("No saved flash run was found.");
+                return FlashVerification.Load(journal, evidenceMode);
+            });
+            string caption = $"{run.Calibration} · {run.ResetAt.ToLocalTime():g}";
+            verificationStatus.Text = "Choose a verified backup captured after this write. " + caption;
+            string? path = (chooseBackup ?? BrowseBackup)();
+            if (path is null) return;
+            bool matches = await Task.Run(() => run.CompareBackup(path));
+            verificationStatus.Text = (matches ? "Match · Every byte matches the intended image. " : "Mismatch · The captured ROM differs from the intended image. ") + caption;
+        }
+        catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException or InvalidOperationException or ArgumentException or JsonException or FormatException)
+        { verificationStatus.Text = "Could not verify the last write · " + error.Message; }
+        finally { loading = false; Refresh(); }
+
+        string? BrowseBackup()
+        {
+            var picker = new OpenFileDialog { Title = "Choose a verified backup after the write", Filter = "Verified backup|rom.bin" };
+            return picker.ShowDialog(Window.GetWindow(this)) == true ? picker.FileName : null;
+        }
     }
 
     private void Refresh()
@@ -399,7 +435,7 @@ internal sealed class FlashWorkspace : UserControl
         active = true; cancel?.Dispose(); cancel = new(); workflow = new(resetWait: offlineFactory is null ? null : _ => { });
         if (preparedRecovery is not null) probeStatus.Text = "Rechecking ECU recovery mode before erase…";
         HardwareUseChanged?.Invoke();
-        bar.Value = 0; events.Clear(); lastStage = null; uiStateFailed = false; Refresh();
+        bar.Value = 0; events.Clear(); verificationStatus.Text = ""; lastStage = null; uiStateFailed = false; Refresh();
         var progress = new WindowProgress(this);
         try
         {
@@ -430,7 +466,7 @@ internal sealed class FlashWorkspace : UserControl
             status.Text = $"{workflow.Stage}: {error.Message}";
             detail.Text = workflow.Stage switch
             {
-                BenchFlashStage.VerificationRequired => "The reset was acknowledged. Read and verify a backup, then compare it with the intended image before driving. Keep this run folder.",
+                BenchFlashStage.VerificationRequired => "The reset was acknowledged. Read a fresh verified backup in Connection, then use Verify last write. Keep this run folder.",
                 BenchFlashStage.RecoveryRequired => "Keep the ECU connected. Retain this run folder and original backup, then follow the Gen 1 recovery guide.",
                 _ => "Stopped before application erase. Review the reported preflight problem."
             };
@@ -525,6 +561,20 @@ internal sealed class FlashWorkspace : UserControl
             Directory.Exists(Path.Combine(workflow.RunFolder!, "readback")))
             throw new InvalidOperationException("Skip readback did not report an unverified write.");
         CheckReadbackCount("unverified-result.json", 0);
+        await VerifyLastWrite(() => original);
+        if (!verificationStatus.Text.Contains("Read a new verified backup", StringComparison.Ordinal))
+            throw new InvalidOperationException("The original backup was accepted for post-write verification: " + verificationStatus.Text);
+        string freshBackup = await Task.Run(() =>
+        {
+            using var transport = peer.Open();
+            transport.Initialize();
+            var identity = ReadWorkflow.Identify(transport);
+            return new ReadWorkflow(inspector: simulation?.Inspector)
+                .ReadBackup(transport, identity, Path.Combine(output, "verify-later")).Path;
+        });
+        await VerifyLastWrite(() => freshBackup);
+        if (!verificationStatus.Text.StartsWith("Match ·", StringComparison.Ordinal))
+            throw new InvalidOperationException("A fresh matching backup failed post-write verification: " + verificationStatus.Text);
 
         ready.IsChecked = true;
         peer.SimulateInterruptedWrite();
@@ -548,7 +598,7 @@ internal sealed class FlashWorkspace : UserControl
         return new { passed = true, hardwareAccessed = false, planValidated = true, explicitSetupConfirmation = true, changedInputDisarms = true,
             rejectedInputRecovers = true, vlinkerSelectionVerified = true, offlineTransferVerified = true, offlineStockRecoveryVerified = true,
             mongooseRecoverySelectionVerified = driver.SelectedItem is J2534Driver { Experimental: true }, progressAndLockingVerified = !uiStateFailed,
-            movedTargetAndAutomaticBackup = true, recoveryStateGate = true, skipReadbackVerified = true, target = plan?.FullCalibration };
+            movedTargetAndAutomaticBackup = true, recoveryStateGate = true, skipReadbackVerified = true, verifyLastWrite = true, target = plan?.FullCalibration };
 
         void CheckReadbackCount(string filename, int expected)
         {

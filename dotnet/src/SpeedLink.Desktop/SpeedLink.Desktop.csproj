@@ -21,6 +21,7 @@
     <EmbeddedResource Include="../../../docs/SUPPORTED_ROMS.md" LogicalName="SpeedLink.Profiles.md" />
     <EmbeddedResource Include="../../../docs/LOGGER.md" LogicalName="SpeedLink.LoggerHelp.md" />
     <EmbeddedResource Include="../../../docs/EDITOR.md" LogicalName="SpeedLink.EditorHelp.md" />
+    <EmbeddedResource Include="../../../docs/TUNING_HELP.md" LogicalName="SpeedLink.TuningHelp.md" />
     <EmbeddedResource Include="../../../docs/GEN2.md" LogicalName="SpeedLink.Gen2Help.md" />
     <EmbeddedResource Include="../../../docs/FLASHING.md" LogicalName="SpeedLink.FlashingHelp.md" />
     <EmbeddedResource Include="../../../docs/TROUBLESHOOTING.md" LogicalName="SpeedLink.SupportHelp.md" />

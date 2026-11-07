@@ -1,13 +1,10 @@
 using System.IO;
 using System.Globalization;
-using System.ComponentModel;
-using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Navigation;
 using SpeedLink.Core;
 
 namespace SpeedLink.Desktop;
@@ -119,7 +116,7 @@ public partial class EditorWorkspace
 
     private void RefreshGuideTopic(TuningDefinition? definition, TuningTable? map)
     {
-        (string Title, string Anchor)? topic = map?.Name switch
+        string? topic = map?.Name switch
         {
             "BCS Correction Mode" or "BCS DC Base" or "BCS Throttle Input" or
             "BCS DC Adjustment - Load Target Correction - Initial" or "BCS DC Adjustment - Load Target Correction - Incremental" or
@@ -128,18 +125,22 @@ public partial class EditorWorkspace
             "BCS DC Adjustment Limit - Increase" or "BCS DC Adjustment Limit - Decrease" or
             "Overboost Pressure Limit - Base" or "Overboost Pressure Limit Hysteresis" or "Boost Limit Barometer Adjustment" or
             "MAP Targets (Boost Targeting Mode)" or "Load Targets (Alternate Mode)"
-                => ("Boost and wastegate control", "boost-and-wastegate-control"),
+                => "Boost and wastegate control",
             "Overboost Protection Fuel Cut" or "Overload Protection Fuel Cut" or "Rev Limiter Normal" or
             "Cold Coolant Rev Limiter - 1" or "Cold Coolant Rev Limiter - 2" or
             "Absolute Rev Limiter - 1" or "Absolute Rev Limiter - 2" or "Absolute Rev Limiter - 3"
-                => ("Load limits and fuel cut", "load-limits-and-fuel-cut"),
+                => "Load limits and fuel cut",
             "Knock Retard Additive" or "Knock Retard Multiplier"
-                => ("Knock reference and spark timing", "knock-reference-and-spark-timing"),
+                => "Knock reference and spark timing",
             "Injector Base Pulsewidth - 1" or "Injector Base Pulsewidth - 2" or "Injector Pulsewidth Offset" or "Injector Short Pulsewidth Correction"
-                => ("Injector pulsewidth", "injector-pulsewidth"),
+                => "Injector pulsewidth",
             "MAF Calibration" or "MAF Calibration 1" or "MAF Calibration 2" or "Closed Loop AFR Target" or
-            "MAP Scale Additive - DTC Reporting" or "MAP Scale Additive - ECU Boost Mgmt" or "MAP Scale Additive - Logging"
-                => ("Sensor scaling and feedback", "sensor-scaling-and-feedback"),
+            "MAP Scale Additive - DTC Reporting" or "MAP Scale Additive - ECU Boost Mgmt" or "MAP Scale Additive - Logging" or
+            "MAP Scale Base Multiplier - Control and Diagnostics" or "MAP Scale Base Multiplier - Logging" or
+            "MAP Scale Second Multiplier - Control and Diagnostics" or "MAP Scale Second Multiplier - Logging" or
+            "MAP Scale Subtractive Offset - Control and Diagnostics" or "MAP Scale Subtractive Offset - Logging" or
+            "Open Loop Part Throttle AFR Target Normal" or "Open Loop Part Throttle AFR Target Knock Present" or "Open Loop Part Throttle AFR Target Overload"
+                => "Sensor scaling and feedback",
             _ => null
         };
         // A local definition can replace the help for the same map name.
@@ -148,19 +149,18 @@ public partial class EditorWorkspace
                 bundled.Name == map.Name && bundled.Category == map.Category && bundled.Description == map.Description)))
         {
             GuideTopic.Visibility = Visibility.Collapsed;
-            GuideLink.NavigateUri = null;
+            GuideLink.Tag = null;
             return;
         }
-        GuideLinkText.Text = "Tuning guide · " + section.Title;
-        GuideLink.NavigateUri = new("https://github.com/mrphyslaw/SpeedLink/blob/main/docs/TUNING_HELP.md#" + section.Anchor);
+        GuideLinkText.Text = "Tuning guide · " + section;
+        GuideLink.Tag = section;
         GuideTopic.Visibility = Visibility.Visible;
     }
 
-    private void GuideLink_RequestNavigate(object sender, RequestNavigateEventArgs e)
+    private void GuideLink_Click(object sender, RoutedEventArgs e)
     {
-        e.Handled = true;
-        try { Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true }); }
-        catch (Win32Exception) { MessageBox.Show(infoWindow, "Open the SpeedLink tuning guide on GitHub in your browser.", "Could not open the browser"); }
+        if (GuideLink.Tag is string heading)
+            MainWindow.HelpWindow("Tuning guide", heading, infoWindow).Show();
     }
 
     private void ApplyLayout()

@@ -39,7 +39,7 @@ internal static class Fixture
                 p.LoopAddress is int at ? RomInspector.Hash(data.AsSpan(at, p.LoopSize!.Value)) : null
         };
     }).ToArray();
-    public static RomInspector Inspector() => new(Profiles);
+    public static RomInspector Inspector() => new(Profiles, TuningGuard);
     public static TuningCodeGuard TuningGuard { get; } = new(Profiles.Select(p =>
     {
         var definition = TuningDefinition.Known.Single(d => d.Calibration == p.Calibration);

@@ -97,21 +97,60 @@ public sealed class Gen2Tests
         Assert.Contains(Directory.GetFiles(temp.Path, "*", SearchOption.AllDirectories), p => Path.GetExtension(p) == ".read");
     }
     [Fact]
-    public void NativeIntegrityExcludesCalibrationAndRejectsCodeOrMarkersWithoutRepair()
+    public void OpenLoopPartThrottleFuelTargetsUseNativeLambdaUnits()
+    {
+        var definition = TuningDefinition.Known.Single(d => d.Calibration == Profile.Calibration);
+        var targets = definition.Tables.Where(t => t.Name.StartsWith("Open Loop Part Throttle AFR Target", StringComparison.Ordinal)).ToArray();
+        Assert.Equal(3, targets.Length);
+        Assert.All(targets, target =>
+        {
+            Assert.Equal("lambda", target.Units);
+            Assert.Equal(0.8, target.Encode(0.8));
+        });
+    }
+
+    [Fact]
+    public void NativeIntegrityExcludesCalibrationAndGuardsCodeCorrection()
     {
         var inspector = Fixture.Inspector(); byte[] image = Image(); var info = inspector.Inspect(image);
-        Assert.True(info.ProfileValid); Assert.True(info.CanExport); Assert.False(info.CanCorrectChecksum); Assert.Null(info.CorrectionAddress);
+        Assert.True(info.ProfileValid); Assert.True(info.CanExport); Assert.True(info.CanCorrectChecksum);
+        Assert.Equal(0x3FFC0, info.CorrectionAddress);
         Assert.Equal(image, inspector.CorrectedCopy(image));
         foreach (int at in new[] { 0xC0000, 0xF0000, 0x1C000 })
         {
             var copy = image.ToArray(); copy[at] ^= 1; Assert.True(inspector.Inspect(copy).ChecksumValid);
-            Assert.Equal(copy, inspector.CorrectedCopy(copy));
         }
         foreach (int at in new[] { 0x4000, 0x1BFFE, 0x20000, 0xFFFFE, 0x80000, 0x12D68 })
         {
             var copy = image.ToArray(); copy[at] ^= 1;
             Assert.Throws<InvalidDataException>(() => inspector.CorrectedCopy(copy)); Assert.Equal(image[at] ^ 1, copy[at]);
         }
+    }
+
+    [Theory]
+    [InlineData(0x40314)] [InlineData(0x40310)] [InlineData(0x4030C)]
+    [InlineData(0x44358)] [InlineData(0x44354)] [InlineData(0x44350)]
+    public void MapScalingEditsSaveAndReopenWithOnlyNativeCorrectionWordChanged(int address)
+    {
+        using var temp = new TempFolder();
+        var image = Image(); var inspector = Fixture.Inspector();
+        string source = Path.Combine(temp.Path, "source.bin"), savedPath = Path.Combine(temp.Path, "edited.bin");
+        File.WriteAllBytes(source, image);
+        var editor = new RomEditor(image, source, inspector, Fixture.TuningGuard);
+        var control = editor.Definition.Tables.Single(t => t.Address == address);
+        Assert.StartsWith("MAP Scale", control.Name);
+        editor.Apply([new(control, 0, 12.5)], "Change MAP scaling");
+        var edited = editor.Snapshot();
+        Assert.False(inspector.Inspect(edited).ChecksumValid);
+        editor.SaveNew(savedPath);
+        var saved = File.ReadAllBytes(savedPath);
+        Assert.True(inspector.Inspect(saved).ProfileValid);
+        Assert.NotEqual(edited.AsSpan(0x3FFC0, 4).ToArray(), saved.AsSpan(0x3FFC0, 4).ToArray());
+        Assert.Equal(edited.AsSpan(0, 0x3FFC0).ToArray(), saved.AsSpan(0, 0x3FFC0).ToArray());
+        Assert.Equal(edited.AsSpan(0x3FFC4).ToArray(), saved.AsSpan(0x3FFC4).ToArray());
+        Assert.Equal(12.5, new RomEditor(saved, savedPath, inspector, Fixture.TuningGuard).Read(control, 0));
+        Assert.Equal(image, File.ReadAllBytes(source));
+        Assert.Equal(saved, inspector.CorrectedCopy(saved));
     }
     [Theory]
     [InlineData("5003")]
@@ -125,21 +164,24 @@ public sealed class Gen2Tests
         Assert.DoesNotContain(peer.Requests, r => r[0] is 0x27 or 0x23);
     }
     [Fact]
-    public void EveryIncludedControlEditsOnlyItsStorageAndSavesWithoutCodeRepair()
+    public void EveryIncludedControlEditsOnlyItsStorage()
     {
         using var temp = new TempFolder(); var image = Image();
-        var editor = new RomEditor(image, Path.Combine(temp.Path, "original.bin"), Fixture.Inspector(), Fixture.TuningGuard);
-        Assert.Equal(442, editor.Definition.Tables.Count);
+        var inspector = Fixture.Inspector();
+        var editor = new RomEditor(image, Path.Combine(temp.Path, "original.bin"), inspector, Fixture.TuningGuard);
+        Assert.Equal(448, editor.Definition.Tables.Count);
         foreach (var table in editor.Definition.Tables)
         {
             double value = table.IsChoice ? table.States[^1].Value : table.Decode(1);
             editor.Apply([new(table, 0, value)], table.Name); var edited = editor.Snapshot();
-            Assert.Equal(image.AsSpan(0, 0xC0000).ToArray(), edited.AsSpan(0, 0xC0000).ToArray());
-            Assert.True(Fixture.Inspector().Inspect(edited).ProfileValid); editor.Undo(); Assert.Equal(image, editor.Snapshot());
+            Assert.True(image.AsSpan(0, table.Address).SequenceEqual(edited.AsSpan(0, table.Address)));
+            Assert.True(image.AsSpan(table.End).SequenceEqual(edited.AsSpan(table.End)));
+            Assert.Equal(table.Address >= 0xC0000, inspector.Inspect(edited).ProfileValid);
+            editor.Undo(); Assert.Equal(image, editor.Snapshot());
         }
         var first = editor.Definition.Tables.First(t => !t.IsChoice); editor.Apply([new(first, 0, first.Decode(2))], "Edit");
         string path = Path.Combine(temp.Path, "edited.bin"); editor.SaveNew(path);
-        Assert.Equal(editor.Snapshot(), File.ReadAllBytes(path)); Assert.True(Fixture.Inspector().Inspect(File.ReadAllBytes(path)).ProfileValid);
+        Assert.Equal(editor.Snapshot(), File.ReadAllBytes(path)); Assert.True(inspector.Inspect(File.ReadAllBytes(path)).ProfileValid);
     }
     private sealed class ProgressList : IProgress<ReadProgress>
     { public List<ReadProgress> Items { get; } = []; public void Report(ReadProgress value) => Items.Add(value); }

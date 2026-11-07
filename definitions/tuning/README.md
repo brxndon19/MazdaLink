@@ -17,9 +17,10 @@ are preserved. See the [editor guide](../../docs/EDITOR.md) for usage and curren
 limits and the [tuning guide](../../docs/TUNING_HELP.md) for control explanations.
 
 L3CGEE000 retains the supported native addresses and geometry. Its help clarifies
-knock-reference arithmetic and encoded injector coefficients. Its code checksum
-and four markers are validated on export without automatic code repair. Editable
-calibrations are outside that sum; additional calibration integrity is unestablished.
+knock-reference arithmetic and encoded injector coefficients. Export verifies the
+native code sum and four markers. The six MAP scaling controls are inside the
+code sum and use the established correction word on save. Other editable
+calibrations are outside that sum. Additional calibration integrity is unestablished.
 
 Update these snapshots deliberately, retain the license, and rerun editor tests
 and the local reference-ROM audit after definition changes.

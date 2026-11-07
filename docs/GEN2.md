@@ -29,9 +29,11 @@ logging addresses or checksum rules from L3CGEE000.
 
 ## Editor and integrity
 
-The L3CGEE000 definition has 287 tuning entries and 155 DTC reporting controls.
-Twenty reviewed reference controls remain excluded. Code-backed sensor changes,
-code patches and independent monitor/readiness controls are not included.
+The L3CGEE000 definition has 293 tuning entries and 155 DTC reporting controls.
+Six MAP scaling controls cover the shared control and diagnostic conversion and
+the separate logging conversion. Both use sensor voltage times two multipliers,
+then subtract the offset in kPa. Keep the corresponding values matched. The
+diagnostic MAP value still has a 255 kPa ceiling.
 DTC reporting options do not guarantee that fault detection or failsafes stop,
 and they do not force readiness complete. Year, market and factory provenance
 of the reference image have not been established.
@@ -39,10 +41,11 @@ of the reference image have not been established.
 Every export validates the native code sum, four application markers and the
 recognized stock program layout. The wrapping big-endian 32-bit sum covers
 `[0x004000, 0x0C0000)`, excluding `[0x01C000, 0x020000)`, and must equal
-`0x5AA55AA5`. Editable calibrations are outside this sum. Valid calibration
-edits preserve the code; invalid code or markers are rejected without repair.
-No correction word or additional calibration-integrity rule is assumed.
-There is no option to bypass these save checks.
+`0x5AA55AA5`. The six MAP coefficients are inside this sum. SpeedLink
+automatically updates the existing correction word at `0x03FFC0` when needed.
+The guarded program layout, checksum routines and four markers must match.
+Calibration tables above `0x0C0000` lie outside the native sum. Additional
+calibration integrity rules remain unestablished.
 
 ## Logger
 

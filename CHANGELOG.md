@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.0-alpha.5
+
+- Add a boost-pressure mode walkthrough to the tuning guide. It covers the mode switch, absolute-pressure targets, base wastegate duty, the correction curve and a worked timing example for L3M6EG000. Open it from **Map info** or **Help → Tuning guide**, including offline.
+- Add **Verify last write…** to Flash & Recover. Compare a fresh verified backup from the same ECU with the intended image after an acknowledged reset.
+- Label the three Gen 2 L3CGEE000 part-throttle fuel targets in lambda. Add six MAP scaling controls with automatic native checksum correction and a program signature guard on export.
+
 ## 0.8.0-alpha.4
 
 - Use **Engine load** and **Boost pressure** for BCS Correction Mode across all ten bundled ROMs. Update L3M6EG000 Map info and the tuning guide to match. Both choices retain their existing ECU mode values.

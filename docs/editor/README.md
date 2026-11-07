@@ -192,8 +192,9 @@ The editor checks the calibration, boot, checksum layout and reference program
 signature. Changes to defined tuning controls remain editable; other program
 modifications are rejected. Extended/patched ROM layouts are unsupported.
 Every export applies its established integrity policy and verifies the saved
-bytes. Gen 2 L3CGEE000 validates its native code sum and markers; it rejects
-invalid code instead of inventing a checksum repair. See [Gen 2 limits](../GEN2.md).
+bytes. Gen 2 L3CGEE000 validates its native code sum and markers and updates the
+established correction word after supported MAP scaling edits. The program
+signature guards the surrounding code. See [Gen 2 limits](../GEN2.md).
 
 Static axes are read-only. This version has no patch installer, smoothing,
 tune-project history or log-to-map overlay. Offline software checks do not

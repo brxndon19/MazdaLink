@@ -14,7 +14,8 @@ public class BenchFlashTests
         using var temp = new TempFolder();
         var state = new PeerState();
         var workflow = new BenchFlashWorkflow(resetWait: _ => { });
-        var result = workflow.Execute(Plan(temp), state.Open, temp.Path, evidenceMode: "simulator", skipReadback: true);
+        var plan = Plan(temp);
+        var result = workflow.Execute(plan, state.Open, temp.Path, evidenceMode: "simulator", skipReadback: true);
         Assert.Null(result.Readback);
         Assert.Equal(BenchFlashStage.WrittenUnverified, workflow.Stage);
         Assert.Equal(BenchFlashPlan.Length, workflow.AcknowledgedBytes);
@@ -24,6 +25,15 @@ public class BenchFlashTests
         var journal = new BackupStore().InspectJournal(Path.Combine(result.Folder, "journal.jsonl"));
         Assert.True(journal.Complete);
         Assert.False(journal.LastDetails!["verified"]!.GetValue<bool>());
+        var verification = FlashVerification.Load(journal.Path, "simulator");
+        Assert.Throws<InvalidDataException>(() => verification.CompareBackup(plan.BackupPath));
+        Assert.True(verification.CompareBackup(TestBackup(temp.Path, Stock, Calibration[..9], Chassis)));
+        Assert.Throws<InvalidDataException>(() => verification.CompareBackup(TestBackup(temp.Path, Stock, Calibration, "GG3P999999")));
+        var different = Stock.ToArray(); different[BenchFlashPlan.Start] ^= 1;
+        Assert.False(verification.CompareBackup(TestBackup(temp.Path, different, Calibration, Chassis)));
+        string intended = Path.Combine(result.Folder, "intended-image.bin");
+        File.SetAttributes(intended, FileAttributes.Normal); File.WriteAllBytes(intended, different);
+        Assert.Throws<InvalidDataException>(() => FlashVerification.Load(journal.Path, "simulator"));
     }
 
     [Fact]
@@ -411,6 +421,8 @@ public class BenchFlashTests
             singleReadback: singleReadback));
         Assert.Equal(BenchFlashStage.VerificationRequired, flow.Stage);
         Assert.False(File.Exists(Path.Combine(flow.RunFolder!, "verified-result.json")));
+        var verification = FlashVerification.Load(Path.Combine(flow.RunFolder!, "journal.jsonl"), "simulator");
+        Assert.True(verification.CompareBackup(TestBackup(temp.Path, Stock, Calibration, Chassis)));
         Assert.Single(state.Requests, request => request[0] == 0xB1);
         Assert.Single(state.Requests, request => request[0] == 0x11);
 

@@ -116,28 +116,28 @@ internal static class Program
                     object workflow;
                     if (args.Contains("--axes-offline", StringComparer.Ordinal))
                     {
-                        workbench = new MainWindow(Path.Combine(output, "data"), new SpeedLink.Core.RomInspector([profile]), guard); editorApp.MainWindow = workbench;
+                        workbench = new MainWindow(Path.Combine(output, "data"), new SpeedLink.Core.RomInspector([profile], guard), guard); editorApp.MainWindow = workbench;
                         workflow = await workbench.ExerciseEveryTableAxesOffline(path, output, args.Contains("--table", StringComparer.Ordinal) ? Get("--table") : null, args.Contains("--panes-only", StringComparer.Ordinal));
                     }
                     else if (args.Contains("--navigation-offline", StringComparer.Ordinal))
                     {
-                        workbench = new MainWindow(Path.Combine(output, "data"), new SpeedLink.Core.RomInspector([profile]), guard); editorApp.MainWindow = workbench;
+                        workbench = new MainWindow(Path.Combine(output, "data"), new SpeedLink.Core.RomInspector([profile], guard), guard); editorApp.MainWindow = workbench;
                         workflow = await workbench.ExerciseNavigationOffline(path, output);
                     }
                     else if (args.Contains("--scalar-cards-offline", StringComparer.Ordinal))
                     {
-                        workbench = new MainWindow(Path.Combine(output, "data"), new SpeedLink.Core.RomInspector([profile]), guard); editorApp.MainWindow = workbench;
+                        workbench = new MainWindow(Path.Combine(output, "data"), new SpeedLink.Core.RomInspector([profile], guard), guard); editorApp.MainWindow = workbench;
                         workbench.Show(); workbench.OpenEditorFile(path); workbench.UpdateLayout();
                         workflow = new { passed = true, cases = await workbench.EditorPane.ExerciseCompactScalarPanes(output) };
                     }
                     else if (args.Contains("--map-windows-offline", StringComparer.Ordinal))
                     {
-                        workbench = new MainWindow(Path.Combine(output, "data"), new SpeedLink.Core.RomInspector([profile]), guard); editorApp.MainWindow = workbench;
+                        workbench = new MainWindow(Path.Combine(output, "data"), new SpeedLink.Core.RomInspector([profile], guard), guard); editorApp.MainWindow = workbench;
                         workflow = await workbench.ExerciseMapWindowsOffline(path, output);
                     }
                     else if (args.Contains("--reliability-offline", StringComparer.Ordinal))
                     {
-                        workbench = new MainWindow(Path.Combine(output, "data"), new SpeedLink.Core.RomInspector([profile]), guard); editorApp.MainWindow = workbench;
+                        workbench = new MainWindow(Path.Combine(output, "data"), new SpeedLink.Core.RomInspector([profile], guard), guard); editorApp.MainWindow = workbench;
                         SpeedLink.Core.IReadTransport CreatePeer(SpeedLink.Core.LoggerDefinition selected)
                         {
                             var peer = new LoggerPeer(selected, Path.Combine(Get("--vectors-root"), selected.SoftwareIds.Single() + ".vectors.json"), false);
@@ -148,22 +148,22 @@ internal static class Program
                     }
                     else if (args.Contains("--layout-offline", StringComparer.Ordinal))
                     {
-                        workbench = new MainWindow(Path.Combine(output, "data"), new SpeedLink.Core.RomInspector([profile]), guard); editorApp.MainWindow = workbench;
+                        workbench = new MainWindow(Path.Combine(output, "data"), new SpeedLink.Core.RomInspector([profile], guard), guard); editorApp.MainWindow = workbench;
                         workflow = await workbench.ExerciseLayoutOffline(path, output);
                     }
                     else if (args.Contains("--definitions-offline", StringComparer.Ordinal))
                     {
-                        workbench = new MainWindow(Path.Combine(output, "data"), new SpeedLink.Core.RomInspector([profile]), guard); editorApp.MainWindow = workbench;
+                        workbench = new MainWindow(Path.Combine(output, "data"), new SpeedLink.Core.RomInspector([profile], guard), guard); editorApp.MainWindow = workbench;
                         workflow = await workbench.ExerciseDefinitionsOffline(path, output, profile.Calibration);
                     }
                     else if (args.Contains("--workbench-offline", StringComparer.Ordinal))
                     {
-                        workbench = new MainWindow(Path.Combine(output, "data"), new SpeedLink.Core.RomInspector([profile]), guard); editorApp.MainWindow = workbench;
+                        workbench = new MainWindow(Path.Combine(output, "data"), new SpeedLink.Core.RomInspector([profile], guard), guard); editorApp.MainWindow = workbench;
                         workflow = await workbench.ExerciseWorkbenchOffline(path, output, args.Contains("--recording", StringComparer.Ordinal) ? Get("--recording") : null);
                     }
                     else
                     {
-                        window = new(new SpeedLink.Core.RomInspector([profile]), guard); editorApp.MainWindow = window;
+                        window = new(new SpeedLink.Core.RomInspector([profile], guard), guard); editorApp.MainWindow = window;
                         workflow = await window.ExerciseOffline(path, output);
                     }
                     File.WriteAllText(Get("--report"), JsonSerializer.Serialize(new { passed = true, synthetic = true, hardwareAccessed = false, calibration = profile.Calibration, workflow }, new JsonSerializerOptions { WriteIndented = true })); resultCode = 0;

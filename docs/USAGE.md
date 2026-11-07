@@ -159,11 +159,11 @@ before sharing.
 
 ## Experimental Gen 2
 
-L3CGEE000 adds a 442-control editor and 20-parameter stock logger. Known ROMs
+L3CGEE000 has a 448-control editor and 20-parameter stock logger. Known ROMs
 choose their reader automatically. For an unknown compatible Gen 2 ECU, select
 **Gen 2 read protocol (experimental)** in Connection. Both read passes must match.
-Gen 2 saves validate native code and markers without repairing code; additional
-calibration-integrity rules are unestablished. Choose **Help → Gen 2 (experimental)**
+Gen 2 saves validate the supported code layout and markers and correct the
+native code checksum when needed. Choose **Help → Gen 2 (experimental)**
 for scope, exclusions and pending real ECU validation.
 
 ## L3M6EG000

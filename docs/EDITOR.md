@@ -7,15 +7,16 @@ from that ECU and follow the [flashing guide](FLASHING.md).
 
 **Checksum correction is automatic and mandatory on every ROM export, including
 saves without table edits. There is no setting to disable it.** Gen 1 saves always
-recalculate the established correction word. L3CGEE000 saves verify its native
-code checksum and markers; calibration edits do not change that code sum. Invalid
-Gen 2 code is rejected without guessed repair. Every export is read back and
-verified before its final filename is published. Originals are preserved.
+recalculate the established correction word. L3CGEE000 saves verify the native
+code checksum and markers and update the established correction word when
+needed for edits to its six MAP scaling controls. The program signature guards
+the surrounding code. SpeedLink verifies each saved file and preserves the original.
 
 This guide is also included in the app: choose **Help → Editor guide**.
 The top **File**, **Edit**, **View**, **Tools** and **Help** menus remain visible
 in every workspace. **Map info** inside a map pane, or
-**F1**, opens help for the selected map instead.
+**F1**, opens help for the selected map. Where available, the link in Map info
+opens the corresponding section of the offline **Tuning guide**.
 
 ## Make your first edit
 

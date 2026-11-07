@@ -1,5 +1,21 @@
 # Alpha validation scope
 
+## Editor, tuning guide and write verification · 0.8.0-alpha.5
+
+- Automated checksum coverage includes all ten bundled profiles. Independent
+  checks on reference images verify the saved bytes. L3CGEE000 checks include
+  all six MAP scaling controls, repeat saves, exact restoration and rejection
+  of unrelated code changes.
+- Desktop editor checks open the embedded boost guide at the selected topic.
+  Simulated Flash & Recover checks accept a fresh matching backup and reject
+  a backup captured before the write.
+- An offline replay of L3M6EG000 follows one pressure target cell through the
+  pressure error, correction curve, accumulator and final wastegate command.
+  The same edit leaves the load-mode command unchanged. Separate cases
+  exercise the native boost enable threshold, accumulator reset and output
+  override. The 25 ms period is the nominal firmware schedule. Live timing
+  and pressure response remain unmeasured.
+
 ## Tuning help · 0.8.0-alpha.3
 
 - All 8,385 bundled editor entries have descriptions. This pass clarified 107

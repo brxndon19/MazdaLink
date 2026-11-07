@@ -59,7 +59,12 @@ public sealed class RomInspector
     public const uint ChecksumTarget = 0x5AA55AA5;
     public static IReadOnlyList<RomProfile> KnownProfiles { get; } = LoadProfiles();
     private readonly IReadOnlyList<RomProfile> profiles;
-    public RomInspector(IReadOnlyList<RomProfile>? profiles = null) => this.profiles = profiles ?? KnownProfiles;
+    private readonly TuningCodeGuard codeGuard;
+    public RomInspector(IReadOnlyList<RomProfile>? profiles = null, TuningCodeGuard? codeGuard = null)
+    {
+        this.profiles = profiles ?? KnownProfiles;
+        this.codeGuard = codeGuard ?? new();
+    }
     private static IReadOnlyList<RomProfile> LoadProfiles()
     {
         using var stream = typeof(RomInspector).Assembly.GetManifestResourceStream("SpeedLink.Core.Profiles.json")
@@ -143,11 +148,15 @@ public sealed class RomInspector
         uint? sum = layout ? Sum(data, profile) : null;
         bool? valid = sum.HasValue ? sum.Value == ChecksumTarget : null;
         var correct = identity && bootKnown && markers && layout;
+        bool canCorrect = correct && profile.CorrectionAddress >= 0;
+        if (canCorrect && profile.Family == "Gen2")
+            canCorrect = TuningDefinition.Known.FirstOrDefault(d => d.Calibration == profile.Calibration) is { } definition &&
+                codeGuard.Matches(data, definition, profile);
         return new(data.Length, profile.Calibration, profile.Model, Hash(data), boot, true, identity, bootKnown,
             markers, layout, sum?.ToString("X8"), layout ? ChecksumTarget.ToString("X8") : null, valid,
             profile.ChecksumStart, profile.CorrectionAddress >= 0 ? profile.CorrectionAddress : null,
-            correct && profile.CorrectionAddress >= 0, correct && valid == true,
-            profile.CorrectionAddress < 0 ? "native_code_validation" : "additive_correction");
+            canCorrect, correct && valid == true,
+            profile.CorrectionAddress < 0 ? "native_code_validation" : profile.Family == "Gen2" ? "native_code_correction" : "additive_correction");
     }
     public byte[] CorrectedCopy(ReadOnlySpan<byte> data)
     {
@@ -158,7 +167,7 @@ public sealed class RomInspector
             return data.ToArray();
         }
         if (!info.CanCorrectChecksum)
-            throw new InvalidDataException("Checksum correction requires a recognized identity, boot and checksum layout.");
+            throw new InvalidDataException("Checksum correction requires a recognized identity, boot and supported program layout.");
         var profile = ProfileFor(data)!;
         var output = data.ToArray();
         var old = BinaryPrimitives.ReadUInt32BigEndian(data.Slice(profile.CorrectionAddress, 4));

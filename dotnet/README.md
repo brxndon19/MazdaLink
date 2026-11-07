@@ -46,7 +46,8 @@ data. Fit map, the draggable preview divider and floating panels control the
 workspace. Map info or F1 opens contextual help, with links to relevant
 [tuning guide](../docs/TUNING_HELP.md) topics. Saves create new verified copies.
 Gen 1 exports correct and verify the checksum. L3CGEE000 exports validate the
-native code sum and markers and reject invalid code. Original files are preserved.
+guarded program and markers and correct the native code sum when needed.
+Original files are preserved.
 Program-area signatures reject incompatible patched layouts while allowing
 changes to defined tuning controls. See the [editor guide](../docs/EDITOR.md).
 

@@ -261,7 +261,7 @@
     "Identity": "L3CGEE000L3T6060",
     "BootSha256": "4e9e15de7e24f733a34fe0fbd0b555f089fb323c672945ba2a20cebf7e76a166",
     "ChecksumStart": 16384,
-    "CorrectionAddress": -1,
+    "CorrectionAddress": 262080,
     "LayoutWords": [],
     "LoopAddress": null,
     "LoopSize": null,

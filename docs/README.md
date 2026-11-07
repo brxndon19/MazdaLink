@@ -22,7 +22,7 @@ flashing and recovery. Gen 2 flashing is planned for an upcoming release.
 | [Definition import](DEFINITIONS.md) | Import editor/logger updates, persistence and bundled fallback |
 | [Logger coverage](../definitions/logging/All_ROM_Coverage.md) | Included and excluded parameters across all ten profiles |
 
-The app includes Getting started, Editor, Logger, Gen 1 flashing, and Report a problem guides under **Help**.
+The app includes Getting started, Editor, Tuning, Logger, Gen 1 flashing, and Report a problem guides under **Help**.
 **Help → Editor guide** opens the editing guide; **Map info** / F1 explains
 the selected map. Navigation shows workspace names by default; **☰ Navigation**
 or **View → Navigation labels** toggles its compact form.

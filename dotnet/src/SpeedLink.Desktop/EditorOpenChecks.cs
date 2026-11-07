@@ -40,8 +40,11 @@ public partial class EditorWorkspace
         uint second = BinaryPrimitives.ReadUInt32BigEndian(programChanged.AsSpan(addresses[1], 4));
         BinaryPrimitives.WriteUInt32BigEndian(programChanged.AsSpan(addresses[0], 4), unchecked(first + 1));
         BinaryPrimitives.WriteUInt32BigEndian(programChanged.AsSpan(addresses[1], 4), unchecked(second - 1));
-        Check(inspector.Inspect(programChanged).CanExport && !codeGuard.Matches(programChanged, definition, profile),
+        var changedInspection = inspector.Inspect(programChanged);
+        Check(changedInspection.ProfileValid && !codeGuard.Matches(programChanged, definition, profile),
             "Unsupported program passes native integrity but fails stock program identification");
+        if (profile.Family == "Gen2")
+            Check(!changedInspection.CanExport, "Gen 2 program guard blocks checksum correction and export");
         var invalidLayout = (byte[])source.Clone(); invalidLayout[0] ^= 1;
         var inputs = new[]
         {

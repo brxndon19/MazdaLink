@@ -17,7 +17,7 @@ $result = Get-Content -LiteralPath $report -Raw | ConvertFrom-Json
 if (!$result.passed -or $result.hardwareAccessed -ne $false -or !$result.explicitSetupConfirmation -or
     !$result.changedInputDisarms -or !$result.rejectedInputRecovers -or !$result.offlineTransferVerified -or
     !$result.offlineStockRecoveryVerified -or !$result.mongooseRecoverySelectionVerified -or !$result.progressAndLockingVerified -or
-    !$result.movedTargetAndAutomaticBackup -or !$result.recoveryStateGate -or !$result.skipReadbackVerified) {
+    !$result.movedTargetAndAutomaticBackup -or !$result.recoveryStateGate -or !$result.skipReadbackVerified -or !$result.verifyLastWrite) {
     throw 'Unexpected Gen 1 flashing desktop evidence.'
 }
 Write-Output 'The standalone Gen 1 flashing and recovery desktop workflows passed with a synthetic ECU.'

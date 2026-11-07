@@ -50,7 +50,10 @@ disabled in this build. See the [supported ROM list](SUPPORTED_ROMS.md) and the
 6. Wait for the result. With readbacks, **Complete** means the captured ROM
    matched the intended image. With **Skip readback**, SpeedLink checks ECU
    identification after reset and reports **Write acknowledged · readback skipped**.
-   The written bytes are unverified. You can verify them later through Connection.
+   To verify later, use **Connection → Read & verify backup** after the ECU has
+   reset. In **Flash & Recover**, choose **Verify last write…** and open the new
+   backup's `rom.bin`. SpeedLink reports whether every byte matches the intended
+   image. The comparison checks the ECU identity, calibration and capture time.
    On the tested ECU, each full pass took about 25 minutes.
 
 ## Recover an interrupted write
@@ -58,8 +61,8 @@ disabled in this build. See the [supported ROM list](SUPPORTED_ROMS.md) and the
 1. Keep the failed run folder and the same original verified stock backup.
    Record the stage at which the write stopped. If SpeedLink says
    **Verification required**, the reset was acknowledged. Reconnect in
-   **Connection**, read a verified backup and compare it with the intended
-   image before using the ECU.
+   **Connection**, read a fresh verified backup, then choose **Verify last
+   write…** to compare it with the intended image.
 2. For **Recovery required**, keep the same physical ECU attached. Once the
    failed operation has ended and the adapter is closed, turn the ignition off
    and wait for the ECU to shut down, then turn the ignition back on without

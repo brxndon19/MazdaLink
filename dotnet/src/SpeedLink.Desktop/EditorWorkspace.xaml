@@ -78,7 +78,7 @@
       <TextBlock x:Name="HelpAxesText" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="0,4,0,0"/>
       <TextBlock x:Name="HelpText" Text="Choose a map." TextWrapping="Wrap" Margin="0,12"/>
       <TextBlock x:Name="GuideTopic" Visibility="Collapsed" TextWrapping="Wrap" Margin="0,0,0,10">
-       <Hyperlink x:Name="GuideLink" Foreground="{DynamicResource AmberBrush}" RequestNavigate="GuideLink_RequestNavigate"><Run x:Name="GuideLinkText"/></Hyperlink>
+       <Hyperlink x:Name="GuideLink" Foreground="{DynamicResource AmberBrush}" Click="GuideLink_Click"><Run x:Name="GuideLinkText"/></Hyperlink>
       </TextBlock>
       <Expander Header="Storage details"><TextBlock x:Name="StorageText" TextWrapping="Wrap" Margin="0,8,0,0"/></Expander>
      </StackPanel>

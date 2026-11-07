@@ -23,7 +23,7 @@ reopened for file inspection with size and SHA-256 checks.
 | L3M7EF000 | Mazdaspeed6 / Mazda 6 MPS | 0x03F000 | 0x0FFFF4 |
 | L35HEH000 | Mazda3 MPS | 0x048000 | 0x048000 |
 | L33XEH000 | Mazdaspeed3 / Axela | 0x048000 | 0x048000 |
-| L3CGEE000 | Mazdaspeed3 / Mazda3 MPS (Gen 2) | Native code sum; see below | Validation only; no repair |
+| L3CGEE000 | Mazdaspeed3 / Mazda3 MPS (Gen 2) | Native code sum with split ranges | 0x03FFC0 |
 
 These layouts correspond to the published or locally prepared MazdaSpeedDefs
 definitions. File checks use each ROM's identity, boot fingerprint and checksum
@@ -37,7 +37,8 @@ L39S variants have 38 parameters; L3M7EF000, L33XEH000 and L3P4EM000 have 35; L3
 L3M6EG000 offers 33 parameters across 30 enhanced identifiers, with five baseline
 parameters unavailable. Standard batching can reduce all-channel polling to 26 requests per scan.
 L3CGEE000 offers 20 parameters; see [Gen 2 coverage and integrity limits](GEN2.md).
-Its native sum covers code only; editable calibration bytes are excluded and invalid code is rejected without repair.
+Its native sum covers the six MAP coefficients. The editor corrects the sum for
+the guarded layout. Ordinary calibration tables above 0x0C0000 are outside it.
 Each profile has independent ROM evidence and its own MAP calibration bindings.
 Some older ROMs do not expose every baseline identifier through the checked path.
 See [coverage and exclusions](../definitions/logging/All_ROM_Coverage.md).

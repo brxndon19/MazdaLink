@@ -46,11 +46,13 @@ internal sealed class FlashBackupLibrary(string dataFolder, string sourcesFolder
             yield return candidate.Path;
     }
 
-    internal IEnumerable<string> InterruptedJournals(string vault, string mode)
+    internal IEnumerable<string> FlashJournals(string vault, string mode)
         => new[] { vault }.Concat(Roots().SelectMany(root => new[] { Path.Combine(root, "flashing"), Path.Combine(root, "data", "flashing") }))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .SelectMany(root => Directories(Path.Combine(root, mode)))
-            .Select(folder => Path.Combine(folder, "journal.jsonl")).Where(File.Exists).OrderDescending(StringComparer.Ordinal);
+            .Select(folder => Path.Combine(folder, "journal.jsonl")).Where(File.Exists)
+            .OrderByDescending(path => Path.GetFileName(Path.GetDirectoryName(path))?.Split('-')[0], StringComparer.Ordinal)
+            .ThenByDescending(File.GetLastWriteTimeUtc);
 
     private IEnumerable<string> Roots()
     {

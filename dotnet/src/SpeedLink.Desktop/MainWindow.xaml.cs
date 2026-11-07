@@ -322,8 +322,8 @@ public partial class MainWindow : Window
             if (info.ChecksumLayoutRecognized)
             {
                 text.AppendLine($"Checksum: {info.Checksum} / expected {info.ExpectedChecksum} [{Show(info.ChecksumValid)}]");
-                if (info.IntegrityPolicy == "native_code_validation")
-                    text.AppendLine("Code sum: 0x004000–0x0BFFFF, excluding 0x01C000–0x01FFFF. Four application markers are also checked.\nCalibration edits lie outside this sum. Invalid code is rejected; automatic repair is unavailable. Additional calibration integrity is not established.\n");
+                if (info.IntegrityPolicy == "native_code_correction")
+                    text.AppendLine($"Code sum: 0x004000–0x0BFFFF, excluding 0x01C000–0x01FFFF. Four application markers are also checked.\nCorrection word: 0x{info.CorrectionAddress:X6}. Correction requires the supported program layout. Additional calibration integrity is not established.\n");
                 else text.AppendLine($"Checksum region: 0x{info.ChecksumStart:X6}–0x0FFFFF\nCorrection word: 0x{info.CorrectionAddress:X6}\n");
             }
             else
@@ -384,12 +384,14 @@ public partial class MainWindow : Window
     }
     private void About_Click(object sender, RoutedEventArgs e) => MessageBox.Show(this,
         Resource("SpeedLink.About.txt").Replace("{version}", Version).Replace("{runtime}", Environment.Version.ToString()), "About SpeedLink");
-    private Window HelpWindow(string document = "Getting started")
+    private Window HelpWindow(string document = "Getting started") => HelpWindow(document, null, this);
+    internal static Window HelpWindow(string document, string? heading, Window? owner)
     {
         var documents = new Dictionary<string, string> { ["Getting started"] = "SpeedLink.Help.md", ["Adapters / testing"] = "SpeedLink.AdapterHelp.md", ["Report a problem"] = "SpeedLink.SupportHelp.md", ["Logger"] = "SpeedLink.LoggerHelp.md", ["Editor"] = "SpeedLink.EditorHelp.md", ["Gen 2 (experimental)"] = "SpeedLink.Gen2Help.md", ["GNU GPL license"] = "SpeedLink.LICENSE", ["Known-ROM checks"] = "SpeedLink.Profiles.md" };
         foreach (var name in Assembly.GetExecutingAssembly().GetManifestResourceNames().Where(x => x.StartsWith("SpeedLink.Notices.", StringComparison.Ordinal)))
             documents["Notices / " + name[18..]] = name;
         documents["Gen 1 flashing and recovery"] = "SpeedLink.FlashingHelp.md";
+        documents["Tuning guide"] = "SpeedLink.TuningHelp.md";
         var panel = new DockPanel { Margin = new Thickness(16) };
         var chooser = new ComboBox { ItemsSource = documents.Keys, Margin = new Thickness(0, 0, 0, 12) };
         DockPanel.SetDock(chooser, Dock.Top);
@@ -398,7 +400,13 @@ public partial class MainWindow : Window
         panel.Children.Add(text);
         chooser.SelectionChanged += (_, _) => text.Text = Resource(documents[(string)chooser.SelectedItem]);
         chooser.SelectedItem = documents.ContainsKey(document) ? document : "Getting started";
-        return new Window { Owner = this, Title = "SpeedLink — Help & licenses", Width = 860, Height = 650, Content = panel };
+        if (heading is not null)
+            text.Loaded += (_, _) =>
+            {
+                int offset = text.Text.IndexOf("\n## " + heading, StringComparison.Ordinal);
+                if (offset >= 0) text.ScrollToLine(text.GetLineIndexFromCharacterIndex(offset + 1));
+            };
+        return new Window { Owner = owner, Title = "SpeedLink — Help & licenses", Width = 860, Height = 650, Content = panel };
     }
     private void Help_Click(object sender, RoutedEventArgs e) => HelpWindow().Show();
     private bool closeApproved;

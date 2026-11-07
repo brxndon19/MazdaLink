@@ -23,10 +23,12 @@
   path that bypasses checksum correction and verification. ROM exports must use
   `RomEditor.SaveNew`; verify both the prepared bytes and the durable file readback.
 - Use the independently verified integrity policy for each ROM. Gen 1 profiles
-  have an established additive correction word. L3CGEE000 calibration edits are
-  outside its native code sum: verify the code sum and markers on every export,
-  preserve valid code, and reject invalid code without inventing a repair word.
-  Additional Gen 2 calibration integrity remains unestablished.
+  have an established additive correction word. L3CGEE000 has an independently
+  established correction word at 0x03FFC0. Its six MAP coefficients lie inside
+  the native code sum. Correct only the established word after checking the
+  guarded program layout, native routines and markers. Ordinary calibration
+  tables above 0x0C0000 lie outside the sum. Additional Gen 2 calibration
+  integrity remains unestablished.
 - Keep originals and existing exports intact. Failure must never publish an
   unchecked ROM or leave a successful-save state.
 - Run `RomSaveIntegrityTests` for every bundled editor definition, plus the full

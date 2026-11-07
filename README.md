@@ -4,7 +4,7 @@ Open-source ROM reading, data logging, ROM editing, and Gen 1 flashing and recov
 
 [![C# checks](https://github.com/mrphyslaw/SpeedLink/actions/workflows/checks-dotnet.yml/badge.svg)](https://github.com/mrphyslaw/SpeedLink/actions/workflows/checks-dotnet.yml)
 
-**[Download v0.8.0-alpha.4](https://github.com/mrphyslaw/SpeedLink/releases/tag/v0.8.0-alpha.4)** · A single Windows EXE with the runtime included.
+**[Download v0.8.0-alpha.5](https://github.com/mrphyslaw/SpeedLink/releases/tag/v0.8.0-alpha.5)** · A single Windows EXE with the runtime included.
 
 **Watch the 4-minute SpeedLink demo (4:11)**
 
@@ -39,7 +39,7 @@ Connect & identify accepts standard VINs and supported short chassis-number
 replies, including space/null-padded identifiers reported by some ECUs. A chassis
 ID is labeled separately; it does not select or authorize a different ROM/logger profile.
 
-**Experimental Gen 2:** L3CGEE000 adds 442 editor controls and a 20-parameter
+**Experimental Gen 2:** L3CGEE000 has 448 editor controls and a 20-parameter
 stock-ROM logger. Compatible unknown Gen 2 ROMs can be dumped by selecting the
 Gen 2 read protocol. Real ECU validation is pending; see the [Gen 2 guide](docs/GEN2.md).
 
