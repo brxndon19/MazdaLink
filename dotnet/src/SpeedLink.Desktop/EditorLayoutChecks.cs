@@ -49,7 +49,13 @@ public partial class EditorWorkspace
                 columnWidth = MapGrid.Columns[0].ActualWidth, horizontalScroll = scroll.ScrollableWidth, verticalScroll = scroll.ScrollableHeight, wholeMapVisible, lastCellVisible = true, previewWidth = GraphPanel.ActualWidth, previewHeight = GraphPanel.ActualHeight });
         }
         await CheckPreviewSplitter(folder, resize);
+        // Keep the compact fit checks above at their original window sizes.
+        // The axis fixture needs room for the added tab strip so it can test a horizontal bar by itself.
+        resize(1280, 720 + WorkspaceTabsBar.ActualHeight + WorkspaceTabsBar.Margin.Top + WorkspaceTabsBar.Margin.Bottom);
+        await Settle();
         await CheckTableAxes(sample);
+        resize(1280, 720);
+        await Settle();
         Graph.CheckSurfaceDrag();
         Graph.CheckSurfaceAxes();
         SelectCell(0); byte[] precise = document.Snapshot(); double exact = document.Read(sample, 0);

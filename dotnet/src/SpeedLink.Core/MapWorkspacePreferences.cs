@@ -8,6 +8,7 @@ public sealed record MapPanePreferences
     public string Key { get; init; } = "";
     public double Zoom { get; init; } = 1;
     public bool AutoFit { get; init; } = true;
+    public bool? FitTable { get; init; }
     public int View { get; init; } = 4;
     public int Baseline { get; init; }
     public int[] Selection { get; init; } = [];
@@ -16,6 +17,7 @@ public sealed record MapPanePreferences
     public double? PreviewWidth { get; init; }
     public double TableFraction { get; init; } = .6;
     public bool Floating { get; init; }
+    public bool Pinned { get; init; } = true;
     public PanelBounds Bounds { get; init; } = new(Width: 840, Height: 650);
     public MapDockBounds? DockBounds { get; init; }
     public int ZOrder { get; init; }
@@ -33,6 +35,7 @@ public sealed record MapPanePreferences
         HorizontalOffset = Offset(HorizontalOffset), VerticalOffset = Offset(VerticalOffset),
         PreviewWidth = PreviewWidth is double width && double.IsFinite(width) ? Math.Clamp(width, 160, 800) : null,
         TableFraction = double.IsFinite(TableFraction) ? Math.Clamp(TableFraction, .2, .8) : .6,
+        Pinned = Pinned || Floating,
         Bounds = new EditorLayoutPreferences { GraphBounds = Bounds }.Validate().GraphBounds,
         DockBounds = DockBounds?.Validate(),
         ZOrder = Math.Clamp(ZOrder, 0, 23),
@@ -44,32 +47,66 @@ public sealed record MapPanePreferences
     private static double Finite(double value, double min, double max, double fallback) => double.IsFinite(value) ? Math.Clamp(value, min, max) : fallback;
 }
 
-public sealed record MapWorkspacePreferences
+public record MapPagePreferences
 {
-    public string Calibration { get; init; } = "";
+    public const int MaxNameLength = 36;
+    public string Name { get; init; } = "Workspace";
     public MapPanePreferences[] Maps { get; init; } = [];
     public string Active { get; init; } = "";
+    public string Expanded { get; init; } = "";
     public int Columns { get; init; } = 2;
     public double ColumnFraction { get; init; } = .5;
     public double RowFraction { get; init; } = .5;
     public double[] RowWeights { get; init; } = [];
     public double[] ScalarColumnWidths { get; init; } = [];
-    public MapWorkspacePreferences Validate() => this with
+    public static bool ValidName(string? name) => name is { Length: > 0 and <= MaxNameLength } && !name.Any(char.IsControl);
+
+    internal MapPagePreferences ValidatePage()
     {
-        Calibration = Calibration is { Length: > 0 and <= 32 } && Calibration.All(char.IsAsciiLetterOrDigit) ? Calibration : "",
-        Maps = (Maps ?? []).Where(m => m is not null).Select(m => m.Validate()).Where(m => m.Key.Length > 0).DistinctBy(m => m.Key).Take(24).ToArray(),
-        Active = Active is { Length: <= 320 } ? Active : "", Columns = Math.Clamp(Columns, 1, 2),
-        ColumnFraction = double.IsFinite(ColumnFraction) ? Math.Clamp(ColumnFraction, .2, .8) : .5,
-        RowFraction = double.IsFinite(RowFraction) ? Math.Clamp(RowFraction, .2, .8) : .5,
-        RowWeights = (RowWeights ?? []).Take(24).Select(v => double.IsFinite(v) ? Math.Clamp(v, .01, 1) : 1).ToArray(),
-        ScalarColumnWidths = (ScalarColumnWidths ?? []).Take(6).Select(v => double.IsFinite(v) ? Math.Clamp(v, 220, 800) : 300).ToArray()
-    };
+        var panes = (Maps ?? []).Where(m => m is not null).Select(m => m.Validate()).Where(m => m.Key.Length > 0).DistinctBy(m => m.Key).Take(24).ToArray();
+        var preview = panes.FirstOrDefault(m => !m.Pinned);
+        return this with
+        {
+            Name = Name?.Trim() ?? "",
+            Maps = panes.Select(m => !m.Pinned && !ReferenceEquals(m, preview) ? m with { Pinned = true } : m).ToArray(),
+            Active = Active is { Length: <= 320 } ? Active : "",
+            Expanded = Expanded is { Length: <= 320 } ? Expanded : "",
+            Columns = Math.Clamp(Columns, 1, 2),
+            ColumnFraction = double.IsFinite(ColumnFraction) ? Math.Clamp(ColumnFraction, .2, .8) : .5,
+            RowFraction = double.IsFinite(RowFraction) ? Math.Clamp(RowFraction, .2, .8) : .5,
+            RowWeights = (RowWeights ?? []).Take(24).Select(v => double.IsFinite(v) ? Math.Clamp(v, .01, 1) : 1).ToArray(),
+            ScalarColumnWidths = (ScalarColumnWidths ?? []).Take(6).Select(v => double.IsFinite(v) ? Math.Clamp(v, 220, 800) : 300).ToArray()
+        };
+    }
+}
+
+public sealed record MapWorkspacePreferences : MapPagePreferences
+{
+    public const int MaxPages = 12;
+    private const int MaxFileBytes = 4 * 1024 * 1024;
+    public string Calibration { get; init; } = "";
+    public MapPagePreferences[] Pages { get; init; } = [];
+    public string SelectedPage { get; init; } = "";
+
+    public MapWorkspacePreferences Validate()
+    {
+        var pages = (Pages ?? []).Where(p => p is not null).Select(p => p.ValidatePage()).Where(p => ValidName(p.Name))
+            .DistinctBy(p => p.Name, StringComparer.OrdinalIgnoreCase).Take(MaxPages).ToArray();
+        var legacyPage = (MapWorkspacePreferences)ValidatePage();
+        return legacyPage with
+        {
+            Calibration = Calibration is { Length: > 0 and <= 32 } && Calibration.All(char.IsAsciiLetterOrDigit) ? Calibration : "",
+            Name = ValidName(legacyPage.Name) ? legacyPage.Name : "Workspace",
+            Pages = pages,
+            SelectedPage = pages.FirstOrDefault(p => string.Equals(p.Name, SelectedPage, StringComparison.OrdinalIgnoreCase))?.Name ?? ""
+        };
+    }
     public static MapWorkspacePreferences[] Load(string path)
     {
         try
         {
             using var stream = File.OpenRead(path);
-            if (stream.Length > 262144) return [];
+            if (stream.Length > MaxFileBytes) return [];
             return (JsonSerializer.Deserialize<MapWorkspacePreferences[]>(stream, new JsonSerializerOptions { MaxDepth = 12 }) ?? [])
                 .Where(p => p is not null).Select(p => p.Validate()).Where(p => p.Calibration.Length > 0).DistinctBy(p => p.Calibration).Take(32).ToArray();
         }
@@ -79,7 +116,7 @@ public sealed record MapWorkspacePreferences
     {
         var valid = profiles.Select(p => p.Validate()).Where(p => p.Calibration.Length > 0).DistinctBy(p => p.Calibration).Take(32).ToArray();
         byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(valid);
-        if (bytes.Length > 262144) throw new IOException("Map layout is too large to save.");
+        if (bytes.Length > MaxFileBytes) throw new IOException("Map layout is too large to save.");
         path = Path.GetFullPath(path); Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         string pending = path + "." + Guid.NewGuid().ToString("N") + ".partial";
         try

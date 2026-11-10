@@ -26,7 +26,7 @@ public partial class EditorWorkspace : UserControl
     }
     private void Changes_Selected(object sender, SelectionChangedEventArgs e)
     {
-        if (ChangesList.SelectedItem is TuningTable changed) Attempt(() => OpenMap(changed));
+        if (ChangesList.SelectedItem is TuningTable changed) Attempt(() => BrowseMap(changed));
     }
     private readonly RomInspector inspector;
     private readonly TuningCodeGuard codeGuard;
@@ -47,17 +47,17 @@ public partial class EditorWorkspace : UserControl
     public void OpenRom(string path)
     {
         var opened = new RomEditor(File.ReadAllBytes(path), path, inspector, codeGuard, Definitions);
-        SaveMapWorkspace(); ClearMapWindows();
-        scalarColumnWidths = [];
+        SaveMapWorkspace();
         restoringMaps = true;
         try
         {
-        if (document is not null) document.Changed -= Document_Changed;
-        document = opened; document.Changed += Document_Changed; table = null;
-        MapTabs.Items.Clear(); BaselineBox.SelectedIndex = 0; SearchBox.Text = ""; ChangedOnly.IsChecked = false;
-        FileText.Text = Path.GetFileName(path); FileText.ToolTip = path;
-        RefreshBrowser(); RefreshTable(); RefreshControls();
-        ShowMapBrowser();
+            ClearMapWindows();
+            if (document is not null) document.Changed -= Document_Changed;
+            document = opened; document.Changed += Document_Changed; table = null;
+            MapTabs.Items.Clear(); BaselineBox.SelectedIndex = 0; SearchBox.Text = ""; ChangedOnly.IsChecked = false;
+            FileText.Text = Path.GetFileName(path); FileText.ToolTip = path;
+            RefreshBrowser(); RefreshTable(); RefreshControls();
+            ShowMapBrowser();
         }
         finally { restoringMaps = false; }
         RestoreMapWorkspace();
@@ -137,7 +137,12 @@ public partial class EditorWorkspace : UserControl
         foreach (var group in filtered.GroupBy(t => t.Category))
         {
             var category = new TreeViewItem { Header = group.Key + "  (" + group.Count() + ")", Tag = group.Key, IsExpanded = query.Length > 0 || ChangedOnly.IsChecked == true || expanded.Contains(group.Key), Padding = new(2, 5, 0, 5) };
-            foreach (var item in group) category.Items.Add(new TreeViewItem { Header = (document.TableChanged(item, Baseline) ? "● " : "") + item.Name, Tag = item, ToolTip = item.Name, Padding = new(2, 4, 0, 4) });
+            foreach (var item in group)
+            {
+                var entry = new TreeViewItem { Header = (document.TableChanged(item, Baseline) ? "● " : "") + item.Name, Tag = item, ToolTip = item.Name, Padding = new(2, 4, 0, 4) };
+                entry.PreviewMouseLeftButtonDown += (_, _) => { if (entry.IsSelected) Attempt(() => BrowseMap(item)); };
+                category.Items.Add(entry);
+            }
             MapTree.Items.Add(category);
         }
         MapCountText.Text = $"{filtered.Length:N0} / {document.Definition.Tables.Count:N0} controls";
@@ -159,7 +164,7 @@ public partial class EditorWorkspace : UserControl
     }
     private void Map_Selected(object sender, RoutedPropertyChangedEventArgs<object> e)
     {
-        if (e.NewValue is TreeViewItem { Tag: TuningTable selected }) Attempt(() => OpenMap(selected));
+        if (e.NewValue is TreeViewItem { Tag: TuningTable selected }) Attempt(() => BrowseMap(selected));
     }
     internal void OpenTable(TuningTable selected)
     {
@@ -276,13 +281,13 @@ public partial class EditorWorkspace : UserControl
     }
     private void Grid_EditEnding(object sender, DataGridCellEditEndingEventArgs e)
     {
-        if (e.EditAction == DataGridEditAction.Cancel) { gridDraft = false; return; }
+        if (e.EditAction == DataGridEditAction.Cancel) { gridDraft = false; ClearPendingEntryStatus(); return; }
         if (refreshing || document is null || table is null || e.EditAction != DataGridEditAction.Commit || e.EditingElement is not TextBox input) return;
         var row = (EditorRow)e.Row.Item; var selected = table; int index = NativeIndex(row, e.Column.DisplayIndex);
         if (!double.TryParse(input.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out double value) || !double.IsFinite(value)) { e.Cancel = true; EditorStatus.Text = "Enter a finite numeric value using a decimal point."; return; }
         try { refreshing = true; document.Apply([new(selected, index, value)], "Edit " + selected.Name); }
         catch (ArgumentException error) { e.Cancel = true; EditorStatus.Text = error.Message; }
-        finally { refreshing = false; if (!e.Cancel) gridDraft = false; }
+        finally { refreshing = false; if (!e.Cancel) { gridDraft = false; ClearPendingEntryStatus(); } }
         Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, new Action(() => { RefreshTable(); RefreshBrowser(); RefreshControls(); }));
     }
     private void Choice_Changed(object sender, SelectionChangedEventArgs e)

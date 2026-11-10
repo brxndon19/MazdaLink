@@ -65,12 +65,42 @@ public sealed class MapWorkspaceTests
     public void Invalid_and_oversized_workspace_settings_recover_and_are_bounded()
     {
         using var temp = new TempFolder(); string path = Path.Combine(temp.Path, "maps.json");
-        foreach (string invalid in new[] { "null", "{", "[null]", new string(' ', 262145), "[{\"Calibration\":\"../../wrong\"}]" })
+        foreach (string invalid in new[] { "null", "{", "[null]", new string(' ', 4 * 1024 * 1024 + 1), "[{\"Calibration\":\"../../wrong\"}]" })
         { File.WriteAllText(path, invalid); Assert.Empty(MapWorkspacePreferences.Load(path)); }
         var pane = new MapPanePreferences { Key = "map", Zoom = double.NaN, View = 99, Baseline = 2, Selection = [-1, 3, 3], HorizontalOffset = double.PositiveInfinity, Bounds = null! }.Validate();
         Assert.Equal(1, pane.Zoom); Assert.Equal(4, pane.View); Assert.Equal(1, pane.Baseline); Assert.Equal(new[] { 3 }, pane.Selection); Assert.Equal(0, pane.HorizontalOffset); Assert.NotNull(pane.Bounds);
         var work = new MapWorkspacePreferences { Calibration = "L3CGEE000", ColumnFraction = double.NaN, RowFraction = 9, Maps = Enumerable.Range(0, 60).Select(i => pane with { Key = i.ToString() }).ToArray() }.Validate();
         Assert.Equal(.5, work.ColumnFraction); Assert.Equal(.8, work.RowFraction); Assert.Equal(24, work.Maps.Length);
         File.WriteAllText(path, JsonSerializer.Serialize(new[] { work })); Assert.Equal(24, MapWorkspacePreferences.Load(path)[0].Maps.Length);
+    }
+
+    [Fact]
+    public void Legacy_open_maps_restore_as_pinned_and_new_pages_keep_one_reusable_pane_each()
+    {
+        using var temp = new TempFolder(); string path = Path.Combine(temp.Path, "maps.json");
+        File.WriteAllText(path, """[{"Calibration":"L38KEH000","Maps":[{"Key":"old map"}]}]""");
+        var legacy = MapWorkspacePreferences.Load(path).Single();
+        Assert.Empty(legacy.Pages);
+        Assert.True(legacy.Maps.Single().Pinned);
+        var fuel = new MapPagePreferences
+        {
+            Name = " Fuel Tuning ",
+            Maps = [new() { Key = "preview", Pinned = false }, new() { Key = "also unpinned", Pinned = false },
+                new() { Key = "floating", Floating = true, Pinned = false }],
+            Active = "preview", Expanded = "preview", Columns = 1
+        };
+        var boost = new MapPagePreferences { Name = "Boost Control", Maps = [new() { Key = "preview", Pinned = false }] };
+        MapWorkspacePreferences.Save(path, [legacy with
+        {
+            Pages = [fuel, fuel with { Name = "fuel tuning" }, new() { Name = " " }, boost],
+            SelectedPage = "boost control"
+        }]);
+        var saved = MapWorkspacePreferences.Load(path).Single();
+        Assert.Equal(new[] { "Fuel Tuning", "Boost Control" }, saved.Pages.Select(p => p.Name));
+        Assert.Equal("Boost Control", saved.SelectedPage);
+        Assert.Equal("preview", saved.Pages[0].Expanded);
+        Assert.Equal(1, saved.Pages[0].Columns);
+        Assert.Equal(new[] { false, true, true }, saved.Pages[0].Maps.Select(p => p.Pinned));
+        Assert.False(saved.Pages[1].Maps.Single().Pinned);
     }
 }

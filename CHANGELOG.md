@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.0-alpha.6
+
+- Browse maps in one reusable pane. Pin the maps you want to keep beside it or undock them into separate windows.
+- Create, rename and switch between workspace tabs. Each calibration remembers its tabs, pins, pane sizes and positions. Tabs share the open ROM, edits, undo history and Save copy.
+- Keep invalid pending input visible when changing maps or tabs. Existing saved panes are pinned on upgrade so they stay open.
+
 ## 0.8.0-alpha.5
 
 - Add a boost-pressure mode walkthrough to the tuning guide. It covers the mode switch, absolute-pressure targets, base wastegate duty, the correction curve and a worked timing example for L3M6EG000. Open it from **Map info** or **Help → Tuning guide**, including offline.

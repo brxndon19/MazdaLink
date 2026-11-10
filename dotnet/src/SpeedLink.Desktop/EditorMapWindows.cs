@@ -18,10 +18,12 @@ public partial class EditorWorkspace
         internal readonly Border Frame = frame;
         internal Window? Window;
         internal bool DockOnClose;
-        internal PanelBounds Bounds = new(Width: 840, Height: 650);
+        internal bool Pinned;
+        internal PanelBounds Bounds = DefaultMapBounds;
         internal MapDockBounds? DockBounds;
     }
     private EditorWorkspace? mapOwner, activeMap;
+    private static readonly PanelBounds DefaultMapBounds = new(Width: 840, Height: 650);
     private readonly List<MapSlot> mapSlots = [];
     private readonly Grid mapDock = new() { HorizontalAlignment = HorizontalAlignment.Left };
     private readonly ScrollViewer mapDockScroll = new() { VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, HorizontalContentAlignment = HorizontalAlignment.Stretch, VerticalContentAlignment = VerticalAlignment.Stretch };
@@ -156,10 +158,11 @@ public partial class EditorWorkspace
     }
     private void MenuMapInfo_Click(object sender, RoutedEventArgs e) => CommandMap.ShowMapInformation();
     /// <summary>Each map is a view over the same document, not a second ROM copy.</summary>
-    internal EditorWorkspace OpenMap(TuningTable selected)
+    internal EditorWorkspace OpenMap(TuningTable selected) => OpenMap(selected, pinned: true);
+    private EditorWorkspace OpenMap(TuningTable selected, bool pinned)
     {
         var root = MapRoot;
-        if (!ReferenceEquals(root, this)) return root.OpenMap(selected);
+        if (!ReferenceEquals(root, this)) return root.OpenMap(selected, pinned);
         var existing = mapSlots.FirstOrDefault(s => ReferenceEquals(s.Editor.table, selected));
         if (existing is not null)
         {
@@ -168,18 +171,70 @@ public partial class EditorWorkspace
             return existing.Editor;
         }
         if (mapSlots.Count(s => s.Editor.table is not null) >= 24) throw new InvalidOperationException("Close a map before opening another; up to 24 maps can remain open.");
+        MapSlot slot;
         if (table is null)
         {
-            OpenTable(selected); ActivateMap(); ArrangeMaps(); QueueMapSave(); return this;
+            slot = mapSlots[0];
+            slot.Pinned = pinned;
+            OpenTable(selected);
         }
+        else slot = AddMapSlot(selected, pinned, mapSlots.Count);
+        expandedMap = null; ArrangeMaps(); slot.Editor.ActivateMap(); QueueMapSave();
+        return slot.Editor;
+    }
+    private MapSlot AddMapSlot(TuningTable selected, bool pinned, int index)
+    {
         if (document is null) throw new InvalidOperationException("Open a ROM first.");
-        var editor = new EditorWorkspace(inspector, codeGuard, this) { document = document, Definitions = Definitions };
+        var editor = new EditorWorkspace(inspector, codeGuard, this)
+        { document = document, Definitions = Definitions, workspaceActive = workspaceActive };
         document.Changed += editor.Document_Changed;
-        editor.FocusButton.IsChecked = true;
-        var slot = new MapSlot(editor, MapFrame(editor)); mapSlots.Add(slot);
-        editor.OpenTable(selected); editor.SetViewMode(selected is { Rows: 1, Columns: > 16 } ? 1 : 4);
-        expandedMap = null; ArrangeMaps(); editor.ActivateMap(); QueueMapSave();
-        return editor;
+        var slot = new MapSlot(editor, MapFrame(editor)) { Pinned = pinned };
+        mapSlots.Insert(index, slot);
+        editor.OpenTable(selected);
+        return slot;
+    }
+    private void BrowseMap(TuningTable selected)
+    {
+        var preview = mapSlots.FirstOrDefault(s => s.Editor.table is not null && s.Window is null && !s.Pinned);
+        if (preview is null || mapSlots.Any(s => ReferenceEquals(s.Editor.table, selected)))
+        {
+            var opened = OpenMap(selected, pinned: false);
+            var slot = mapSlots.First(s => ReferenceEquals(s.Editor, opened));
+            if (slot.Window is null) slot.Frame.BringIntoView();
+            return;
+        }
+
+        var editor = preview.Editor;
+        if (!editor.FinishEdit()) { ShowPendingEntry(preview); return; }
+        if (!independentMapLayout && mapSlots.Count(s => s.Window is null && s.Editor.table is not null) > 1)
+        {
+            var expanded = expandedMap;
+            expandedMap = null;
+            if (expanded is not null) ArrangeMaps();
+            FreezeMapPositions();
+            expandedMap = ReferenceEquals(expanded, preview) ? preview : null;
+        }
+        else if (!ReferenceEquals(expandedMap, preview)) expandedMap = null;
+        editor.graphWindow?.Close();
+        editor.infoWindow?.Close();
+        editor.OpenTable(selected);
+        // The hidden per-pane selector must no longer be able to select the previous map.
+        foreach (var item in editor.MapTabs.Items.OfType<TabItem>().Where(item => !ReferenceEquals(item.Tag, selected)).ToArray())
+            editor.MapTabs.Items.Remove(item);
+        ArrangeMaps(); editor.ActivateMap(); preview.Frame.BringIntoView(); QueueMapSave();
+    }
+    private void PinMap_Click(object sender, RoutedEventArgs e)
+    {
+        var root = MapRoot;
+        var slot = root.mapSlots.FirstOrDefault(s => ReferenceEquals(s.Editor, this));
+        if (slot is null || slot.Window is not null || table is null) return;
+        if (slot.Pinned)
+        {
+            var preview = root.mapSlots.FirstOrDefault(s => s.Editor.table is not null && !s.Pinned && s.Window is null);
+            if (preview is not null) { preview.Pinned = true; preview.Editor.RefreshPinButton(); }
+        }
+        slot.Pinned = !slot.Pinned;
+        RefreshPinButton(); root.QueueMapSave();
     }
     private void ArrangeMaps()
     {
@@ -298,6 +353,7 @@ public partial class EditorWorkspace
         var slot = mapSlots.FirstOrDefault(s => ReferenceEquals(s.Editor, editor));
         if (slot is null || editor.table is null) return;
         if (slot.Window is not null) { slot.Window.Activate(); return; }
+        slot.Pinned = true;
         // The primary view stays in the main editor; move its state to an identical
         // shared-document view before detaching, so closing it cannot close the ROM.
         if (ReferenceEquals(editor, this))
@@ -305,22 +361,19 @@ public partial class EditorWorkspace
             var state = CaptureMap(this);
             var tableToMove = table!;
             MapTabs.Items.Clear();
-            var moved = OpenMap(tableToMove);
-            if (ReferenceEquals(moved, this))
-            {
-                // Reserve the primary view for the next map while this view floats.
-                moved = new EditorWorkspace(inspector, codeGuard, this) { document = document, Definitions = Definitions };
-                document!.Changed += moved.Document_Changed;
-                var movedSlot = new MapSlot(moved, MapFrame(moved)); mapSlots.Add(movedSlot);
-                movedSlot.DockBounds = state.DockBounds; slot.DockBounds = null;
-                moved.OpenTable(tableToMove); RestoreMap(moved, state);
-                MapTabs.Items.Clear(); slot = movedSlot; editor = moved;
-            }
+            slot.DockBounds = null;
+            slot.Pinned = false;
+            slot = AddMapSlot(tableToMove, true, 1);
+            slot.DockBounds = state.DockBounds;
+            slot.Bounds = state.Bounds;
+            editor = slot.Editor;
+            RestoreMap(editor, state);
         }
         mapDock.Children.Remove(slot.Frame);
         slot.Frame.Width = slot.Frame.Height = double.NaN; slot.Frame.Margin = new(0);
         slot.Frame.HorizontalAlignment = HorizontalAlignment.Stretch; slot.Frame.VerticalAlignment = VerticalAlignment.Stretch;
         var window = Floating("SpeedLink · " + editor.table!.Name, slot.Bounds.Width, slot.Bounds.Height, slot.Bounds);
+        window.ShowActivated = !restoringMaps;
         if (editor.ScalarMap && slot.Bounds.Width == 840 && slot.Bounds.Height == 650) { window.Width = 320; window.Height = 200; }
         window.MinWidth = editor.ScalarMap ? 280 : 300; window.MinHeight = editor.ScalarMap ? 200 : 330; window.ShowInTaskbar = true;
         slot.Window = window; window.Content = slot.Frame; editor.RefreshMapControls();
@@ -349,7 +402,9 @@ public partial class EditorWorkspace
                 }));
             }
         };
-        expandedMap = null; ArrangeMaps(); editor.ActivateMap(); window.Show(); QueueMapSave();
+        expandedMap = null; ArrangeMaps(); editor.ActivateMap();
+        if (workspaceActive) window.Show();
+        QueueMapSave();
     }
     private void CloseMap_Click(object sender, RoutedEventArgs e) => MapRoot.CloseMap(this);
     private bool CloseMap(EditorWorkspace editor)
@@ -364,10 +419,10 @@ public partial class EditorWorkspace
                 if (!next.Editor.FinishEdit()) return false;
                 var state = CaptureMap(next.Editor); var selected = next.Editor.table;
                 RemoveMapSlot(next); MapTabs.Items.Clear();
-                slot.DockBounds = state.DockBounds;
+                slot.DockBounds = state.DockBounds; slot.Pinned = state.Pinned; slot.Bounds = state.Bounds;
                 if (selected is not null) { OpenTable(selected); RestoreMap(this, state with { Floating = false }); }
             }
-            else { MapTabs.Items.Clear(); slot.DockBounds = null; }
+            else { MapTabs.Items.Clear(); slot.DockBounds = null; slot.Pinned = false; slot.Bounds = DefaultMapBounds; }
         }
         else RemoveMapSlot(slot);
         expandedMap = null; activeMap = mapSlots.Select(s => s.Editor).FirstOrDefault(p => p.table is not null) ?? this;
@@ -387,7 +442,7 @@ public partial class EditorWorkspace
         disposingMaps = true;
         foreach (var slot in mapSlots.Where(s => !ReferenceEquals(s.Editor, this)).ToArray()) RemoveMapSlot(slot);
         independentMapLayout = false;
-        foreach (var slot in mapSlots) slot.DockBounds = null;
+        foreach (var slot in mapSlots) { slot.DockBounds = null; slot.Pinned = false; slot.Bounds = DefaultMapBounds; }
         disposingMaps = false; expandedMap = null; activeMap = this; ArrangeMaps();
     }
     private bool FinishAllMapEdits()
@@ -396,13 +451,24 @@ public partial class EditorWorkspace
         foreach (var slot in root.mapSlots.ToArray())
             if (!slot.Editor.FinishEdit())
             {
-                if (Window.GetWindow(root) is MainWindow main) main.OpenEditorFile();
-                root.SetWorkspaceActive(true);
-                if (root.expandedMap is not null && !ReferenceEquals(root.expandedMap, slot)) { root.expandedMap = null; root.ArrangeMaps(); }
-                root.EditorStatus.Text = "Correct or cancel the pending entry in " + slot.Editor.table?.Name + " before continuing.";
-                slot.Editor.ActivateMap(); slot.Window?.Activate(); return false;
+                root.ShowPendingEntry(slot);
+                return false;
             }
         return true;
+    }
+    private void ShowPendingEntry(MapSlot slot)
+    {
+        if (Window.GetWindow(this) is MainWindow main) main.OpenEditorFile();
+        SetWorkspaceActive(true);
+        if (expandedMap is not null && !ReferenceEquals(expandedMap, slot)) { expandedMap = null; ArrangeMaps(); }
+        EditorStatus.Text = slot.Editor.PendingEntryStatus;
+        slot.Editor.ActivateMap(); slot.Window?.Activate();
+    }
+    private string PendingEntryStatus => "Correct or cancel the pending entry in " + table?.Name + " before continuing.";
+    private void ClearPendingEntryStatus()
+    {
+        var status = MapRoot.EditorStatus;
+        if (status.Text == PendingEntryStatus) status.Text = "Choose a map to edit. Static axes are read-only.";
     }
     private void RefreshMapControls()
     {
@@ -420,6 +486,7 @@ public partial class EditorWorkspace
         bool expanded = ReferenceEquals(MapRoot.expandedMap?.Editor, this);
         ExpandMapButton.Content = ScalarMap ? expanded ? "⤡" : "⤢" : expanded ? "Restore" : "Expand";
         CloseMapButton.IsEnabled = UndockMapButton.IsEnabled = ExpandMapButton.IsEnabled = table is not null;
+        RefreshPinButton();
         updatingMapControls = true;
         AutoFitBox.IsChecked = autoFitCells; CellZoomText.Text = cellZoom.ToString("P0", CultureInfo.InvariantCulture);
         PaneViewBox.SelectedIndex = ViewMode; CellZoomOut.IsEnabled = cellZoom > .85; CellZoomIn.IsEnabled = cellZoom < 1.5;
@@ -428,9 +495,19 @@ public partial class EditorWorkspace
         ScalarInfoButton.Visibility = ScalarMap ? Visibility.Visible : Visibility.Collapsed;
         MapInfoButton.Visibility = ValueUnitsText.Visibility = ScalarMap ? Visibility.Collapsed : Visibility.Visible;
         CellText.Visibility = ScalarMap ? Visibility.Collapsed : Visibility.Visible;
-        if (mapOwner is not null) WorkspaceRoot.RowDefinitions[2].Height = new(ScalarMap ? 0 : 24);
+        if (mapOwner is not null) WorkspaceRoot.RowDefinitions[3].Height = new(ScalarMap ? 0 : 24);
         PaneViewBox.IsEnabled = table is { IsChoice: false };
         updatingMapControls = false;
+    }
+    private void RefreshPinButton()
+    {
+        var slot = MapRoot.mapSlots.FirstOrDefault(s => ReferenceEquals(s.Editor, this));
+        bool pinned = slot?.Pinned == true;
+        PinMapButton.IsChecked = pinned;
+        PinMapButton.IsEnabled = slot is { Window: null } && table is not null;
+        PinMapButton.ToolTip = slot?.Window is not null ? "Undocked maps stay pinned" :
+            pinned ? "Unpin this map to reuse its pane while browsing" : "Pin this map to keep it open while browsing";
+        System.Windows.Automation.AutomationProperties.SetName(PinMapButton, pinned ? "Unpin map" : "Pin map");
     }
     private void CellFit_Changed(object sender, RoutedEventArgs e)
     {
@@ -464,11 +541,12 @@ public partial class EditorWorkspace
         var scroll = Descendants(editor.MapGrid).OfType<ScrollViewer>().FirstOrDefault();
         return editor.Graph.CaptureView(new MapPanePreferences
         {
-            Key = editor.table is null ? "" : MapKey(editor.table), Zoom = editor.cellZoom, AutoFit = editor.autoFitCells,
-            View = editor.ViewMode, Baseline = Math.Min(1, editor.BaselineBox.SelectedIndex), Selection = editor.SelectedIndices(),
+            Key = editor.table is null ? "" : MapKey(editor.table), Zoom = editor.cellZoom, AutoFit = editor.autoFitCells, FitTable = editor.fitTable,
+            View = editor.ViewMode, Baseline = Math.Max(0, editor.BaselineBox.SelectedIndex), Selection = editor.SelectedIndices(),
             HorizontalOffset = scroll?.HorizontalOffset ?? 0, VerticalOffset = scroll?.VerticalOffset ?? 0,
             PreviewWidth = editor.previewWidth, TableFraction = editor.tableFraction, Floating = slot.Window is not null,
-            Bounds = Bounds(slot.Window, slot.Bounds), DockBounds = independentMapLayout ? slot.DockBounds : null, ZOrder = Panel.GetZIndex(slot.Frame)
+            Bounds = Bounds(slot.Window, slot.Bounds), DockBounds = independentMapLayout ? slot.DockBounds : null,
+            ZOrder = Panel.GetZIndex(slot.Frame), Pinned = slot.Pinned
         });
     }
     private void SaveMapWorkspace()
@@ -476,9 +554,10 @@ public partial class EditorWorkspace
         if (mapOwner is not null) { MapRoot.SaveMapWorkspace(); return; }
         if (mapsPath is null || document is null || restoringMaps || disposingMaps) return;
         mapSaveTimer?.Stop();
+        if (workspacePages.Count == 0) return;
+        CaptureActivePage();
         var state = new MapWorkspacePreferences { Calibration = document.Definition.Calibration,
-            Maps = mapSlots.Where(s => s.Editor.table is not null).Select(s => CaptureMap(s.Editor)).ToArray(),
-            Active = activeMap?.table is { } t ? MapKey(t) : "", Columns = dockColumns, ColumnFraction = dockColumnFraction, RowFraction = dockRowFraction, RowWeights = dockRowWeights, ScalarColumnWidths = scalarColumnWidths };
+            Pages = workspacePages.ToArray(), SelectedPage = workspacePages[currentPage].Name };
         mapProfiles = mapProfiles.Where(p => p.Calibration != state.Calibration).Append(state).TakeLast(32).ToArray();
         try { MapWorkspacePreferences.Save(mapsPath, mapProfiles); }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException) { EditorStatus.ToolTip = "Map layout could not be saved: " + error.Message; }
@@ -486,9 +565,11 @@ public partial class EditorWorkspace
     private void RestoreMap(EditorWorkspace editor, MapPanePreferences state)
     {
         editor.cellZoom = state.Zoom; editor.autoFitCells = state.AutoFit; editor.previewWidth = state.PreviewWidth; editor.tableFraction = state.TableFraction;
+        editor.fitTable = state.FitTable ?? editor.fitTable;
         editor.MapGrid.FontSize = 13 * state.Zoom; editor.MapGrid.ColumnHeaderHeight = Math.Ceiling(26 * state.Zoom);
         editor.measuredCellWidth = double.NaN;
-        editor.BaselineBox.SelectedIndex = state.Baseline; editor.SetViewMode(state.View); editor.RefreshAxes(); editor.RefreshMapControls();
+        editor.BaselineBox.SelectedIndex = state.Baseline == 2 && editor.document?.HasComparison != true ? 0 : state.Baseline;
+        editor.SetViewMode(state.View); editor.RefreshAxes(); editor.RefreshMapControls();
         void ApplySelection()
         {
             if (editor.layoutClosing || editor.table is null || MapKey(editor.table) != state.Key) return;
@@ -497,6 +578,8 @@ public partial class EditorWorkspace
             editor.MapGrid.SelectedCells.Clear();
             foreach (int index in state.Selection.Where(i => i < editor.table.Count))
                 if (!editor.ScalarMap) editor.MapGrid.SelectedCells.Add(new(editor.MapGrid.Items[editor.CurveList ? index : index / editor.table.Columns], editor.MapGrid.Columns[editor.CurveList ? 1 : index % editor.table.Columns]));
+            if (editor.MapGrid.SelectedCells.Count > 0)
+                editor.MapGrid.CurrentCell = editor.MapGrid.SelectedCells[0];
             editor.refreshing = false;
             editor.UpdateSelectedAxes(); editor.UpdateCellText(); editor.Graph.Select(state.Selection.FirstOrDefault(-1)); editor.Graph.RestoreView(state);
             var scroll = Descendants(editor.MapGrid).OfType<ScrollViewer>().FirstOrDefault();
@@ -507,29 +590,29 @@ public partial class EditorWorkspace
         // cells earlier creates invalid DataGridCellInfo entries after startup.
         editor.Dispatcher.BeginInvoke(DispatcherPriority.ContextIdle, new Action(ApplySelection));
     }
-    private void RestoreMapWorkspace()
+    private void RestorePage(MapPagePreferences saved)
     {
-        if (mapOwner is not null || document is null) return;
-        var saved = mapProfiles.FirstOrDefault(p => p.Calibration == document.Definition.Calibration); if (saved is null) return;
-        restoringMaps = true;
-        try
+        if (document is null) return;
+        dockColumns = saved.Columns; dockColumnFraction = saved.ColumnFraction; dockRowFraction = saved.RowFraction;
+        dockRowWeights = saved.RowWeights;
+        scalarColumnWidths = saved.ScalarColumnWidths;
+        independentMapLayout = saved.Maps.Any(s => s.DockBounds is not null);
+        foreach (var state in saved.Maps)
         {
-            dockColumns = saved.Columns; dockColumnFraction = saved.ColumnFraction; dockRowFraction = saved.RowFraction;
-            dockRowWeights = saved.RowWeights;
-            scalarColumnWidths = saved.ScalarColumnWidths;
-            independentMapLayout = saved.Maps.Any(s => s.DockBounds is not null);
-            foreach (var state in saved.Maps)
-            {
-                var selected = document.Definition.Tables.FirstOrDefault(t => MapKey(t) == state.Key); if (selected is null) continue;
-                var editor = OpenMap(selected); RestoreMap(editor, state);
-                var slot = mapSlots.First(s => ReferenceEquals(s.Editor, editor)); slot.Bounds = state.Bounds; slot.DockBounds = state.DockBounds;
-                if (state.Floating) DetachMap(editor);
-            }
-            var active = mapSlots.FirstOrDefault(s => s.Editor.table is { } t && MapKey(t) == saved.Active);
-            foreach (var slot in mapSlots.Where(s => s.Editor.table is not null))
-                Panel.SetZIndex(slot.Frame, saved.Maps.FirstOrDefault(s => s.Key == MapKey(slot.Editor.table!))?.ZOrder ?? 0);
-            active?.Editor.ActivateMap(); ArrangeMaps();
+            var selected = document.Definition.Tables.FirstOrDefault(t => MapKey(t) == state.Key);
+            if (selected is null) continue;
+            var editor = OpenMap(selected, state.Pinned);
+            RestoreMap(editor, state);
+            var slot = mapSlots.First(s => ReferenceEquals(s.Editor, editor));
+            slot.Bounds = state.Bounds;
+            slot.DockBounds = state.DockBounds;
+            if (state.Floating) DetachMap(editor);
         }
-        finally { restoringMaps = false; }
+        var active = mapSlots.FirstOrDefault(s => s.Editor.table is { } t && MapKey(t) == saved.Active);
+        foreach (var slot in mapSlots.Where(s => s.Editor.table is not null))
+            Panel.SetZIndex(slot.Frame, saved.Maps.FirstOrDefault(s => s.Key == MapKey(slot.Editor.table!))?.ZOrder ?? 0);
+        expandedMap = mapSlots.FirstOrDefault(s => s.Window is null && s.Editor.table is { } t && MapKey(t) == saved.Expanded);
+        (active?.Editor ?? this).ActivateMap();
+        ArrangeMaps();
     }
 }

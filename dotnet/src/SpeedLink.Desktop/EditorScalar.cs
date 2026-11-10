@@ -64,7 +64,7 @@ public partial class EditorWorkspace
             if (!double.TryParse(ScalarInput.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out double value) || !double.IsFinite(value))
                 throw new ArgumentException("Enter a finite number using a decimal point.");
             document.Apply([new(table, 0, value)], "Edit " + table.Name);
-            RefreshScalar(); return true;
+            RefreshScalar(); ClearPendingEntryStatus(); return true;
         }
         catch (ArgumentException error)
         {
@@ -73,11 +73,15 @@ public partial class EditorWorkspace
         }
     }
     private void ScalarApply_Click(object sender, RoutedEventArgs e) => CommitScalar();
-    private void ScalarCancel_Click(object sender, RoutedEventArgs e) => RefreshScalar();
+    private void ScalarCancel_Click(object sender, RoutedEventArgs e)
+    {
+        RefreshScalar();
+        ClearPendingEntryStatus();
+    }
     private void ScalarInput_KeyDown(object sender, KeyEventArgs e)
     {
         if (e.Key == Key.Enter) { CommitScalar(); e.Handled = true; }
-        else if (e.Key == Key.Escape) { RefreshScalar(); ScalarInput.SelectAll(); e.Handled = true; }
+        else if (e.Key == Key.Escape) { ScalarCancel_Click(sender, e); ScalarInput.SelectAll(); e.Handled = true; }
     }
     private void ScalarChoice_Changed(object sender, SelectionChangedEventArgs e)
     {

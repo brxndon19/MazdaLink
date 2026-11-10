@@ -134,7 +134,7 @@ public partial class EditorWorkspace
         second.UndockMapButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); await Idle();
         SaveMapWorkspace();
         string calibration = doc.Definition.Calibration;
-        var saved = MapWorkspacePreferences.Load(mapsPath!).Single(p => p.Calibration == calibration);
+        var saved = MapWorkspacePreferences.Load(mapsPath!).Single(p => p.Calibration == calibration).Pages.Single();
         Check(saved.Maps.Length == mapSlots.Count && saved.Maps.Any(p => p.Floating) && saved.Maps[0].Zoom == zoom, "Workspace persistence includes maps, bounds, zoom, and selection");
         CaptureHost(Path.Combine(folder, "MultipleMaps.png"));
         var fresh = new Window { Width = 1280, Height = 850, ShowInTaskbar = false, Title = "SpeedLink · layout restart check" };
@@ -187,6 +187,7 @@ public partial class EditorWorkspace
         Check(NoMapPanel.IsVisible && document == doc, "Closing all maps retains ROM and browse prompt");
         cases.AddRange(await ExerciseCompactScalarPanes(folder));
         cases.AddRange(await ExerciseIndependentMapResize(folder));
+        cases.AddRange(await ExerciseWorkspaceTabs(folder));
         return new { passed = true, cases, calibration, hardwareAccessed = false, synthetic = true };
     }
     private async Task CaptureMapWindowGallery(string folder)

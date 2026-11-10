@@ -1,5 +1,14 @@
 # Alpha validation scope
 
+## Editor workspaces · 0.8.0-alpha.6
+
+- Offline desktop scenarios exercise map browsing, pinning, independent pane
+  bounds, tab switching and persistence on all ten bundled ROM layouts.
+- Cases cover invalid scalar and grid entries, shared undo history, detached
+  windows, and retaining applied ROM edits when a tab is deleted.
+- Layout tests cover importing the previous single-workspace settings and
+  keeping named workspace state separate by calibration.
+
 ## Editor, tuning guide and write verification · 0.8.0-alpha.5
 
 - Automated checksum coverage includes all ten bundled profiles. Independent

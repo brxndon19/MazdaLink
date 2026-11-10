@@ -27,6 +27,20 @@ foreach ($calibration in @('L33XEH000','L35HEH000','L38KEH000','L39SED000','L39S
     foreach ($required in @('Bottom map widens across empty space without moving either upper map', 'Manual resizing allows overlap without moving the covered map', 'Choosing a covered map brings it to the front without changing its bounds', 'Moving one pane allows overlap and leaves all other panes in place', 'The visible corner resize handle receives pointer input', 'Opening another map preserves independently sized panes', 'Docking back restores only that pane''s bounds', 'Smaller workspaces scroll without moving independently sized maps', 'Reopening a ROM restores each pane''s independent position and size', 'Reopening a ROM restores overlapping map stacking order', 'Escape cancels a resize even when keyboard focus belongs to another map', 'Resizing preserves invalid pending input and still blocks ROM export', 'Mixed scalar and table panes resize into empty space without shifting other rows')) {
         if ($result.workflow.cases -notcontains $required) { throw "Missing independent resize regression: $calibration; $required" }
     }
+    foreach ($required in @(
+        'Browsing replaces the reusable map pane',
+        'Replacing the preview keeps pane sizes and pinned positions',
+        'Invalid scalar input blocks preview replacement without losing the draft',
+        'Valid input is applied before preview replacement',
+        'Tabs share applied edits and undo history',
+        'Invalid pending input keeps the current workspace selected',
+        'Invalid grid input also blocks a workspace switch',
+        'Returning to a tab restores its pins, selection and detached window bounds',
+        'Reopening the ROM restores workspace names, selected tab and preview',
+        'Deleting a tab removes only its layout and retains applied edits'
+    )) {
+        if ($result.workflow.cases -notcontains $required) { throw "Missing workspace tab regression: $calibration; $required" }
+    }
     $reports += $result
 }
 @{ passed = $true; hardwareAccessed = $false; reports = $reports } | ConvertTo-Json -Depth 14 | Set-Content -LiteralPath (Join-Path $runRoot 'summary.json') -Encoding utf8

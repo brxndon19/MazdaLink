@@ -3,7 +3,7 @@
   <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}"><Setter Property="MinHeight" Value="26"/><Setter Property="Padding" Value="8,3"/><Setter Property="Margin" Value="0,0,4,0"/></Style>
   <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}"><Setter Property="MinHeight" Value="26"/><Setter Property="Padding" Value="5,2"/></Style>
  </UserControl.Resources>
- <Grid x:Name="WorkspaceRoot" Margin="8"><Grid.RowDefinitions><RowDefinition Height="32"/><RowDefinition Height="*"/><RowDefinition Height="24"/></Grid.RowDefinitions>
+ <Grid x:Name="WorkspaceRoot" Margin="8"><Grid.RowDefinitions><RowDefinition Height="32"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="24"/></Grid.RowDefinitions>
   <DockPanel x:Name="EditorToolbar">
    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal"><Button x:Name="SaveButton" Content="Save copy…" Click="Save_Click" Style="{DynamicResource PrimaryButton}" Padding="10,3" MinHeight="26"/><Button x:Name="FitMapButton" Content="Fit map" Click="FitMap_Click" ToolTip="Show the complete table · Ctrl+0"/></StackPanel>
    <Menu x:Name="EditorMenu" DockPanel.Dock="Left" Background="Transparent" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center">
@@ -15,7 +15,21 @@
    <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Margin="6,0"><Button x:Name="UndoButton" Content="↶" Click="Undo_Click" ToolTip="Undo · Ctrl+Z" Width="28"/><Button x:Name="RedoButton" Content="↷" Click="Redo_Click" ToolTip="Redo · Ctrl+Y" Width="28"/></StackPanel>
    <TextBlock x:Name="ProfileText" VerticalAlignment="Center" Foreground="{DynamicResource MutedBrush}" TextTrimming="CharacterEllipsis" Margin="5,0"/>
   </DockPanel>
-  <Grid Grid.Row="1" x:Name="EditorLayout"><Grid.ColumnDefinitions><ColumnDefinition x:Name="BrowserColumn" Width="200" MinWidth="0"/><ColumnDefinition x:Name="BrowserDivider" Width="5"/><ColumnDefinition Width="*" MinWidth="200"/><ColumnDefinition x:Name="ChangesDivider" Width="0"/><ColumnDefinition x:Name="ChangesColumn" Width="0"/></Grid.ColumnDefinitions>
+  <DockPanel Grid.Row="1" x:Name="WorkspaceTabsBar" Visibility="Collapsed" Margin="0,0,0,5">
+   <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top" Margin="5,0,0,0">
+    <Button x:Name="NewWorkspaceButton" Content="+ New tab" Click="NewWorkspace_Click" AutomationProperties.Name="New map workspace tab" ToolTip="Create an empty workspace tab"/>
+    <Button Content="Rename" Click="RenameWorkspace_Click" ToolTip="Rename the current workspace tab" AutomationProperties.Name="Rename map workspace tab"/>
+    <Button x:Name="DeleteWorkspaceButton" Content="Delete" Click="DeleteWorkspace_Click" ToolTip="Remove this tab and its layout. ROM edits are kept." AutomationProperties.Name="Delete map workspace tab"/>
+   </StackPanel>
+   <TabControl x:Name="WorkspaceTabs" SelectionChanged="WorkspaceTab_Changed" AutomationProperties.Name="Map workspace tabs">
+    <TabControl.Template><ControlTemplate TargetType="TabControl">
+     <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" Focusable="False">
+      <TabPanel IsItemsHost="True"/>
+     </ScrollViewer>
+    </ControlTemplate></TabControl.Template>
+   </TabControl>
+  </DockPanel>
+  <Grid Grid.Row="2" x:Name="EditorLayout"><Grid.ColumnDefinitions><ColumnDefinition x:Name="BrowserColumn" Width="200" MinWidth="0"/><ColumnDefinition x:Name="BrowserDivider" Width="5"/><ColumnDefinition Width="*" MinWidth="200"/><ColumnDefinition x:Name="ChangesDivider" Width="0"/><ColumnDefinition x:Name="ChangesColumn" Width="0"/></Grid.ColumnDefinitions>
    <Border x:Name="BrowserPanel" Background="{DynamicResource PanelBrush}" Padding="6"><DockPanel>
     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,5"><StackPanel DockPanel.Dock="Right" Orientation="Horizontal"><Button Content="↗" Click="PopBrowser_Click" ToolTip="Pop out map browser" Padding="5,0" MinHeight="23"/><Button Content="×" Click="HideBrowser_Click" ToolTip="Hide map browser · Ctrl+B" Padding="5,0" MinHeight="23"/></StackPanel><TextBlock Text="Maps" FontWeight="SemiBold" VerticalAlignment="Center"/></DockPanel>
     <TextBox x:Name="SearchBox" DockPanel.Dock="Top" ToolTip="Search maps" TextChanged="Search_Changed" Margin="0,0,0,5" Padding="5,3"/>
@@ -26,7 +40,17 @@
    <GridSplitter x:Name="BrowserSplitter" Grid.Column="1" Width="5" HorizontalAlignment="Stretch" Background="{DynamicResource ShellBrush}" DragCompleted="LayoutSplitter_Completed"/>
    <Grid Grid.Column="2" x:Name="MapWorkspace"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
     <StackPanel>
-     <DockPanel Margin="2,2,0,3"><StackPanel DockPanel.Dock="Right" Orientation="Horizontal"><Button x:Name="ScalarInfoButton" Content="ⓘ" Click="MapInfo_Click" Visibility="Collapsed" ToolTip="Map info · F1" AutomationProperties.Name="Map info" Padding="5,2"/><Button x:Name="UndockMapButton" Content="Undock" Click="UndockMap_Click" ToolTip="Move this map into its own resizable window"/><Button x:Name="ExpandMapButton" Content="Expand" Click="ExpandMap_Click" ToolTip="Expand this map, or restore the tiled layout"/><Button x:Name="CloseMapButton" Content="×" Click="CloseMap_Click" ToolTip="Close this map view; keep its ROM edits" AutomationProperties.Name="Close map"/></StackPanel><TextBlock x:Name="PaneCaption" VerticalAlignment="Center" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/><TabControl x:Name="MapTabs" SelectionChanged="Tab_Changed" Visibility="Collapsed"/></DockPanel>
+     <DockPanel Margin="2,2,0,3">
+      <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+       <Button x:Name="ScalarInfoButton" Content="ⓘ" Click="MapInfo_Click" Visibility="Collapsed" ToolTip="Map info · F1" AutomationProperties.Name="Map info" Padding="5,2"/>
+       <ToggleButton x:Name="PinMapButton" Content="Pin" Click="PinMap_Click" Style="{DynamicResource ToggleButton}" Padding="5,2" MinHeight="26" Margin="0,0,4,0" ToolTipService.ShowOnDisabled="True"/>
+       <Button x:Name="UndockMapButton" Content="Undock" Click="UndockMap_Click" ToolTip="Move this map into its own resizable window"/>
+       <Button x:Name="ExpandMapButton" Content="Expand" Click="ExpandMap_Click" ToolTip="Expand this map, or restore the tiled layout"/>
+       <Button x:Name="CloseMapButton" Content="×" Click="CloseMap_Click" ToolTip="Close this map view; keep its ROM edits" AutomationProperties.Name="Close map"/>
+      </StackPanel>
+      <TextBlock x:Name="PaneCaption" VerticalAlignment="Center" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+      <TabControl x:Name="MapTabs" SelectionChanged="Tab_Changed" Visibility="Collapsed"/>
+     </DockPanel>
      <WrapPanel Margin="2,0,0,3"><CheckBox x:Name="AutoFitBox" Content="Auto fit" IsChecked="True" Checked="CellFit_Changed" Unchecked="CellFit_Changed" VerticalAlignment="Center" Margin="0,0,8,0" ToolTip="Adjust cell spacing without shrinking text; scroll below the readable minimum"/><Button x:Name="CellZoomOut" Content="−" Click="CellZoom_Click" ToolTip="Smaller text; minimum 85%" AutomationProperties.Name="Smaller map text"/><TextBlock x:Name="CellZoomText" Text="100%" VerticalAlignment="Center" Margin="0,0,5,0"/><Button x:Name="CellZoomIn" Content="+" Click="CellZoom_Click" ToolTip="Larger text; maximum 150%" AutomationProperties.Name="Larger map text"/><ComboBox x:Name="PaneViewBox" Width="130" SelectionChanged="PaneView_Changed" ToolTip="Table and graph layout" Margin="0,0,5,0"><ComboBoxItem Content="Graph below"/><ComboBoxItem Content="Graph beside"/><ComboBoxItem Content="Table only"/><ComboBoxItem Content="Graph only"/><ComboBoxItem Content="Table + preview"/></ComboBox><Button x:Name="MapInfoButton" Content="ⓘ Map info" Click="MapInfo_Click" IsEnabled="{Binding IsEnabled, ElementName=DetailsButton}" ToolTip="Help for this map · F1" AutomationProperties.Name="Map info"/><TextBlock x:Name="ValueUnitsText" Foreground="{DynamicResource MutedBrush}" FontSize="11" VerticalAlignment="Center" Margin="3,0" MaxWidth="180" TextTrimming="CharacterEllipsis"/></WrapPanel>
     </StackPanel>
     <WrapPanel x:Name="EditBar" Grid.Row="1" Margin="3,1"><ComboBox x:Name="ChoiceBox" Width="220" Visibility="Collapsed" SelectionChanged="Choice_Changed"/>
@@ -87,6 +111,6 @@
    <GridSplitter x:Name="ChangesSplitter" Grid.Column="3" Width="5" HorizontalAlignment="Stretch" Background="{DynamicResource ShellBrush}" Visibility="Collapsed"/>
    <Border x:Name="ChangesPanel" Grid.Column="4" Background="{DynamicResource PanelBrush}" Padding="8" Visibility="Collapsed"><DockPanel><TextBlock DockPanel.Dock="Top" Text="Changed maps" FontWeight="SemiBold" Margin="0,0,0,8"/><ListBox x:Name="ChangesList" DisplayMemberPath="Name" SelectionChanged="Changes_Selected"/></DockPanel></Border>
   </Grid>
-  <DockPanel Grid.Row="2" Margin="2,3,2,0"><TextBlock x:Name="ExportIntegrityText" DockPanel.Dock="Right" Text="Checksum ✓ on save" ToolTip="Every export applies the ROM's integrity policy: checksum correction when supported, otherwise mandatory native code and marker validation. Invalid Gen 2 code is rejected without repair." Foreground="{DynamicResource MutedBrush}" FontSize="11" Margin="10,0,0,0"/><TextBlock x:Name="CellText" DockPanel.Dock="Right" FontSize="11" Foreground="{DynamicResource MutedBrush}" Margin="8,0"/><TextBlock x:Name="FileText" DockPanel.Dock="Left" FontSize="11" Foreground="{DynamicResource MutedBrush}" Margin="0,0,8,0" MaxWidth="180" TextTrimming="CharacterEllipsis"/><TextBlock x:Name="EditorStatus" FontSize="11" Foreground="{DynamicResource MutedBrush}" Text="Open a ROM to begin" TextTrimming="CharacterEllipsis"/></DockPanel>
+  <DockPanel Grid.Row="3" Margin="2,3,2,0"><TextBlock x:Name="ExportIntegrityText" DockPanel.Dock="Right" Text="Checksum ✓ on save" ToolTip="Every export applies the ROM's integrity policy: checksum correction when supported, otherwise mandatory native code and marker validation. Invalid Gen 2 code is rejected without repair." Foreground="{DynamicResource MutedBrush}" FontSize="11" Margin="10,0,0,0"/><TextBlock x:Name="CellText" DockPanel.Dock="Right" FontSize="11" Foreground="{DynamicResource MutedBrush}" Margin="8,0"/><TextBlock x:Name="FileText" DockPanel.Dock="Left" FontSize="11" Foreground="{DynamicResource MutedBrush}" Margin="0,0,8,0" MaxWidth="180" TextTrimming="CharacterEllipsis"/><TextBlock x:Name="EditorStatus" FontSize="11" Foreground="{DynamicResource MutedBrush}" Text="Open a ROM to begin" TextTrimming="CharacterEllipsis"/></DockPanel>
  </Grid>
 </UserControl>

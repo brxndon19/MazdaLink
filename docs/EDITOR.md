@@ -113,10 +113,18 @@ not a record of the order in which edits were made.
 
 ## Arrange the workspace
 
-Maps open together in separate panes over the same ROM document. Opening an
-already open map brings its existing pane forward. Numbered maps remain sorted
-naturally in the browser. Each pane has its own selection, comparison baseline,
-text zoom and graph view; Undo/Redo and saved ROM bytes belong to the shared ROM.
+Click a map in the browser to open it in the reusable pane. The next map
+replaces it. Turn on **Pin** in the pane title to keep the map visible while
+you browse other maps. Picking an already open map brings it forward. If you
+turn off **Pin** while another reusable pane is open, that other pane becomes
+pinned so both maps stay open.
+
+Use **+ New tab** above the editor to make a workspace such as Fuel Tuning or
+Boost Control. **Rename** changes the current tab's name. **Delete** removes
+that layout and keeps all applied ROM edits. Each tab remembers its own maps
+and arrangement, and every tab shares the open ROM, Undo/Redo and **Save copy**.
+Valid pending input is applied before replacing its pane or switching tabs.
+Correct or cancel invalid input before continuing.
 
 Drag any pane's edge or corner to resize only that map. Drag its title to move
 it inside the workspace. The other panes retain their positions and sizes;
@@ -143,16 +151,19 @@ cells while scrolling and resizing. Long titles can be trimmed in very small
 panes; hover over an axis title to read its full name and units.
 
 **Undock** moves a map and its editing controls into a separate resizable Windows
-window, which can move to another monitor. **Dock** returns it. Dragging a map's
+window, which can move to another monitor. Undocking also pins the map.
+**Dock** returns it. Dragging a map's
 title outside the workspace also detaches it; dropping that window over the editor docks it. Closing
 a detached window or a pane's **×** closes that view and retains the ROM edits.
 Invalid pending input blocks closing that view and blocks saving the ROM until
 corrected or canceled. Opening another pane does not discard a pending entry.
 
-Map windows hide while using another workspace and return with Editor. Opening
-the same calibration restores its open maps, independent pane bounds, window bounds,
-text sizes, selections, scrolling and graph views. Different calibrations keep
-separate layouts. This restores presentation, not unsaved tuning edits.
+Detached map windows are visible only on their own tab while Editor is active.
+Opening the same calibration restores its workspace tabs, the selected tab, open
+maps, pins, independent pane bounds, window bounds, text sizes, selections,
+scrolling and graph views. Each calibration has its own layouts. On upgrade,
+maps from the previous layout are kept pinned in the Workspace tab. Layout files
+store display settings. Use **Save copy** to save ROM edits.
 
 Use the app's **☰ Navigation** button to collapse navigation to icons, or toggle
 **View → Navigation labels**. The sidebar starts with names and remembers your
