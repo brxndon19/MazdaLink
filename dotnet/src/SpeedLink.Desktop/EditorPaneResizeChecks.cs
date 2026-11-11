@@ -42,6 +42,19 @@ public partial class EditorWorkspace
         host.Width = 1280; host.Height = 850; FocusButton.IsChecked = true;
         var tables = doc.Definition.Tables.Where(t => t.Rows > 1 && t.Columns > 1 && !t.IsChoice).Take(5).ToArray();
         var first = OpenMap(tables[0]); var second = OpenMap(tables[1]); var third = OpenMap(tables[2]); await Idle();
+        var thirdSlot = mapSlots.Single(s => ReferenceEquals(s.Editor, third));
+        var dragArea = third.PaneDragArea;
+        var pinButton = third.PinMapButton;
+        bool Hits(FrameworkElement element, Point point)
+        {
+            var hit = thirdSlot.Frame.InputHitTest(element.TranslatePoint(point, thirdSlot.Frame)) as Visual;
+            return hit is not null && (ReferenceEquals(hit, element) || element.IsAncestorOf(hit));
+        }
+        double emptyHeaderX = dragArea.ActualWidth - 8;
+        Check(thirdSlot.Pinned && emptyHeaderX > third.PaneCaption.DesiredSize.Width &&
+            Hits(dragArea, new(emptyHeaderX, dragArea.ActualHeight / 2)), "Blank map header space receives drag input while pinned");
+        Check(Hits(pinButton, new(pinButton.ActualWidth / 2, pinButton.ActualHeight / 2)),
+            "The pin button still receives pointer input");
         var upper = new[] { DockedBounds(first), DockedBounds(second) }; double thirdWidth = DockedBounds(third).Width;
         third.SelectCell(1); third.CellZoomIn.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); double zoom = third.cellZoom;
         DragPaneEdge(third, MapResizeEdge.Right, thirdWidth, 0); await Idle();

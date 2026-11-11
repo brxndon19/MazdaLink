@@ -126,9 +126,9 @@ and arrangement, and every tab shares the open ROM, Undo/Redo and **Save copy**.
 Valid pending input is applied before replacing its pane or switching tabs.
 Correct or cancel invalid input before continuing.
 
-Drag any pane's edge or corner to resize only that map. Drag its title to move
-it inside the workspace. The other panes retain their positions and sizes;
-manual placement and resizing allow overlap. Click a map or select it in the
+Drag any pane's edge or corner to resize that map. Drag the pane header,
+including the space between its title and buttons, to move that map.
+Panes can overlap. Click a map or select it in the
 browser to bring it to the front, even if another pane covers it.
 
 **View → Map layout and display → Tile maps side by side** and **Stack maps vertically** reset manual
@@ -153,7 +153,7 @@ panes; hover over an axis title to read its full name and units.
 **Undock** moves a map and its editing controls into a separate resizable Windows
 window, which can move to another monitor. Undocking also pins the map.
 **Dock** returns it. Dragging a map's
-title outside the workspace also detaches it; dropping that window over the editor docks it. Closing
+header outside the workspace also detaches it; dropping that window over the editor docks it. Closing
 a detached window or a pane's **×** closes that view and retains the ROM edits.
 Invalid pending input blocks closing that view and blocks saving the ROM until
 corrected or canceled. Opening another pane does not discard a pending entry.

@@ -40,16 +40,18 @@
    <GridSplitter x:Name="BrowserSplitter" Grid.Column="1" Width="5" HorizontalAlignment="Stretch" Background="{DynamicResource ShellBrush}" DragCompleted="LayoutSplitter_Completed"/>
    <Grid Grid.Column="2" x:Name="MapWorkspace"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
     <StackPanel>
-     <DockPanel Margin="2,2,0,3">
-      <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+     <DockPanel>
+      <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="0,2,0,3">
        <Button x:Name="ScalarInfoButton" Content="ⓘ" Click="MapInfo_Click" Visibility="Collapsed" ToolTip="Map info · F1" AutomationProperties.Name="Map info" Padding="5,2"/>
        <ToggleButton x:Name="PinMapButton" Content="Pin" Click="PinMap_Click" Style="{DynamicResource ToggleButton}" Padding="5,2" MinHeight="26" Margin="0,0,4,0" ToolTipService.ShowOnDisabled="True"/>
        <Button x:Name="UndockMapButton" Content="Undock" Click="UndockMap_Click" ToolTip="Move this map into its own resizable window"/>
        <Button x:Name="ExpandMapButton" Content="Expand" Click="ExpandMap_Click" ToolTip="Expand this map, or restore the tiled layout"/>
        <Button x:Name="CloseMapButton" Content="×" Click="CloseMap_Click" ToolTip="Close this map view; keep its ROM edits" AutomationProperties.Name="Close map"/>
       </StackPanel>
-      <TextBlock x:Name="PaneCaption" VerticalAlignment="Center" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-      <TabControl x:Name="MapTabs" SelectionChanged="Tab_Changed" Visibility="Collapsed"/>
+      <Grid x:Name="PaneDragArea" Background="Transparent" Cursor="SizeAll">
+       <TextBlock x:Name="PaneCaption" Margin="2,2,0,3" VerticalAlignment="Center" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+       <TabControl x:Name="MapTabs" SelectionChanged="Tab_Changed" Visibility="Collapsed"/>
+      </Grid>
      </DockPanel>
      <WrapPanel Margin="2,0,0,3"><CheckBox x:Name="AutoFitBox" Content="Auto fit" IsChecked="True" Checked="CellFit_Changed" Unchecked="CellFit_Changed" VerticalAlignment="Center" Margin="0,0,8,0" ToolTip="Adjust cell spacing without shrinking text; scroll below the readable minimum"/><Button x:Name="CellZoomOut" Content="−" Click="CellZoom_Click" ToolTip="Smaller text; minimum 85%" AutomationProperties.Name="Smaller map text"/><TextBlock x:Name="CellZoomText" Text="100%" VerticalAlignment="Center" Margin="0,0,5,0"/><Button x:Name="CellZoomIn" Content="+" Click="CellZoom_Click" ToolTip="Larger text; maximum 150%" AutomationProperties.Name="Larger map text"/><ComboBox x:Name="PaneViewBox" Width="130" SelectionChanged="PaneView_Changed" ToolTip="Table and graph layout" Margin="0,0,5,0"><ComboBoxItem Content="Graph below"/><ComboBoxItem Content="Graph beside"/><ComboBoxItem Content="Table only"/><ComboBoxItem Content="Graph only"/><ComboBoxItem Content="Table + preview"/></ComboBox><Button x:Name="MapInfoButton" Content="ⓘ Map info" Click="MapInfo_Click" IsEnabled="{Binding IsEnabled, ElementName=DetailsButton}" ToolTip="Help for this map · F1" AutomationProperties.Name="Map info"/><TextBlock x:Name="ValueUnitsText" Foreground="{DynamicResource MutedBrush}" FontSize="11" VerticalAlignment="Center" Margin="3,0" MaxWidth="180" TextTrimming="CharacterEllipsis"/></WrapPanel>
     </StackPanel>

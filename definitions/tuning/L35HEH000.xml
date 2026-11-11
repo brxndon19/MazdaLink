@@ -1391,8 +1391,8 @@ Values are relative engine load, not boost pressure.</description>
 
 1 applies this factor unchanged; 0 removes its multiplied contribution.</description>
     </table>
-    <table type="2D" name="Fuel Feedback Gain" category="Fueling" storageaddress="0xd008" storagetype="float" endian="big" sizex="28" userlevel="1">
-      <scaling units="controller gain" expression="x*1+(0)" to_byte="(x-(0))/1" format="0.0000" fineincrement="0.01" coarseincrement="1" />
+    <table type="2D" name="Fuel Feedback - Primary Wideband Gain" category="Fueling" storageaddress="0xd008" storagetype="float" endian="big" sizex="28" userlevel="1">
+      <scaling units="Ratio" expression="x*1+(0)" to_byte="(x-(0))/1" format="0.0000" fineincrement="0.01" coarseincrement="1" />
       <table type="Static X Axis" name="Airflow (g/s)" sizex="28">
         <data>1</data>
         <data>5.11999988556</data>
@@ -1423,9 +1423,9 @@ Values are relative engine load, not boost pressure.</description>
         <data>250.880004883</data>
         <data>271.359985352</data>
       </table>
-      <description>Dimensionless gain for the fuel-feedback controller at each airflow. Larger values strengthen the calculated proportional, integral and derivative corrections for the same response period. This is a controller gain, not a direct fuel multiplier; 1 does not mean add 100% fuel. Values beyond an axis use its nearest endpoint.</description>
+      <description>Sets the strength of front wideband fuel correction by airflow. Higher values increase correction. Also applies during enrichment when front sensor feedback is active.</description>
     </table>
-    <table type="2D" name="Fuel Feedback Response Period" category="Fueling" storageaddress="0xcf98" storagetype="float" endian="big" sizex="28" userlevel="1">
+    <table type="2D" name="Fuel Feedback - Primary Wideband Response Period" category="Fueling" storageaddress="0xcf98" storagetype="float" endian="big" sizex="28" userlevel="1">
       <scaling units="s" expression="x*1+(0)" to_byte="(x-(0))/1" format="0.0000" fineincrement="0.01" coarseincrement="1" />
       <table type="Static X Axis" name="Airflow (g/s)" sizex="28">
         <data>1</data>
@@ -1457,7 +1457,75 @@ Values are relative engine load, not boost pressure.</description>
         <data>250.880004883</data>
         <data>271.359985352</data>
       </table>
-      <description>Response period in seconds used with Fuel Feedback Gain to calculate controller coefficients. Increasing it reduces the integral coefficient magnitude and increases the derivative coefficient magnitude. This is a controller tuning period, not a logging interval or a guaranteed sensor delay. Values beyond an axis use its nearest endpoint.</description>
+      <description>Sets how quickly the front wideband builds correction for a sustained error. A shorter period builds correction faster and reduces derivative action. Use positive values.</description>
+    </table>
+    <table type="2D" name="Fuel Feedback - Rear O2 Gain" category="Fueling" storageaddress="0xd220" storagetype="float" endian="big" sizex="28" userlevel="1">
+      <scaling units="Ratio" expression="x*1+(0)" to_byte="(x-(0))/1" format="0.0000" fineincrement="0.01" coarseincrement="1" />
+      <table type="Static X Axis" name="Airflow (g/s)" sizex="28">
+        <data>1</data>
+        <data>5.11999988556</data>
+        <data>10.2399997711</data>
+        <data>15.3599996567</data>
+        <data>20.4799995422</data>
+        <data>25.6000003815</data>
+        <data>30.7199993134</data>
+        <data>35.8400001526</data>
+        <data>40.9599990845</data>
+        <data>46.0800018311</data>
+        <data>51.2000007629</data>
+        <data>56.3199996948</data>
+        <data>61.4399986267</data>
+        <data>66.5599975586</data>
+        <data>76.8000030518</data>
+        <data>87.0400009155</data>
+        <data>97.2799987793</data>
+        <data>107.519996643</data>
+        <data>117.760002136</data>
+        <data>128</data>
+        <data>138.240005493</data>
+        <data>148.479995728</data>
+        <data>168.960006714</data>
+        <data>189.440002441</data>
+        <data>209.919998169</data>
+        <data>230.399993896</data>
+        <data>250.880004883</data>
+        <data>271.359985352</data>
+      </table>
+      <description>Sets the strength of rear oxygen sensor fuel correction by airflow.</description>
+    </table>
+    <table type="2D" name="Fuel Feedback - Rear O2 Response Period" category="Fueling" storageaddress="0xd1b0" storagetype="float" endian="big" sizex="28" userlevel="1">
+      <scaling units="s" expression="x*1+(0)" to_byte="(x-(0))/1" format="0.0000" fineincrement="0.01" coarseincrement="1" />
+      <table type="Static X Axis" name="Airflow (g/s)" sizex="28">
+        <data>1</data>
+        <data>5.11999988556</data>
+        <data>10.2399997711</data>
+        <data>15.3599996567</data>
+        <data>20.4799995422</data>
+        <data>25.6000003815</data>
+        <data>30.7199993134</data>
+        <data>35.8400001526</data>
+        <data>40.9599990845</data>
+        <data>46.0800018311</data>
+        <data>51.2000007629</data>
+        <data>56.3199996948</data>
+        <data>61.4399986267</data>
+        <data>66.5599975586</data>
+        <data>76.8000030518</data>
+        <data>87.0400009155</data>
+        <data>97.2799987793</data>
+        <data>107.519996643</data>
+        <data>117.760002136</data>
+        <data>128</data>
+        <data>138.240005493</data>
+        <data>148.479995728</data>
+        <data>168.960006714</data>
+        <data>189.440002441</data>
+        <data>209.919998169</data>
+        <data>230.399993896</data>
+        <data>250.880004883</data>
+        <data>271.359985352</data>
+      </table>
+      <description>Sets how quickly rear oxygen sensor correction builds. A shorter period builds correction faster and reduces derivative action. Use positive values.</description>
     </table>
     <table type="1D" name="Fuel Specific Gravity" category="Fueling" storageaddress="0x37548" storagetype="float" endian="big" sizex="1" userlevel="1">
       <scaling units="fuel-density coefficient" expression="x*1+(0)" to_byte="(x-(0))/1" format="0.0000" fineincrement="0.01" coarseincrement="1" />

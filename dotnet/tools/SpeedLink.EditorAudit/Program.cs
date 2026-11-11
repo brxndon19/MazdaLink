@@ -58,16 +58,25 @@ foreach (var item in golden.EnumerateArray())
     }
     string noEdit = Path.Combine(folder, "NO_EDIT_ROUNDTRIP.bin"); editor.SaveNew(noEdit);
     if (!File.ReadAllBytes(noEdit).AsSpan().SequenceEqual(original)) throw new Exception("Roundtrip export mismatch.");
-    var changedTable = editor.Definition.Tables.First(t => t.Bits.Length > 0);
-    editor.Apply([new(changedTable, 0, 1 - editor.Read(changedTable, 0))], "Bit control edit"); var edited = editor.Snapshot();
+    var inspector = new RomInspector();
+    var profile = inspector.ProfileFor(original)!;
+    var sumRanges = profile.SumRanges ?? [new(profile.ChecksumStart, original.Length - profile.ChecksumStart)];
+    // Gen 2 has no bitfield tables. Exercise an editable float covered by its native sum.
+    var changedTable = editor.Definition.Tables.FirstOrDefault(t => t.Bits.Length > 0) ??
+        editor.Definition.Tables.First(t => !t.IsChoice && t.Storage == "float" &&
+            sumRanges.Any(r => t.Address >= r.Address && t.Address + t.Width <= r.Address + r.Length));
+    double beforeEdit = editor.Read(changedTable, 0);
+    double editValue = changedTable.Bits.Length > 0 ? 1 - beforeEdit :
+        changedTable.Decode(beforeEdit == changedTable.Decode(100) ? 120 : 100);
+    editor.Apply([new(changedTable, 0, editValue)], "Audit export edit"); var edited = editor.Snapshot();
     string saved = Path.Combine(folder, "EDITOR_TEST_ONLY_NOT_FOR_FLASHING.bin"); editor.SaveNew(saved);
-    var exported = File.ReadAllBytes(saved); var check = new RomInspector().Inspect(exported);
+    var exported = File.ReadAllBytes(saved); var check = inspector.Inspect(exported);
     if (check.ChecksumValid != true) throw new Exception("Edited export checksum invalid.");
     for (int i = 0; i < edited.Length; i++) if (edited[i] != exported[i] && (i < check.CorrectionAddress || i >= check.CorrectionAddress + 4)) throw new Exception("Save changed unrelated bytes.");
     if (!File.ReadAllBytes(path).AsSpan().SequenceEqual(original)) throw new Exception("Original changed.");
     var faultyChecksum = (byte[])original.Clone(); faultyChecksum[check.CorrectionAddress!.Value] ^= 1;
     var repair = new RomEditor(faultyChecksum, path); string repairedPath = Path.Combine(folder, "CHECKSUM_FAULT_REPAIR_TEST_ONLY.bin"); repair.SaveNew(repairedPath);
-    if (!new RomInspector().Inspect(File.ReadAllBytes(repairedPath)).ProfileValid) throw new Exception("Injected checksum fault was not repaired.");
+    if (!inspector.Inspect(File.ReadAllBytes(repairedPath)).ProfileValid) throw new Exception("Injected checksum fault was not repaired.");
     repair.Undo(); if (!repair.Snapshot().AsSpan().SequenceEqual(faultyChecksum)) throw new Exception("Checksum correction undo mismatch.");
     reports.Add(new { calibration = editor.Definition.Calibration, controls = editor.Definition.Tables.Count, cellsCompared = cells, nonfinite, bitSwitchesEdited = bits, numericControlsEdited = numeric, namedSwitchesEdited = choices, originalSha256 = RomInspector.Hash(original), exportedSha256 = RomInspector.Hash(exported), independentGoldenMatched = true, allNoOpEditsByteIdentical = true, allTableEditsConfinedToStorage = true, undoRestoredBytes = true, noEditExportIdentical = true, checksumExportVerified = true, originalUnchanged = true });
 }

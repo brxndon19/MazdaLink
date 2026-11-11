@@ -6,6 +6,12 @@ are embedded into the executable. No ROM image or commercial software is bundled
 
 Source: https://github.com/mrphyslaw/MazdaSpeedDefs
 
+The full upstream definitions at [2882a15](https://github.com/mrphyslaw/MazdaSpeedDefs/commit/2882a15020134bb2fc2e26cc3319eec894504d17)
+include separate front wideband and rear O2 fuel-feedback gain and response-period
+curves. These snapshots retain SpeedLink's existing help, labels and units for
+other maps. Saved tabs reopen the renamed curves by their original address.
+On L3CGEE000, the former generic labels pointed to the rear O2 curves.
+
 The editor requires an exact definition identity, the SpeedLink
 boot/checksum-layout checks and a program-area signature. Program signatures
 cover the recognized program area with defined numeric controls, named switch bits and

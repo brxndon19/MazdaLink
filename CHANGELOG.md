@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.0-alpha.7
+
+- Drag a map using its full header area, including the empty space before the buttons. Header buttons keep their individual actions.
+- Update all ten bundled Mazda definitions with separate primary wideband and rear O2 fuel-feedback gain and response-period curves. Include the new primary wideband curves for L3CGEE000 and retain SpeedLink's map help, units and BCS labels.
+- Restore saved fuel-feedback panes at their original ROM addresses after the map renames. Gen 2 layouts that used the former generic names reopen the rear O2 controls.
+
 ## 0.8.0-alpha.6
 
 - Browse maps in one reusable pane. Pin the maps you want to keep beside it or undock them into separate windows.

@@ -38,6 +38,58 @@ public sealed class RomSaveIntegrityTests
         Assert.Equal(TuningDefinition.Known.Count, AllEditorProfiles.Count());
     }
 
+    [Theory]
+    [InlineData("L33XEH000", 0xd008, 0xcf98, 0xd220, 0xd1b0)]
+    [InlineData("L35HEH000", 0xd008, 0xcf98, 0xd220, 0xd1b0)]
+    [InlineData("L38KEH000", 0xce40, 0xcdd0, 0xd058, 0xcfe8)]
+    [InlineData("L39SED000", 0xd060, 0xcff0, 0xd278, 0xd208)]
+    [InlineData("L39SEE000", 0xd060, 0xcff0, 0xd278, 0xd208)]
+    [InlineData("L39SEF000", 0xd1a0, 0xd130, 0xd3b8, 0xd348)]
+    [InlineData("L3M6EG000", 0xcc8c, 0xcc1c, 0xcea4, 0xce34)]
+    [InlineData("L3M7EF000", 0xccc8, 0xcc58, 0xcee0, 0xce70)]
+    [InlineData("L3P4EM000", 0xcd58, 0xcce8, 0xcf70, 0xcf00)]
+    [InlineData("L3CGEE000", 0xd76a4, 0xd7634, 0xd7c4c, 0xd7bdc)]
+    public void FuelFeedbackEditsKeepFrontAndRearCurvesSeparate(string calibration, int frontGain, int frontPeriod, int rearGain, int rearPeriod)
+    {
+        using var folder = new TempFolder();
+        var profile = Fixture.Profiles.Single(p => p.Calibration == calibration);
+        var original = Fixture.Image(profile);
+        var source = Path.Combine(folder.Path, "original.bin");
+        File.WriteAllBytes(source, original);
+        var inspector = Fixture.Inspector();
+        var editor = new RomEditor(original, source, inspector, Fixture.TuningGuard);
+        var curves = new[]
+        {
+            (Name: "Primary Wideband Gain", Address: frontGain, Unit: "Ratio", Value: 1.25f),
+            (Name: "Primary Wideband Response Period", Address: frontPeriod, Unit: "s", Value: 0.5f),
+            (Name: "Rear O2 Gain", Address: rearGain, Unit: "Ratio", Value: 0.75f),
+            (Name: "Rear O2 Response Period", Address: rearPeriod, Unit: "s", Value: 1.5f)
+        };
+        const int cell = 5;
+        var expected = (byte[])original.Clone();
+        var edits = new List<CellEdit>();
+        foreach (var curve in curves)
+        {
+            var map = editor.Definition.Tables.Single(t => t.Name == "Fuel Feedback - " + curve.Name);
+            Assert.Equal(curve.Address, map.Address);
+            Assert.Equal(curve.Unit, map.Units);
+            Assert.Equal((28, 1, "float", true), (map.Columns, map.Rows, map.Storage, map.BigEndian));
+            Assert.Equal("Airflow (g/s)", map.X.Name);
+            edits.Add(new(map, cell, curve.Value));
+            BinaryPrimitives.WriteSingleBigEndian(expected.AsSpan(curve.Address + cell * 4, 4), curve.Value);
+        }
+        editor.Apply(edits, "Edit front and rear fuel feedback curves");
+        string path = Path.Combine(folder.Path, "fuel-feedback.bin");
+        editor.SaveNew(path);
+        byte[] saved = File.ReadAllBytes(path);
+        Assert.Equal(expected, saved);
+        Assert.Equal(0x5AA55AA5u, Sum(saved, profile));
+        var reopened = new RomEditor(saved, path, inspector, Fixture.TuningGuard);
+        foreach (var edit in edits)
+            Assert.Equal(edit.Value, reopened.Read(reopened.Definition.Tables.Single(t => t.Name == edit.Table.Name), cell));
+        Assert.Equal(original, File.ReadAllBytes(source));
+    }
+
     [Theory, MemberData(nameof(AllEditorProfiles))]
     public void EveryEditedAndRepeatedSaveHasValidChecksumAndPreservesSource(string calibration)
     {

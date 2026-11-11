@@ -169,7 +169,7 @@ public sealed class Gen2Tests
         using var temp = new TempFolder(); var image = Image();
         var inspector = Fixture.Inspector();
         var editor = new RomEditor(image, Path.Combine(temp.Path, "original.bin"), inspector, Fixture.TuningGuard);
-        Assert.Equal(448, editor.Definition.Tables.Count);
+        Assert.Equal(450, editor.Definition.Tables.Count);
         foreach (var table in editor.Definition.Tables)
         {
             double value = table.IsChoice ? table.States[^1].Value : table.Decode(1);

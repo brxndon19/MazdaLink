@@ -1,5 +1,16 @@
 # Alpha validation scope
 
+## Map headers and fuel feedback definitions · 0.8.0-alpha.7
+
+- Desktop checks cover pointer input across blank map header space and access to
+  the Pin button on all ten ROM profiles. Existing pane movement, independent
+  resizing, docking and saved workspace checks run alongside them.
+- Definition checks cover all four fuel-feedback curves on each profile,
+  including their separate addresses, units, edits and checksum-verified saves.
+  Reference-ROM checks compare 1,120 cells across the 40 curves.
+- Saved workspace checks retain the original address when the former generic
+  fuel-feedback labels are replaced with the primary wideband or rear O2 names.
+
 ## Editor workspaces · 0.8.0-alpha.6
 
 - Offline desktop scenarios exercise map browsing, pinning, independent pane

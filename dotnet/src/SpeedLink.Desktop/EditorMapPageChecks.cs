@@ -124,6 +124,19 @@ public partial class EditorWorkspace
             edited.AsSpan().SequenceEqual(reopened.Snapshot()), "Deleting a tab removes only its layout and retains applied edits");
         reopened.Undo();
         Check(original.AsSpan().SequenceEqual(reopened.Snapshot()), "Workspace presentation and undo preserve the synthetic ROM");
+        string sensor = reopened.Definition.Calibration == "L3CGEE000" ? "Rear O2" : "Primary Wideband";
+        var gain = reopened.Definition.Tables.Single(t => t.Name == $"Fuel Feedback - {sensor} Gain");
+        var period = reopened.Definition.Tables.Single(t => t.Name == $"Fuel Feedback - {sensor} Response Period");
+        string oldGain = $"{gain.Address:X}:Fuel Feedback Gain", oldPeriod = $"{period.Address:X}:Fuel Feedback Response Period";
+        workspacePages[0] = workspacePages[0] with
+        {
+            Maps = [new() { Key = oldGain, Pinned = true, Zoom = 1.15, Selection = [5] }, new() { Key = oldPeriod, Pinned = false }],
+            Active = oldGain, Expanded = oldGain
+        };
+        ShowWorkspace(0); await Idle();
+        Check(OpenCount() == 2 && Slot(gain).Pinned && !Slot(period).Pinned && ReferenceEquals(activeMap?.table, gain) &&
+            ReferenceEquals(expandedMap?.Editor.table, gain) && Slot(gain).Editor.cellZoom == 1.15 &&
+            Slot(gain).Editor.SelectedIndices().SequenceEqual(new[] { 5 }), "Old fuel feedback layouts reopen the same ROM addresses under the new names");
         return cases;
     }
 }
