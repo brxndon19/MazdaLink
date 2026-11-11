@@ -41,6 +41,8 @@ public partial class MainWindow
                 throw new InvalidOperationException("Application navigation disappears or uses the wrong workspace state.");
         }
         Navigate(0); var app = Application.Current;
+        var priorMenuBrush = app.Resources[SystemColors.MenuBrushKey];
+        var priorMenuText = app.Resources[SystemColors.MenuTextBrushKey];
         app.Resources[SystemColors.MenuBrushKey] = Brushes.White;
         app.Resources[SystemColors.MenuTextBrushKey] = Brushes.Black;
         var results = new List<object>();
@@ -77,7 +79,8 @@ public partial class MainWindow
         finally
         {
             foreach (var item in menu) item.IsSubmenuOpen = false;
-            app.Resources.Remove(SystemColors.MenuBrushKey); app.Resources.Remove(SystemColors.MenuTextBrushKey);
+            app.Resources[SystemColors.MenuBrushKey] = priorMenuBrush;
+            app.Resources[SystemColors.MenuTextBrushKey] = priorMenuText;
         }
         NavigationToggle.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); await MenuIdle();
         if (!navigationIsCollapsed || labels.Any(l => l.IsVisible) || NavigationLabelsMenu.IsChecked || NavigationColumn.ActualWidth > 60)
@@ -113,8 +116,7 @@ public partial class MainWindow
         string previewPath = Path.Combine(folder, "SYNTHETIC_PREVIEW_NOT_ECU_FIRMWARE.bin");
         doc.SaveNew(previewPath); EditorPane.OpenRom(previewPath); doc = EditorPane.Document!;
         EditorPane.OpenMap(map); await MenuIdle();
-        var category = EditorPane.MapTree.Items.OfType<TreeViewItem>().Single(c => c.Tag as string == map.Category); category.IsExpanded = true;
-        category.Items.OfType<TreeViewItem>().Single(i => ReferenceEquals(i.Tag, map)).IsSelected = true;
+        EditorPane.RevealMapEntry(map).IsSelected = true;
         EditorPane.EditorStatus.Text = "Preview · synthetic map values · no ECU connected";
         EditorPane.FileText.Text = "Synthetic preview";
         await MenuIdle();
@@ -134,6 +136,7 @@ public partial class MainWindow
                 throw new InvalidOperationException("Application menu navigation lost ROM state.");
         }
         Navigate(1); await MenuIdle(); CaptureApplicationPreview(Path.Combine(folder, "EditorNavigation.png"));
+        await CheckEditorAppearance(folder, map);
         ApplicationFileMenu.IsSubmenuOpen = true; await MenuIdle();
         if (ApplicationFileMenu.Template.FindName("PART_Popup", ApplicationFileMenu) is Popup { Child: Border file })
             EditorWorkspace.SaveMenuImage(file, Path.Combine(folder, "LoadedFileMenu.png"));
@@ -144,7 +147,45 @@ public partial class MainWindow
         if (EditorPane.SaveButton.TranslatePoint(new(), this).X > ActualWidth - 70) throw new InvalidOperationException("Editor actions are clipped at minimum size.");
         CaptureWorkbench(Path.Combine(folder, "MinimumNavigation.png"));
         Width = 1440; Height = 880; await MenuIdle();
-        return new { passed = true, hardwareAccessed = false, menuChecks, editorCommands = true, navigationPreservesEdits = true, minimumLayout = true, previewMap = map.Name };
+        return new { passed = true, hardwareAccessed = false, menuChecks, editorCommands = true, navigationPreservesEdits = true, minimumLayout = true,
+            appearanceVerified = true, gridAdjustmentsVerified = true, mapFoldersVerified = true, previewMap = map.Name };
+    }
+
+    private async Task CheckEditorAppearance(string folder, TuningTable map)
+    {
+        var light = AppearanceMenu.Items.OfType<MenuItem>().Single(i => Equals(i.Tag, "Light"));
+        var dark = AppearanceMenu.Items.OfType<MenuItem>().Single(i => Equals(i.Tag, "Dark"));
+        var original = UiTheme.Panel.Color;
+        EditorPane.CheckGridActionsAndFolders(map);
+        try
+        {
+            light.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+            await MenuIdle();
+            if (!light.IsChecked || dark.IsChecked || UiTheme.Load(appearancePath) != Appearance.Light ||
+                UiTheme.Panel.Color == original || !ReferenceEquals(Background, FindResource("ShellBrush")))
+                throw new InvalidOperationException("Light appearance did not update the open window or save its choice.");
+            foreach (var fill in new[] { UiTheme.Heat(0), UiTheme.Heat(1), UiTheme.Brush("CellSelectionBrush"), UiTheme.Brush("AxisBandBrush") })
+                if (EditorWorkspace.Contrast(UiTheme.Text.Color, fill.Color) < 4.5)
+                    throw new InvalidOperationException("A light theme map color has insufficient text contrast.");
+            if (EditorWorkspace.Contrast(UiTheme.Brush("ChangedCellBrush").Color, UiTheme.Heat(1).Color) < 3)
+                throw new InvalidOperationException("Changed cell borders are hard to see in the light theme.");
+            CaptureApplicationPreview(Path.Combine(folder, "EditorNavigationLight.png"));
+            var restarted = new MainWindow(vault);
+            try
+            {
+                if (!restarted.AppearanceMenu.Items.OfType<MenuItem>().Single(i => Equals(i.Tag, "Light")).IsChecked ||
+                    UiTheme.Panel.Color == original)
+                    throw new InvalidOperationException("The light theme did not survive restart.");
+            }
+            finally { restarted.CloseWorkbenchTest(); }
+        }
+        finally
+        {
+            dark.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+            await MenuIdle();
+        }
+        if (!dark.IsChecked || UiTheme.Panel.Color != original || UiTheme.Load(appearancePath) != Appearance.Dark)
+            throw new InvalidOperationException("Dark appearance did not restore the original palette.");
     }
 
     private void CaptureApplicationPreview(string path, MenuItem? menu = null)

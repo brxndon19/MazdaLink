@@ -151,6 +151,8 @@ public partial class EditorWorkspace
         if (mapOwner is not null) return;
         var current = CommandMap; bool graphable = current.table is { Count: > 1, IsChoice: false };
         FitMapButton.IsEnabled = DetailsButton.IsEnabled = current.table is not null;
+        ToggleGraphItem.IsEnabled = graphable;
+        CloseOtherMapsItem.IsEnabled = current.table is not null && mapSlots.Count(s => s.Editor.table is not null) > 1;
         PreviewItem.IsEnabled = BelowItem.IsEnabled = BesideItem.IsEnabled = GraphItem.IsEnabled = graphable;
         PreviewItem.IsChecked = graphable && current.ViewMode == 4; BelowItem.IsChecked = current.ViewMode == 0;
         BesideItem.IsChecked = current.ViewMode == 1; TableItem.IsChecked = current.ViewMode == 2; GraphItem.IsChecked = current.ViewMode == 3;
@@ -492,6 +494,9 @@ public partial class EditorWorkspace
         var controls = table is { Count: > 1 } ? Visibility.Visible : Visibility.Collapsed;
         AutoFitBox.Visibility = CellZoomOut.Visibility = CellZoomIn.Visibility = CellZoomText.Visibility = PaneViewBox.Visibility = controls;
         ScalarInfoButton.Visibility = ScalarMap ? Visibility.Visible : Visibility.Collapsed;
+        ToggleGraphButton.Visibility = table is { Count: > 1, IsChoice: false } ? Visibility.Visible : Visibility.Collapsed;
+        ToggleGraphButton.Content = ViewMode == 3 ? "Table" : "Graph";
+        EditToolsButton.Visibility = table is { Count: > 1, IsChoice: false } ? Visibility.Visible : Visibility.Collapsed;
         MapInfoButton.Visibility = ValueUnitsText.Visibility = ScalarMap ? Visibility.Collapsed : Visibility.Visible;
         CellText.Visibility = ScalarMap ? Visibility.Collapsed : Visibility.Visible;
         if (mapOwner is not null) WorkspaceRoot.RowDefinitions[3].Height = new(ScalarMap ? 0 : 24);
@@ -503,9 +508,10 @@ public partial class EditorWorkspace
         var slot = MapRoot.mapSlots.FirstOrDefault(s => ReferenceEquals(s.Editor, this));
         bool pinned = slot?.Pinned == true;
         PinMapButton.IsChecked = pinned;
+        PinMapButton.Content = pinned ? "Pinned" : "Pin";
         PinMapButton.IsEnabled = slot is { Window: null } && table is not null;
         PinMapButton.ToolTip = slot?.Window is not null ? "Undocked maps stay pinned" :
-            pinned ? "Unpin this map to reuse its pane while browsing" : "Pin this map to keep it open while browsing";
+            pinned ? "Pinned maps stay open. Click to make this pane reusable." : "Pin to keep this map open. Opening another map replaces the unpinned pane.";
         System.Windows.Automation.AutomationProperties.SetName(PinMapButton, pinned ? "Unpin map" : "Pin map");
     }
     private void CellFit_Changed(object sender, RoutedEventArgs e)

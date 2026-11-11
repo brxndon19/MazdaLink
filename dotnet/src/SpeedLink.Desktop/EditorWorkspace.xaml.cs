@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
+using System.Windows.Markup;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Microsoft.Win32;
@@ -41,8 +42,8 @@ public partial class EditorWorkspace : UserControl
     internal EditorWorkspace(RomInspector inspector, TuningCodeGuard codeGuard, EditorWorkspace? mapOwner = null)
     {
         this.inspector = inspector; this.codeGuard = codeGuard;
-        UiTheme.Ensure(); InitializeComponent(); InitializeMapWindows(mapOwner); BaselineBox.ItemsSource = new[] { "Original ROM", "Last save", "Comparison ROM" }; BaselineBox.SelectedIndex = 0;
-        Graph.CellPicked += index => SelectCell(index); RefreshControls(); SetViewMode(4);
+        UiTheme.Ensure(); InitializeComponent(); InitializeMapActions(); InitializeMapWindows(mapOwner); BaselineBox.ItemsSource = new[] { "Original ROM", "Last save", "Comparison ROM" }; BaselineBox.SelectedIndex = 0;
+        Graph.CellPicked += index => SelectCell(index); RefreshControls(); SetViewMode(2);
     }
     public void OpenRom(string path)
     {
@@ -128,23 +129,16 @@ public partial class EditorWorkspace : UserControl
     }
     private void RefreshBrowser()
     {
-        if (MapTree is null) return;
-        var expanded = MapTree.Items.OfType<TreeViewItem>().Where(i => i.IsExpanded).Select(i => i.Tag as string).ToHashSet();
+        if (MapTree is null || mapOwner is not null) return;
+        if (!mapBrowserFiltered && MapTree.Items.Count > 0)
+            expandedMapFolders = MapTreeEntries(MapTree).Where(i => i.IsExpanded).Select(i => i.Tag).OfType<string>().ToHashSet(StringComparer.Ordinal);
         MapTree.Items.Clear(); if (document is null) return;
         string query = SearchBox.Text.Trim();
+        mapBrowserFiltered = query.Length > 0 || ChangedOnly.IsChecked == true;
         var filtered = document.Definition.Tables.Where(t => (query.Length == 0 || (t.Name + " " + t.Category + " " + t.Description).Contains(query, StringComparison.OrdinalIgnoreCase)) &&
             (ChangedOnly.IsChecked != true || document.TableChanged(t, Baseline))).ToArray();
-        foreach (var group in filtered.GroupBy(t => t.Category))
-        {
-            var category = new TreeViewItem { Header = group.Key + "  (" + group.Count() + ")", Tag = group.Key, IsExpanded = query.Length > 0 || ChangedOnly.IsChecked == true || expanded.Contains(group.Key), Padding = new(2, 5, 0, 5) };
-            foreach (var item in group)
-            {
-                var entry = new TreeViewItem { Header = (document.TableChanged(item, Baseline) ? "● " : "") + item.Name, Tag = item, ToolTip = item.Name, Padding = new(2, 4, 0, 4) };
-                entry.PreviewMouseLeftButtonDown += (_, _) => { if (entry.IsSelected) Attempt(() => BrowseMap(item)); };
-                category.Items.Add(entry);
-            }
-            MapTree.Items.Add(category);
-        }
+        var header = (DataTemplate)FindResource("MapBrowserHeader");
+        BuildMapFolders(MapTree, filtered.Select(t => (Map: t, Folders: CategoryFolders(t.Category))).ToArray(), 0, "", header);
         MapCountText.Text = $"{filtered.Length:N0} / {document.Definition.Tables.Count:N0} controls";
     }
     private void Search_Changed(object sender, TextChangedEventArgs e) => RefreshBrowser();
@@ -188,11 +182,10 @@ public partial class EditorWorkspace : UserControl
             revertingTab = false; return;
         }
         refreshing = true; MapGrid.SelectedCells.Clear(); refreshing = false;
-        bool wasCurve = CurveList;
         table = (MapTabs.SelectedItem as TabItem)?.Tag as TuningTable;
         if (table is null && MapTree.SelectedItem is TreeViewItem selectedMap) selectedMap.IsSelected = false;
-        if (CurveList && !wasCurve) SetViewMode(1);
-        else if (wasCurve && !CurveList) SetViewMode(table?.Rows > 1 ? 4 : 0);
+        returnView = CurveList ? 1 : 2;
+        SetViewMode(returnView);
         RefreshTable(); RefreshControls(); ApplyView();
         QueueMapSave();
         Dispatcher.BeginInvoke(new Action(() => { if (MapTabs.SelectedItem is TabItem active) { active.UpdateLayout(); active.BringIntoView(); } }));
@@ -243,7 +236,10 @@ public partial class EditorWorkspace : UserControl
                     style.Setters.Add(new Setter(BorderBrushProperty, FindResource("AxisBorderBrush")));
                     style.Setters.Add(new Setter(BorderThicknessProperty, new Thickness(0, 0, 2, 1)));
                 }
-                var trigger = new Trigger { Property = DataGridCell.IsSelectedProperty, Value = true }; trigger.Setters.Add(new Setter(BackgroundProperty, new SolidColorBrush(Color.FromRgb(93, 70, 36)))); trigger.Setters.Add(new Setter(ForegroundProperty, UiTheme.Text)); style.Triggers.Add(trigger);
+                var trigger = new Trigger { Property = DataGridCell.IsSelectedProperty, Value = true };
+                trigger.Setters.Add(new Setter(BackgroundProperty, new DynamicResourceExtension("CellSelectionBrush")));
+                trigger.Setters.Add(new Setter(ForegroundProperty, new DynamicResourceExtension("TextBrush")));
+                style.Triggers.Add(trigger);
                 string header = CurveList ? (col == 0 ? table.X.Name : table.Units) : table.Columns == 1 ? "Value" : table.X.Values[col].ToString("G5", CultureInfo.InvariantCulture);
                 MapGrid.Columns.Add(new DataGridTextColumn { Header = header, Width = new DataGridLength(70), Binding = new Binding($"Values[{col}]") { Mode = BindingMode.TwoWay, UpdateSourceTrigger = UpdateSourceTrigger.Explicit }, IsReadOnly = table.IsChoice || CurveList && col == 0, CellStyle = style });
             }
@@ -348,10 +344,8 @@ public partial class EditorWorkspace : UserControl
         if (!ReferenceEquals(CommandMap, this)) { CommandMap.Paste_Click(sender, e); return; }
         if (document is null || table is null) return; Attempt(() => { var r = Rectangle(); if (CurveList) document.PasteCurve(table, r.Left, Clipboard.GetText()); else document.Paste(table, r.Top, r.Left, Clipboard.GetText()); });
     }
-    private void Interpolate_Click(object sender, RoutedEventArgs e)
-    {
-        if (document is null || table is null) return; Attempt(() => { var r = Rectangle(); document.Interpolate(table, r.Left, r.Top, r.Right, r.Bottom, CurveList ? "Horizontal" : ((ComboBoxItem)InterpolationBox.SelectedItem).Content.ToString()!); });
-    }
+    private void Interpolate_Click(object sender, RoutedEventArgs e) =>
+        Interpolate(CurveList ? "Horizontal" : ((ComboBoxItem)InterpolationBox.SelectedItem).Content.ToString()!);
     private void Reset_Click(object sender, RoutedEventArgs e) { if (!ReferenceEquals(CommandMap, this)) { CommandMap.Reset_Click(sender, e); return; } if (document is not null && table is not null) { RefreshScalar(); Attempt(() => document.Reset(table, SelectedIndices(), Baseline)); } }
     private void Undo_Click(object sender, RoutedEventArgs e) { if (!ReferenceEquals(CommandMap, this)) { CommandMap.Undo_Click(sender, e); return; } MapGrid.CancelEdit(); RefreshScalar(); document?.Undo(); }
     private void Redo_Click(object sender, RoutedEventArgs e) { if (!ReferenceEquals(CommandMap, this)) { CommandMap.Redo_Click(sender, e); return; } MapGrid.CancelEdit(); RefreshScalar(); document?.Redo(); }
@@ -363,6 +357,7 @@ public partial class EditorWorkspace : UserControl
     }
     private void Editor_KeyDown(object sender, KeyEventArgs e)
     {
+        if (HandleMapShortcut(e)) return;
         if (!ReferenceEquals(CommandMap, this) && e.Key is not (Key.S or Key.O or Key.B)) { CommandMap.Editor_KeyDown(sender, e); return; }
         if (e.Key == Key.F1 && Keyboard.Modifiers == ModifierKeys.None)
         {
@@ -408,8 +403,8 @@ public partial class EditorWorkspace : UserControl
         doc.Undo(); if (doc.IsDirty) throw new InvalidOperationException("Direct cell edit undo failed.");
         SelectCell(0); OperandBox.Text = "1"; Add_Click(this, new()); if (!doc.IsDirty || !UndoButton.IsEnabled) throw new InvalidOperationException("Scalar UI edit failed.");
         Undo_Click(this, new()); if (doc.IsDirty) throw new InvalidOperationException("UI undo failed."); Redo_Click(this, new());
-        var curve = doc.Definition.Tables.First(t => t.Kind == "2D"); OpenTable(curve); SelectCell(1); UpdateLayout(); Capture(Path.Combine(folder, "curve.png"));
-        var surface = doc.Definition.Tables.First(t => t.Kind == "3D"); OpenTable(surface); SelectCell(surface.Columns + 2); UpdateLayout(); Capture(Path.Combine(folder, "surface.png"));
+        var curve = doc.Definition.Tables.First(t => t.Kind == "2D"); OpenTable(curve); SetViewMode(4); SelectCell(1); UpdateLayout(); Capture(Path.Combine(folder, "curve.png"));
+        var surface = doc.Definition.Tables.First(t => t.Kind == "3D"); OpenTable(surface); SetViewMode(4); SelectCell(surface.Columns + 2); UpdateLayout(); Capture(Path.Combine(folder, "surface.png"));
         var bit = doc.Definition.Tables.FirstOrDefault(t => t.Bit is not null) ?? doc.Definition.Tables.First(t => t.IsChoice); OpenTable(bit); double before = doc.Read(bit, 0);
         var selector = bit.Count == 1 ? ScalarChoice : ChoiceBox;
         selector.SelectedItem = selector.Items.Cast<TuningState>().First(s => s.Value != before); if (doc.Read(bit, 0) == before) throw new InvalidOperationException("State selector did not edit.");
@@ -427,11 +422,12 @@ public partial class EditorWorkspace : UserControl
         Capture(Path.Combine(folder, "editor.png")); closingForTest = true;
         MapTabs.Items.Clear();
         var documentationCurve = doc.Definition.Tables.FirstOrDefault(t => t.Name.Contains("Injector Base Pulsewidth", StringComparison.OrdinalIgnoreCase) && t.Kind == "2D") ?? curve;
-        OpenTable(documentationCurve); SelectCell(0);
-        foreach (var category in MapTree.Items.OfType<TreeViewItem>()) category.IsExpanded = (string?)category.Tag == documentationCurve.Category;
+        OpenTable(documentationCurve); SetViewMode(4); SelectCell(0);
+        foreach (var category in MapTreeEntries(MapTree).Where(i => i.Tag is string))
+            category.IsExpanded = IsMapFolder((string)category.Tag, documentationCurve.Category);
         UpdateLayout(); Capture(Path.Combine(folder, "CurveEditor.png"));
         var illustrated = doc.Definition.Tables.FirstOrDefault(t => t.Name == "Intake Cam Advance (VVT)") ?? surface;
-        OpenTable(illustrated); FocusButton.IsChecked = true; DetailsButton.IsChecked = false; FitMap_Click(this, new()); SelectCell(illustrated.Columns + 2); UpdateLayout();
+        OpenTable(illustrated); SetViewMode(4); FocusButton.IsChecked = true; DetailsButton.IsChecked = false; FitMap_Click(this, new()); SelectCell(illustrated.Columns + 2); UpdateLayout();
         await Dispatcher.InvokeAsync(() => { }, System.Windows.Threading.DispatcherPriority.ApplicationIdle); UpdateLayout();
         Graph.CheckSurfaceDrag();
         Graph.CheckSurfaceAxes();
@@ -461,12 +457,12 @@ internal sealed class EditorCellConverter(RomEditor document, TuningTable table,
         if (value is not EditorRow row) return UiTheme.Panel;
         int index = curveList ? row.Index : row.Index * table.Columns + column; double current = document.Read(table, index);
         if (curveList && column == 0) return (string)parameter == "tip" ? "Static breakpoint · read-only" : (string)parameter == "border" ? Brushes.Transparent : UiTheme.Panel;
-        if ((string)parameter == "border") return document.CellChanged(table, index, baseline) ? Brushes.DarkOrange : Brushes.Transparent;
+        if ((string)parameter == "border") return document.CellChanged(table, index, baseline) ? UiTheme.Brush("ChangedCellBrush") : Brushes.Transparent;
         if ((string)parameter == "tip") { double reference = document.Read(table, index, baseline); return $"Current: {current:R}\nBaseline: {reference:R}\nDifference: {current - reference:R} {table.Units}"; }
-        if (!double.IsFinite(current)) return Brushes.LightCoral;
+        if (!double.IsFinite(current)) return UiTheme.Brush("InvalidCellBrush");
         double scale = Math.Max(1, Math.Max(Math.Abs(min), Math.Abs(max))), span = max / scale - min / scale;
         double fraction = span < 1e-15 ? .5 : Math.Clamp((current / scale - min / scale) / span, 0, 1);
-        return new SolidColorBrush(Color.FromRgb((byte)(39 + 48 * fraction), (byte)(43 + 23 * fraction), (byte)(46 - 7 * fraction)));
+        return UiTheme.Heat(fraction);
     }
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotSupportedException();
 }

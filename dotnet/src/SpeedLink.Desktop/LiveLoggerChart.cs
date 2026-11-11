@@ -56,8 +56,7 @@ internal sealed class LiveLoggerChart : StackPanel
 
 internal sealed class LiveLoggerPlot : FrameworkElement
 {
-    private static readonly Pen Stroke = CreateStroke();
-    private static Pen CreateStroke() { var pen = new Pen(UiTheme.Amber.Clone(), 1.8); pen.Freeze(); return pen; }
+    private static readonly Pen Stroke = new(UiTheme.Amber, 1.8);
     private StreamGeometry? geometry;
     internal Rect Bounds => geometry?.Bounds ?? Rect.Empty;
     internal void Update(StreamGeometry? value) { geometry = value; InvalidateVisual(); }

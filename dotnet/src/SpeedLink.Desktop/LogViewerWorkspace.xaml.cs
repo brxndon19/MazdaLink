@@ -123,7 +123,7 @@ public partial class LogViewerWorkspace : UserControl
                     foreach (var point in segment) line.Points.Add(new(X(point.SampleSeconds!.Value), 8 + height - (point.Value!.Value / scale - low) / (high - low) * height));
                     canvas.Children.Add(line);
                 }
-                var cursor = new Line { X1 = X(TimeCursor.Value), X2 = X(TimeCursor.Value), Y1 = 0, Y2 = 105, Stroke = Brushes.White, StrokeThickness = 1, StrokeDashArray = [3, 3] };
+                var cursor = new Line { X1 = X(TimeCursor.Value), X2 = X(TimeCursor.Value), Y1 = 0, Y2 = 105, Stroke = UiTheme.Text, StrokeThickness = 1, StrokeDashArray = [3, 3] };
                 canvas.Children.Add(cursor);
                 canvas.MouseLeftButtonDown += (_, e) => TimeCursor.Value = Math.Clamp(start + (e.GetPosition(canvas).X - 8) / (width - 16) * span, 0, duration);
                 panel.Children.Add(canvas);

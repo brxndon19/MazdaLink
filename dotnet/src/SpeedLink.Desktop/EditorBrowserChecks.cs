@@ -12,7 +12,7 @@ public partial class EditorWorkspace
         if (FocusButton.IsChecked || !BrowserPanel.IsVisible || BrowserFloating != floating ||
             !floating && BrowserColumn.ActualWidth < 160 || !MapsButton.IsVisible || !MapsButton.IsEnabled ||
             !NoMapPanel.IsVisible || table is not null || FitMapButton.IsEnabled || TablePanel.IsVisible ||
-            MapTree.Items.OfType<TreeViewItem>().Sum(category => category.Items.Count) != document!.Definition.Tables.Count ||
+            MapTreeEntries(MapTree).Count(entry => entry.Tag is TuningTable) != document!.Definition.Tables.Count ||
             !NoMapText.Text.Contains(document.Definition.Calibration, StringComparison.Ordinal))
             throw new InvalidOperationException("A loaded ROM has no accessible map browser or map-selection prompt.");
     }
@@ -26,9 +26,7 @@ public partial class EditorWorkspace
         MapsButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); UpdateLayout(); CheckBrowserReady(false);
 
         var selected = document!.Definition.Tables.First(t => t.Kind == "1D" && t.Storage == "float");
-        var category = MapTree.Items.OfType<TreeViewItem>().Single(item => (string)item.Tag == selected.Category);
-        category.IsExpanded = true;
-        category.Items.OfType<TreeViewItem>().Single(item => ReferenceEquals(item.Tag, selected)).IsSelected = true;
+        RevealMapEntry(selected).IsSelected = true;
         await Dispatcher.InvokeAsync(() => { }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
         UpdateLayout();
         if (!ReferenceEquals(table, selected) || NoMapPanel.IsVisible)
@@ -40,9 +38,7 @@ public partial class EditorWorkspace
             throw new InvalidOperationException("Closing the final map lost the selection prompt or ROM edits.");
         NoMapAction.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); UpdateLayout(); CheckBrowserReady(false);
         if (!edited.AsSpan().SequenceEqual(document.Snapshot())) throw new InvalidOperationException("Showing maps changed ROM edits.");
-        category = MapTree.Items.OfType<TreeViewItem>().Single(item => (string)item.Tag == selected.Category);
-        category.IsExpanded = true;
-        category.Items.OfType<TreeViewItem>().Single(item => ReferenceEquals(item.Tag, selected)).IsSelected = true;
+        RevealMapEntry(selected).IsSelected = true;
         if (!ReferenceEquals(table, selected) || NoMapPanel.IsVisible)
             throw new InvalidOperationException("The last closed map cannot be selected again from the browser.");
         document.Undo();

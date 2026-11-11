@@ -3,6 +3,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Input;
 using System.Windows.Threading;
 using SpeedLink.Core;
 
@@ -21,9 +22,7 @@ public partial class EditorWorkspace
         async Task Idle() { await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle); UpdateLayout(); }
         void Choose(TuningTable map)
         {
-            var category = MapTree.Items.OfType<TreeViewItem>().Single(i => (string)i.Tag == map.Category);
-            category.IsExpanded = true;
-            var entry = category.Items.OfType<TreeViewItem>().Single(i => ReferenceEquals(i.Tag, map));
+            var entry = RevealMapEntry(map);
             entry.IsSelected = false;
             entry.IsSelected = true;
         }
@@ -37,13 +36,27 @@ public partial class EditorWorkspace
         var scalar = doc.Definition.Tables.First(t => t.Count == 1 && !t.IsChoice && t.Storage == "float");
         FocusButton.IsChecked = false;
         Choose(maps[0]); await Idle();
+        Check(ViewMode == 2 && TablePanel.IsVisible && !GraphPanel.IsVisible && !EditBar.IsVisible,
+            "Fresh surfaces give the table the available room");
+        MapGrid.Focus();
+        MapGrid.RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(MapGrid)!, 0, Key.F4)
+            { RoutedEvent = Keyboard.PreviewKeyDownEvent });
+        Check(ViewMode == 3 && GraphPanel.IsVisible && !TablePanel.IsVisible, "F4 opens the full map graph");
+        ToggleGraphButton.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+        Check(ViewMode == 2 && !GraphPanel.IsVisible && TablePanel.IsVisible, "Table button returns to the grid");
+        EditToolsButton.IsChecked = true;
+        EditToolsButton.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+        Check(EditBar.IsVisible, "Bulk editing tools can be revealed");
+        EditToolsButton.IsChecked = false;
+        EditToolsButton.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
         Choose(maps[1]); await Idle();
         Check(OpenCount() == 1 && ReferenceEquals(table, maps[1]) && !Slot(maps[1]).Pinned, "Browsing replaces the reusable map pane");
         Pin(this);
         Choose(maps[0]); await Idle();
         var pinned = Slot(maps[1]);
         var preview = Slot(maps[0]);
-        Check(OpenCount() == 2 && pinned.Pinned && !preview.Pinned, "Pinning opens a second pane for browsing");
+        Check(OpenCount() == 2 && pinned.Pinned && !preview.Pinned && Equals(PinMapButton.Content, "Pinned") &&
+            Equals(preview.Editor.PinMapButton.Content, "Pin"), "Pinning opens a second pane for browsing");
         var bounds = DockedBounds(preview.Editor);
         var pinnedBounds = DockedBounds(this);
         Choose(maps[2]); await Idle();
@@ -51,6 +64,7 @@ public partial class EditorWorkspace
             SameBounds(pinnedBounds, DockedBounds(this)), "Replacing the preview keeps pane sizes and pinned positions");
         Choose(maps[1]); await Idle();
         Check(ReferenceEquals(activeMap, this) && OpenCount() == 2, "Choosing a pinned map focuses it without replacing the preview");
+        preview.Editor.SetViewMode(4);
         Pin(this);
         Check(!pinned.Pinned && preview.Pinned, "Unpinning makes that pane reusable while keeping the other map");
         Choose(scalar); await Idle();
@@ -59,6 +73,9 @@ public partial class EditorWorkspace
         Choose(maps[0]); await Idle();
         Check(ReferenceEquals(table, scalar) && scalarDraft && ScalarInput.Text == "invalid" && before == doc.Read(scalar, 0),
             "Invalid scalar input blocks preview replacement without losing the draft");
+        preview.Editor.CloseOtherMaps();
+        Check(OpenCount() == 2 && ReferenceEquals(table, scalar) && scalarDraft && ScalarInput.Text == "invalid",
+            "Close other maps keeps the panes open when any has invalid input");
         ScalarInput.Text = (before + 1).ToString("R", CultureInfo.InvariantCulture);
         Choose(maps[0]); await Idle();
         Check(ReferenceEquals(table, maps[0]) && doc.Read(scalar, 0) != before && doc.CanUndo &&
@@ -86,7 +103,8 @@ public partial class EditorWorkspace
         Check(original.AsSpan().SequenceEqual(doc.Snapshot()), "Undo in a different workspace restores the original ROM bytes");
         WorkspaceTabs.SelectedIndex = 0; await Idle();
         Check(OpenCount() == 2 && Slot(maps[2]).Pinned && Slot(maps[2]).Window is { IsVisible: true, Width: 570, Height: 450 } &&
-            !Slot(maps[0]).Pinned && SelectedIndices().SequenceEqual(new[] { 1 }), "Returning to a tab restores its pins, selection and detached window bounds");
+            Slot(maps[2]).Editor.ViewMode == 4 && !Slot(maps[0]).Pinned && SelectedIndices().SequenceEqual(new[] { 1 }),
+            "Returning to a tab restores its pins, selection and detached window bounds");
         MapGrid.Focus();
         Check(MapGrid.BeginEdit(), "A restored map supports direct grid editing");
         var input = MapGrid.Columns[1].GetCellContent(MapGrid.Items[0]) as TextBox ?? throw new InvalidOperationException("Grid editor did not open.");
@@ -137,6 +155,15 @@ public partial class EditorWorkspace
         Check(OpenCount() == 2 && Slot(gain).Pinned && !Slot(period).Pinned && ReferenceEquals(activeMap?.table, gain) &&
             ReferenceEquals(expandedMap?.Editor.table, gain) && Slot(gain).Editor.cellZoom == 1.15 &&
             Slot(gain).Editor.SelectedIndices().SequenceEqual(new[] { 5 }), "Old fuel feedback layouts reopen the same ROM addresses under the new names");
+        var kept = Slot(period).Editor;
+        reopened.Apply([new(reopenedScalar, 0, before + 1)], "Close other maps fixture");
+        byte[] beforeClose = reopened.Snapshot();
+        kept.ActivateMap();
+        kept.CloseOtherMaps();
+        await Idle();
+        Check(OpenCount() == 1 && ReferenceEquals(table, period) && beforeClose.AsSpan().SequenceEqual(reopened.Snapshot()),
+            "Close other maps keeps the active view even when it must take the first pane");
+        reopened.Undo();
         return cases;
     }
 }

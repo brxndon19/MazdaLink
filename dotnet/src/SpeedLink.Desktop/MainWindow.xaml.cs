@@ -41,7 +41,16 @@ public partial class MainWindow : Window
             ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SpeedLink", "BackupSources")
             : Path.Combine(testVault, "BackupSources"));
         definitionLibrary = new(Path.Combine(vault, "definitions")); definitionSnapshot = definitionLibrary.Load();
-        UiTheme.Ensure(); InitializeComponent();
+        UiTheme.Ensure();
+        appearancePath = Path.Combine(vault, "appearance.txt");
+        appearance = testVault is null || File.Exists(appearancePath) ? UiTheme.Load(appearancePath) : Appearance.Dark;
+        UiTheme.Apply(appearance);
+        if (testVault is null)
+        {
+            SystemEvents.UserPreferenceChanged += WindowsAppearanceChanged;
+            Closed += (_, _) => SystemEvents.UserPreferenceChanged -= WindowsAppearanceChanged;
+        }
+        InitializeComponent();
         if (editorInspector is not null && editorGuard is not null)
         {
             EditorPane = new(editorInspector, editorGuard); ((TabItem)Pages.Items[1]).Content = EditorPane;

@@ -1,5 +1,14 @@
 # Alpha validation scope
 
+## Editor usability · 0.8.0-alpha.9
+
+- Desktop checks cover table-first opening, F4 and the Graph button, the
+  collapsible edit row, and keeping the active pane and ROM edits when
+  closing other maps. Saved split views and detached windows are reopened.
+- Navigation checks cover type icons, nested folders, search, a keyboard
+  value edit and byte-exact undo, live theme switching, light grid contrast
+  and restoring the chosen appearance on restart.
+
 ## vLinker FS reconnection · 0.8.0-alpha.8
 
 - Startup tests cover the selected baud, a retained transfer rate, an adapter

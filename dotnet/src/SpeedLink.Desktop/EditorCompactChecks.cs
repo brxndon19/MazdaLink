@@ -73,7 +73,7 @@ public partial class EditorWorkspace
                 throw new InvalidOperationException("Small multi-state controls waste grid or graph space.");
             Capture(Path.Combine(folder, "SmallStates.png"));
         }
-        OpenTable(curve); FitMap_Click(this, new()); await Settle();
+        OpenTable(curve); SetViewMode(4); FitMap_Click(this, new()); await Settle();
         if (!TablePanel.IsVisible || !GraphPanel.IsVisible || GraphTitle.Text != "Curve preview" || TablePanel.ActualHeight > 100 || MapGrid.RowHeight < 28)
             throw new InvalidOperationException("Short curves do not use a proportional grid and curve.");
         double originalGridWidth = TableColumn.ActualWidth, originalGraphWidth = GraphColumn.ActualWidth;
@@ -91,7 +91,7 @@ public partial class EditorWorkspace
         Capture(Path.Combine(folder, "ShortCurve.png"));
         var smallMaps = doc.Definition.Tables.Where(t => t.Rows is > 1 and <= 8 && t.Columns is > 1 and <= 8 && !t.IsChoice).ToArray();
         var small = smallMaps.FirstOrDefault(t => Enumerable.Range(0, t.Count).Select(i => doc.Read(t, i)).Where(double.IsFinite).Distinct().Take(2).Count() > 1) ?? smallMaps[0];
-        OpenTable(small); FitMap_Click(this, new()); await Settle();
+        OpenTable(small); SetViewMode(4); FitMap_Click(this, new()); await Settle();
         var scroll = Descendants(MapGrid).OfType<ScrollViewer>().First();
         if (TablePanel.ActualHeight > small.Rows * 28 + 60 || TablePanel.ActualWidth > small.Columns * 112 + 100 ||
             scroll.ScrollableWidth > 1 || scroll.ScrollableHeight > 1 || !GraphPanel.IsVisible || GraphTitle.Text != "3D preview")

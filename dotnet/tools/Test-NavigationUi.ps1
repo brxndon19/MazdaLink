@@ -14,7 +14,7 @@ foreach ($calibration in @('L33XEH000','L35HEH000','L38KEH000','L39SED000','L39S
     if (!$process.WaitForExit(45000)) { $process.Kill(); throw "Navigation UI timed out: $calibration" }
     if ($process.ExitCode -ne 0 -or !(Test-Path -LiteralPath $report)) { throw "Navigation UI failed: $calibration; see $report" }
     $result = Get-Content -LiteralPath $report -Raw | ConvertFrom-Json
-    if (!$result.passed -or $result.hardwareAccessed -or !$result.synthetic -or !$result.workflow.editorCommands -or !$result.workflow.navigationPreservesEdits -or !$result.workflow.minimumLayout -or !$result.workflow.menuChecks.permanentMenus -or !$result.workflow.menuChecks.labeledNavigation -or !$result.workflow.menuChecks.navigationRemembered) { throw "Unexpected navigation result: $calibration" }
+    if (!$result.passed -or $result.hardwareAccessed -or !$result.synthetic -or !$result.workflow.editorCommands -or !$result.workflow.navigationPreservesEdits -or !$result.workflow.minimumLayout -or !$result.workflow.menuChecks.permanentMenus -or !$result.workflow.menuChecks.labeledNavigation -or !$result.workflow.menuChecks.navigationRemembered -or !$result.workflow.appearanceVerified -or !$result.workflow.gridAdjustmentsVerified -or !$result.workflow.mapFoldersVerified) { throw "Unexpected navigation result: $calibration" }
     $reports += $result
 }
 @{ passed = $true; hardwareAccessed = $false; reports = $reports } | ConvertTo-Json -Depth 14 | Set-Content -LiteralPath (Join-Path $runRoot 'summary.json') -Encoding utf8

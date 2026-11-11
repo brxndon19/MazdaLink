@@ -112,7 +112,8 @@ Multi-state controls retain their labeled rows without an empty graph.
 
 ![Intake cam advance table with a compact 3D preview at the upper-right](images/table-preview.png)
 
-**Table with 3D preview** places the surface at the upper-right of the grid,
+New maps open in **Table only**. Press F4 or choose **Graph** to switch to the
+full graph. **Table with 3D preview** places the surface at the upper-right of the grid,
 keeping the table's full height. Small panes temporarily omit the preview to
 prioritize the table; expanding restores it. The graph stays on the right, like the
 MAF editor. Its controls and linked cell selection work the same way.

@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -8,11 +9,45 @@ namespace SpeedLink.Desktop;
 
 public partial class MainWindow
 {
+    private readonly string appearancePath;
+    private Appearance appearance = Appearance.Dark;
+
     private void ConfigureApplicationMenus()
     {
         EditorPane.AttachApplicationMenus(ApplicationEditMenu, ApplicationMapViewMenu);
         ApplicationSaveMenu.SetBinding(IsEnabledProperty, new Binding(nameof(IsEnabled)) { Source = EditorPane.SaveButton });
         RefreshApplicationMenus();
+        RefreshAppearanceMenu();
+    }
+
+    private void RefreshAppearanceMenu()
+    {
+        foreach (var item in AppearanceMenu.Items.OfType<MenuItem>())
+            item.IsChecked = item.Tag as string == appearance.ToString();
+    }
+
+    private void Appearance_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuItem { Tag: string name } || !Enum.TryParse(name, out Appearance choice)) return;
+        appearance = choice;
+        UiTheme.Apply(appearance);
+        try
+        {
+            UiTheme.Save(appearancePath, choice);
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            StatusText.Text = "Appearance could not be saved. " + error.Message;
+        }
+        RefreshAppearanceMenu();
+    }
+
+    private void WindowsAppearanceChanged(object sender, Microsoft.Win32.UserPreferenceChangedEventArgs e)
+    {
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            if (appearance == Appearance.System) UiTheme.Apply(appearance);
+        }));
     }
 
     private void RefreshApplicationMenus()

@@ -98,20 +98,22 @@ gives the table the available workspace. A permanent **File / Edit / View / Tool
 menu stays available throughout the app. Navigation shows icons and names by default
 and remembers your choice to collapse it;
 the map browser and graph can be resized, hidden or moved into separate windows.
-Use **View** for layout options, map information and changed maps. 3D tables can
-keep a small surface preview at the upper-right of the grid; MAF curves keep
-their value list on the left and graph on the right.
+Use **View** for layout options, map information, changed maps and appearance.
+New maps open in table view. Use **Graph** or F4 to switch to the full graph,
+or choose a split view. Long MAF curves open with their value list and graph
+together. **View → Appearance** offers System, Light and Dark.
 Axis names sit directly above the column breakpoints and beside the row
 breakpoints. Selected row and column headers highlight together; value units
 stay inside the map's header. 3D maps carry labeled axis rulers and tick values
 directly on their frame, aligned with the surface as it rotates.
 
 1. Open **Editor**, then **File → Open ROM…**.
-2. Select a map from the categorized list or use search. Related numbered maps
-   are kept together. Maps open together in resizable panes with their units and tuner help.
+2. Select a map from the category folders or use search. Icons identify
+   settings, curves and surfaces. Pin maps to keep them open while browsing.
 3. For a single value, type in the field and choose **Apply** or Enter;
-   Cancel or Escape discards typing. For a table, double-click a cell or apply
-   arithmetic, paste or interpolation to a selection. State controls use named
+   Cancel or Escape discards typing. For a table, double-click a cell, use
+   **Edit tools**, or right-click selected cells to see actions and shortcuts.
+   State controls use named
    choices. Compare with the original, last save or another compatible ROM;
    Undo/Redo restores operations. Review a curve or surface when available.
 4. Choose **Save copy…**. Every save applies the ROM-specific checksum/integrity checks, then

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.0-alpha.9
+
+- Open new maps in Table only and use **Graph** or F4 to switch views. Saved layouts and long MAF curve layouts are preserved.
+- Free up grid space with a collapsible **Edit tools** row and a right-click menu for value adjustments and interpolation. Use **Pinned** and **Close other maps** to manage open panes.
+- Choose System, Light, or Dark from **View → Appearance**. The map grid, axes, and plot labels adapt to the chosen theme.
+- Browse nested definition categories with icons for settings, curves, and surfaces.
+
 ## 0.8.0-alpha.8
 
 - Reconnect to a vLinker FS that stayed at its faster USB serial speed after a failed session. SpeedLink tries the selected baud first and checks its known adapter rates before sending any ECU request.

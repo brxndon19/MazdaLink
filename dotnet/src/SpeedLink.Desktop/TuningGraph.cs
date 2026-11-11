@@ -231,8 +231,8 @@ internal sealed class CurvePlot : FrameworkElement
         double min = finite.Min(), max = finite.Max(), scale = Math.Max(1, Math.Max(Math.Abs(min), Math.Abs(max))), low = min / scale, high = max / scale;
         if (high - low < 1e-15) { low -= .5; high += .5; }
         double Y(double value) => 15 + (1 - (value / scale - low) / (high - low)) * Math.Max(1, ActualHeight - 53);
-        void Text(string value, double x, double y) => dc.DrawText(new FormattedText(value, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), 11, Brushes.White, VisualTreeHelper.GetDpi(this).PixelsPerDip), new(x, y));
-        var grid = new Pen(new SolidColorBrush(Color.FromRgb(67, 74, 80)), 1);
+        void Text(string value, double x, double y) => dc.DrawText(new FormattedText(value, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), 11, UiTheme.Text, VisualTreeHelper.GetDpi(this).PixelsPerDip), new(x, y));
+        var grid = new Pen(UiTheme.Line, 1);
         for (int i = 0; i < 4; i++) { double y = 15 + i * Math.Max(1, ActualHeight - 53) / 3; dc.DrawLine(grid, new(60, y), new(ActualWidth - 25, y)); Text(((high - i * (high - low) / 3) * scale).ToString("G5", CultureInfo.InvariantCulture), 0, y - 7); }
         var pen = new Pen(UiTheme.Amber, 2);
         dc.PushClip(new RectangleGeometry(new Rect(60, 8, Math.Max(1, ActualWidth - 85), Math.Max(1, ActualHeight - 43))));

@@ -20,7 +20,7 @@ public partial class EditorWorkspace
         var definition = new TuningDefinition { Calibration = known.Calibration, Model = known.Model, Version = "Layout test", IdentityAddress = known.IdentityAddress, Identity = known.Identity, Tables = known.Tables.Append(sample).ToArray() };
         var snapshot = document.Snapshot(); string path = document.SourcePath;
         document = new(snapshot, path, inspector, codeGuard, [definition]); document.Changed += Document_Changed;
-        MapTabs.Items.Clear(); OpenTable(sample);
+        MapTabs.Items.Clear(); OpenTable(sample); SetViewMode(4);
         document.Apply(Enumerable.Range(0, 256).Select(i => { double x = i % 16 / 15d, y = i / 16 / 15d; return new CellEdit(sample, i, 12 + 24 * Math.Exp(-18 * ((x - .45) * (x - .45) + (y - .6) * (y - .6))) + 7 * Math.Sin(x * 6) * Math.Cos(y * 4)); }), "Synthetic surface fixture");
         SelectCell(8 * 16 + 8);
         var measurements = new List<object>();
@@ -54,6 +54,7 @@ public partial class EditorWorkspace
         resize(1280, 720 + WorkspaceTabsBar.ActualHeight + WorkspaceTabsBar.Margin.Top + WorkspaceTabsBar.Margin.Bottom);
         await Settle();
         await CheckTableAxes(sample);
+        SetViewMode(4);
         resize(1280, 720);
         await Settle();
         Graph.CheckSurfaceDrag();

@@ -50,7 +50,7 @@ public partial class EditorWorkspace
         layoutPath = path; navigationCollapsed = getNavigationCollapsed; preferences = EditorLayoutPreferences.Load(path);
         mapsPath = Path.ChangeExtension(path, ".maps.json"); mapProfiles = MapWorkspacePreferences.Load(mapsPath);
         restoringLayout = true; browserWidth = preferences.BrowserWidth; curveWidth = preferences.CurveWidth; tableFraction = preferences.TableFraction; previewWidth = preferences.PreviewWidth; fitTable = preferences.FitTable;
-        FocusButton.IsChecked = preferences.BrowserHidden; SetViewMode(preferences.FitTable && preferences.View == 2 ? 4 : preferences.View);
+        FocusButton.IsChecked = preferences.BrowserHidden; SetViewMode(preferences.View);
         Loaded += RestoreFloating;
     }
     private void RestoreFloating(object sender, RoutedEventArgs e)
@@ -229,8 +229,7 @@ public partial class EditorWorkspace
         else GraphTitle.Text = surface ? "3D · drag to rotate · wheel to zoom" : "Curve · wheel to zoom · Shift+drag to pan · click a point";
         TablePanel.Visibility = table is null || graphOnly || ScalarMap ? Visibility.Collapsed : Visibility.Visible;
         ScalarPanel.Visibility = ScalarMap ? Visibility.Visible : Visibility.Collapsed;
-        EditBar.Visibility = ScalarMap ? Visibility.Collapsed : Visibility.Visible;
-        MapWorkspace.RowDefinitions[1].Height = ScalarMap ? new(0) : GridLength.Auto;
+        EditBar.Visibility = table is not null && !ScalarMap && (table.IsChoice || EditToolsButton.IsChecked == true) ? Visibility.Visible : Visibility.Collapsed;
         GraphPanel.Visibility = graphable && (floating || ViewMode != 2 && (ViewMode != 4 || preview)) ? Visibility.Visible : Visibility.Collapsed;
         UpdateFloatingVisibility();
         Grid.SetRow(DataSplitter, vertical ? 0 : 1); Grid.SetColumn(DataSplitter, vertical ? 1 : 0);
@@ -265,7 +264,7 @@ public partial class EditorWorkspace
             root.FocusButton.IsChecked = true;
         }
         previewWidth = null; FocusButton.IsChecked = true; ChangesButton.IsChecked = false; DetailsButton.IsChecked = false; fitTable = true;
-        SetViewMode(CurveList ? 1 : table is { Count: > 1, IsChoice: false } ? 4 : 2); Graph.ResetView();
+        SetViewMode(ViewMode == 3 ? (CurveList ? 1 : 2) : ViewMode); Graph.ResetView();
         Dispatcher.BeginInvoke(new Action(() => { UpdateLayout(); UpdateTableSizing(); SaveLayout(); }));
     }
     private void HideBrowser_Click(object sender, RoutedEventArgs e) => FocusButton.IsChecked = true;

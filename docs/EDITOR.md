@@ -22,7 +22,7 @@ opens the corresponding section of the offline **Tuning guide**.
 
 1. Choose **Editor** in the left navigation, then **File → Open ROM…**.
    Opening a ROM shows the map browser, even if it was hidden in your saved layout.
-2. Find a map in the category list or search by name, description or category.
+2. Find a map in the category folders or search by name, description or category. Each entry's icon identifies it as a setting, curve or surface.
    Click **Map info** to check its units, purpose and correction direction.
 3. Edit the control using the instructions below for its shape. Compare with
    the baseline and use Undo/Redo to review or reverse an operation.
@@ -115,9 +115,13 @@ not a record of the order in which edits were made.
 
 Click a map in the browser to open it in the reusable pane. The next map
 replaces it. Turn on **Pin** in the pane title to keep the map visible while
-you browse other maps. Picking an already open map brings it forward. If you
+you browse other maps. The button changes to **Pinned**. Picking an already open map brings it forward. If you
 turn off **Pin** while another reusable pane is open, that other pane becomes
 pinned so both maps stay open.
+
+Use **View → Map layout and display → Close other maps**, or right-click the
+map header, to keep just the active map in this workspace. Closing a view
+keeps applied ROM edits. Correct or cancel invalid pending input before closing.
 
 Use **+ New tab** above the editor to make a workspace such as Fuel Tuning or
 Boost Control. **Rename** changes the current tab's name. **Delete** removes
@@ -189,6 +193,10 @@ preview to give the table priority; the selected preview view returns with room.
 | Table beside graph | Side-by-side panes with a draggable vertical divider. Long MAF curves use this layout. |
 | Table only / Graph only | Give the selected view the available space. |
 
+New maps open in **Table only**. Long MAF curves open with the breakpoint
+list and graph together. Use **Graph** or F4 to show the full graph, then
+**Table** or F4 to return. Existing workspace tabs restore their saved views.
+
 Drag the divider at the table's right edge to resize the preview. Its width is
 remembered across launches and graph docking. **Fit map** resets that custom
 width to automatic sizing. Small-map previews stay directly beside their grids.
@@ -241,6 +249,13 @@ tune-project format or recovery of unsaved work in this version.
 
 ## Keyboard shortcuts
 
+Right-click selected grid cells for copy, paste, reset, adjustments and
+interpolation. **Edit tools** opens the row for entering an amount, applying
+bulk operations, and changing the comparison baseline.
+
+Use **View → Appearance** for System, Light, or Dark. System uses the Windows
+app theme. SpeedLink remembers the choice.
+
 | Shortcut | Action |
 | --- | --- |
 | Ctrl+O | Open ROM. |
@@ -248,11 +263,18 @@ tune-project format or recovery of unsaved work in this version.
 | Ctrl+0 | Fit map. |
 | Ctrl+B | Hide/restore the map browser. |
 | F1 | Open/restore help for the active map. |
+| F4 | Switch the active map between the table and graph. |
+| Q / A | Increase / decrease selected values by one step while the grid has focus. |
+| Shift+Q / Shift+A | Increase / decrease selected values by ten steps. |
+| Shift+H / Shift+V | Interpolate the selected rectangle horizontally / vertically. |
 | Ctrl+Z / Ctrl+Y | Undo/Redo ROM operations when a text field is not being edited. |
 | Ctrl+C / Ctrl+V | Copy/paste selected table values; in a focused text field, edit its text. |
 | Enter / Escape in a single-value field | Apply / cancel typing. |
 
 Layout shortcuts apply when you are not typing in a text field.
+Adjustment steps use the map's display precision and are at least as large
+as one storage step. A shortcut applies to the selected value cells and can
+be undone as one edit.
 
 ## Compatible files and definition updates
 

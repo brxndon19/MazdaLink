@@ -9,8 +9,8 @@ namespace SpeedLink.Desktop;
 /// <summary>Axis rulers attached to the surface's world coordinates, with screen-space text.</summary>
 internal sealed class SurfaceAxes : FrameworkElement
 {
-    private static readonly Brush XColor = new SolidColorBrush(Color.FromRgb(124, 196, 237));
-    private static readonly Brush YColor = new SolidColorBrush(Color.FromRgb(125, 213, 179));
+    private static Brush XColor => UiTheme.Brush("XAxisBrush");
+    private static Brush YColor => UiTheme.Brush("YAxisBrush");
     private OrthographicCamera? camera;
     private TuningTable? table;
     private double[] finite = [];
@@ -87,7 +87,7 @@ internal sealed class SurfaceAxes : FrameworkElement
                 if (!labels.Any(other => other.IntersectsWith(padded)))
                 {
                     labels.Add(padded);
-                    dc.DrawRoundedRectangle(new SolidColorBrush(Color.FromArgb(215, 35, 39, 43)), null, padded, 2, 2);
+                    dc.DrawRoundedRectangle(UiTheme.Panel, null, padded, 2, 2);
                     dc.DrawText(text, box.TopLeft); return;
                 }
                 position += outward * 6;
