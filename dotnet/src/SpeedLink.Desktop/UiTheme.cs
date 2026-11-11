@@ -46,7 +46,7 @@ internal static class UiTheme
         ["AmberBrush"] = Pair(0xF2B65D, 0x875100),
         ["AmberSoftBrush"] = Pair(0x493A25, 0xF7E5C3),
         ["InkBrush"] = Pair(0x211C15, 0xFFFFFF),
-        ["CellSelectionBrush"] = Pair(0x5D4624, 0xFFDA8D),
+        ["CellSelectionBrush"] = Pair(0x244F7B, 0xA9CFFA),
         ["ChangedCellBrush"] = Pair(0xFF9C37, 0x875100),
         ["InvalidCellBrush"] = Pair(0x793937, 0xFFD6D0),
         ["ErrorBrush"] = Pair(0xFFB1A6, 0x9F3026),
@@ -58,12 +58,27 @@ internal static class UiTheme
         ["XAxisBrush"] = Pair(0x7CC4ED, 0x166391),
         ["YAxisBrush"] = Pair(0x7DD5B3, 0x28674F)
     };
-    private static readonly Swatch[] heat = Enumerable.Range(0, 33).Select(index =>
+    internal const int HeatSteps = 32;
+    private static readonly Swatch[] heat = CreateHeat();
+
+    private static Swatch[] CreateHeat()
     {
-        double t = index / 32d;
-        return new Swatch(Color.FromRgb((byte)(39 + 48 * t), (byte)(43 + 23 * t), (byte)(46 - 7 * t)),
-            Color.FromRgb((byte)(235 + 17 * t), (byte)(239 - 24 * t), (byte)(242 - 83 * t)));
-    }).ToArray();
+        Color[] dark = [Rgb(0x603449), Rgb(0x62502C), Rgb(0x285B4A)];
+        Color[] light = [Rgb(0xF1B6C2), Rgb(0xFAE8AD), Rgb(0xB9E2C8)];
+        return Enumerable.Range(0, HeatSteps + 1)
+            .Select(index => new Swatch(BlendRamp(dark, index), BlendRamp(light, index))).ToArray();
+    }
+
+    private static Color BlendRamp(Color[] stops, int index)
+    {
+        const int stepsPerSegment = HeatSteps / 2;
+        int segment = index < stepsPerSegment ? 0 : 1;
+        double fraction = (double)(index - stepsPerSegment * segment) / stepsPerSegment;
+        Color from = stops[segment];
+        Color to = stops[segment + 1];
+        byte Mix(byte start, byte end) => (byte)Math.Round(start + fraction * (end - start));
+        return Color.FromRgb(Mix(from.R, to.R), Mix(from.G, to.G), Mix(from.B, to.B));
+    }
 
     internal static SolidColorBrush Brush(string name) => palette[name].Brush;
     internal static SolidColorBrush Text => Brush("TextBrush");
@@ -71,7 +86,7 @@ internal static class UiTheme
     internal static SolidColorBrush Panel => Brush("PanelBrush");
     internal static SolidColorBrush Line => Brush("LineBrush");
     internal static SolidColorBrush Amber => Brush("AmberBrush");
-    internal static SolidColorBrush Heat(double fraction) => heat[(int)Math.Round(Math.Clamp(fraction, 0, 1) * 32)].Brush;
+    internal static SolidColorBrush Heat(double fraction) => heat[(int)Math.Round(Math.Clamp(fraction, 0, 1) * HeatSteps)].Brush;
 
     internal static void Ensure()
     {

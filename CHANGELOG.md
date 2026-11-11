@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.8.0-alpha.10
+
+- Shade map cells from rose through gold to mint in Light mode and from plum through amber to green in Dark mode.
+- Highlight the selection and its axis headers in blue. An amber outline marks values that differ from the comparison baseline.
+
 ## 0.8.0-alpha.9
 
 - Open new maps in Table only and use **Graph** or F4 to switch views. Saved layouts and long MAF curve layouts are preserved.

@@ -164,11 +164,7 @@ public partial class MainWindow
             if (!light.IsChecked || dark.IsChecked || UiTheme.Load(appearancePath) != Appearance.Light ||
                 UiTheme.Panel.Color == original || !ReferenceEquals(Background, FindResource("ShellBrush")))
                 throw new InvalidOperationException("Light appearance did not update the open window or save its choice.");
-            foreach (var fill in new[] { UiTheme.Heat(0), UiTheme.Heat(1), UiTheme.Brush("CellSelectionBrush"), UiTheme.Brush("AxisBandBrush") })
-                if (EditorWorkspace.Contrast(UiTheme.Text.Color, fill.Color) < 4.5)
-                    throw new InvalidOperationException("A light theme map color has insufficient text contrast.");
-            if (EditorWorkspace.Contrast(UiTheme.Brush("ChangedCellBrush").Color, UiTheme.Heat(1).Color) < 3)
-                throw new InvalidOperationException("Changed cell borders are hard to see in the light theme.");
+            CheckMapColorContrast();
             CaptureApplicationPreview(Path.Combine(folder, "EditorNavigationLight.png"));
             var restarted = new MainWindow(vault);
             try
@@ -186,6 +182,25 @@ public partial class MainWindow
         }
         if (!dark.IsChecked || UiTheme.Panel.Color != original || UiTheme.Load(appearancePath) != Appearance.Dark)
             throw new InvalidOperationException("Dark appearance did not restore the original palette.");
+        CheckMapColorContrast();
+    }
+
+    private static void CheckMapColorContrast()
+    {
+        Color text = UiTheme.Text.Color;
+        Color selection = UiTheme.Brush("CellSelectionBrush").Color;
+        Color changed = UiTheme.Brush("ChangedCellBrush").Color;
+        Color axis = UiTheme.Brush("AxisBandBrush").Color;
+        if (selection == axis || EditorWorkspace.Contrast(text, selection) < 4.5 ||
+            EditorWorkspace.Contrast(text, axis) < 4.5 || EditorWorkspace.Contrast(changed, selection) < 3)
+            throw new InvalidOperationException("Selected values, axes, or edit outlines have insufficient contrast.");
+        for (int step = 0; step <= UiTheme.HeatSteps; step++)
+        {
+            Color fill = UiTheme.Heat((double)step / UiTheme.HeatSteps).Color;
+            if (fill == selection || EditorWorkspace.Contrast(text, fill) < 4.5 ||
+                EditorWorkspace.Contrast(changed, fill) < 3)
+                throw new InvalidOperationException($"Map color step {step} obscures a value, selection, or edit outline.");
+        }
     }
 
     private void CaptureApplicationPreview(string path, MenuItem? menu = null)

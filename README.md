@@ -102,6 +102,8 @@ Use **View** for layout options, map information, changed maps and appearance.
 New maps open in table view. Use **Graph** or F4 to switch to the full graph,
 or choose a split view. Long MAF curves open with their value list and graph
 together. **View → Appearance** offers System, Light and Dark.
+Cell shading follows the value range of each map, and blue highlights the
+selected cells and their axis headers.
 Axis names sit directly above the column breakpoints and beside the row
 breakpoints. Selected row and column headers highlight together; value units
 stay inside the map's header. 3D maps carry labeled axis rulers and tick values

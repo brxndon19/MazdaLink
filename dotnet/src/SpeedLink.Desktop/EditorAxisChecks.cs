@@ -22,7 +22,8 @@ public partial class EditorWorkspace
             header.BorderBrush is not SolidColorBrush axisLine || axisLine.Color != Color.FromRgb(137, 154, 168) ||
             rowHeader.BorderBrush is not SolidColorBrush rowLine || rowLine.Color != axisLine.Color)
             throw new InvalidOperationException("The axis headers lack a distinct separator from editable map cells.");
-        if (!GetIsAxisSelected(header.Column) || !GetIsAxisSelected(row) || header.Background is not SolidColorBrush brush || brush.Color != Color.FromRgb(93, 70, 36))
+        var selectionColor = UiTheme.Brush("CellSelectionBrush").Color;
+        if (!GetIsAxisSelected(header.Column) || !GetIsAxisSelected(row) || header.Background is not SolidColorBrush brush || brush.Color != selectionColor)
             throw new InvalidOperationException("The selected cell's axis headers are not visibly highlighted.");
         MapGrid.SelectedCells.Clear();
         foreach (int r in new[] { 2, 3 }) foreach (int c in new[] { 6, 7 }) MapGrid.SelectedCells.Add(new(MapGrid.Items[r], MapGrid.Columns[c]));
@@ -56,7 +57,7 @@ public partial class EditorWorkspace
             throw new InvalidOperationException("Axis titles moved or lost their header alignment while scrolling.");
         var lastRow = (DataGridRow)MapGrid.ItemContainerGenerator.ContainerFromIndex(15);
         var lastHeader = Descendants(MapGrid).OfType<DataGridColumnHeader>().Single(h => h.Column?.DisplayIndex == 15);
-        if (!GetIsAxisSelected(lastRow) || lastHeader.Background is not SolidColorBrush lastBrush || lastBrush.Color != Color.FromRgb(93, 70, 36))
+        if (!GetIsAxisSelected(lastRow) || lastHeader.Background is not SolidColorBrush lastBrush || lastBrush.Color != selectionColor)
             throw new InvalidOperationException("Scrolled headers lost the current selection.");
         scroll.ScrollToLeftEnd(); scroll.ScrollToTop(); FitMap_Click(this, new());
         // Use the full pane for explicit scrollbar combinations: a compact

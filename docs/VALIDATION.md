@@ -1,5 +1,11 @@
 # Alpha validation scope
 
+## Map cell colors · 0.8.0-alpha.10
+
+- Desktop navigation checks verify value and edit-outline contrast across
+  the full color scale in Light and Dark mode. Layout checks verify that
+  selection highlights follow the row and column headers while scrolling.
+
 ## Editor usability · 0.8.0-alpha.9
 
 - Desktop checks cover table-first opening, F4 and the Graph button, the
