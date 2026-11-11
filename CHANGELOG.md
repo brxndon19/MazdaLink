@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.0-alpha.8
+
+- Reconnect to a vLinker FS that stayed at its faster USB serial speed after a failed session. SpeedLink tries the selected baud first and checks its known adapter rates before sending any ECU request.
+
 ## 0.8.0-alpha.7
 
 - Drag a map using its full header area, including the empty space before the buttons. Header buttons keep their individual actions.

@@ -122,11 +122,11 @@ local paths; review reports before sharing them.
 
 - **vLinker FS:** use initial baud **115200**. The adapter temporarily uses
   2,000,000 baud during reads and normally returns to 115200 on disconnect.
-  After a read transport error or interruption while USB stays connected, select
-  2000000 to reconnect when
-  that temporary setting remains active. After reconnecting USB, start at
-  115200. The app uses the installed FTDI driver with 1 ms latency and restores
-  the prior latency setting when closing the connection.
+  After a transport error, click **Connect & identify** again. SpeedLink
+  automatically checks whether the adapter stayed at its transfer rate. If the
+  adapter still does not answer, check USB, OBD power and the selected COM port.
+  The app uses the installed FTDI driver with 1 ms latency and restores the prior
+  latency setting when closing the connection.
 - **Tactrix:** select the installed J2534 driver. No COM port or baud selection
   is needed. Registered Openport-compatible entries remain available.
 - **Mongoose-Plus ISO/CAN3 (experimental):** choose its experimental adapter

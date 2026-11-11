@@ -68,7 +68,8 @@ public class ElmTransport : IReadTransport
             throw new TransportException("Incomplete serial write.");
         Serial.Flush();
     }
-    protected string Prompt(double seconds, int maxBytes = 32768)
+    protected string Prompt(double seconds, int maxBytes = 32768) => ReadPrompt(seconds, maxBytes, allowSilence: false)!;
+    private string? ReadPrompt(double seconds, int maxBytes, bool allowSilence)
     {
         using var response = new MemoryStream();
         var deadline = Clock.Elapsed + TimeSpan.FromSeconds(seconds);
@@ -90,9 +91,13 @@ public class ElmTransport : IReadTransport
                 return Encoding.ASCII.GetString(raw[..at]);
             }
         }
+        if (allowSilence && response.Length == 0)
+            return null;
         throw new TransportException("Adapter timeout. Command was sent once; reconnect before continuing.");
     }
-    public string Command(string command, double timeout = 4)
+    public string Command(string command, double timeout = 4) => CommandCore(command, timeout, allowSilence: false)!;
+    private protected string? ProbeAdapterIdentity(double timeout) => CommandCore("ATI", timeout, allowSilence: true);
+    private string? CommandCore(string command, double timeout, bool allowSilence)
     {
         if (Failed)
             throw new TransportException("Connection is no longer synchronized. Disconnect and reconnect.");
@@ -102,7 +107,12 @@ public class ElmTransport : IReadTransport
         try
         {
             WriteExact(Encoding.ASCII.GetBytes(command + "\r"));
-            string response = Prompt(timeout);
+            string? response = ReadPrompt(timeout, 32768, allowSilence);
+            if (response is null)
+            {
+                diagnostics?.Record("serial.command_no_reply", new { command, durationMs = (Clock.Elapsed - started).TotalMilliseconds });
+                return null;
+            }
             if (control) diagnostics?.Record("serial.command_completed", new { command, response = response.Length <= 256 ? response : response[..256], durationMs = (Clock.Elapsed - started).TotalMilliseconds });
             else diagnostics?.Record("serial.reply", new { command, responseCharacters = response.Length,
                 response = command.StartsWith("09", StringComparison.Ordinal) || command.StartsWith("23", StringComparison.Ordinal) ? "[payload omitted]" : response[..Math.Min(512, response.Length)],
@@ -154,6 +164,7 @@ public sealed partial class VLinkerReadTransport : ElmTransport
 {
     private string serialIdentity = "";
     // Host USB-UART rate. ATSP6 configures the separate 500 kbit/s CAN link.
+    public const int DefaultBaud = 115200;
     public const int TransferBaud = 2000000;
     public int ConfiguredTransferBaud
     {
@@ -175,8 +186,7 @@ public sealed partial class VLinkerReadTransport : ElmTransport
     {
         try
         {
-            Serial.DiscardInput();
-            Command("ATI");
+            SynchronizeStartup();
             Command("ATE0");
             serialIdentity = Command("ATI").Trim();
             if (serialIdentity.Length == 0 || serialIdentity.Contains('?')) throw new TransportException("Adapter identity was not established.");
@@ -193,6 +203,39 @@ public sealed partial class VLinkerReadTransport : ElmTransport
         }
         catch { Failed = true; Ready = false; throw; }
     }
+    private void SynchronizeStartup()
+    {
+        int selectedBaud = Serial.BaudRate;
+        // A failed session may close without restoring the adapter's default baud.
+        // Probe only the selected rate and SpeedLink's own transfer/default rates.
+        int[] rates = [.. new[] { selectedBaud, TransferBaud, DefaultBaud }.Distinct()];
+        foreach (int rate in rates)
+        {
+            diagnostics?.Record("serial.startup_probe", new { baud = rate });
+            if (Serial.BaudRate != rate)
+                Serial.BaudRate = rate;
+            Serial.DiscardInput();
+            var response = ProbeAdapterIdentity(rate == selectedBaud ? 4 : 2);
+            if (response is null)
+                continue;
+
+            // A probe at the wrong rate can leave an unrecognized command in the
+            // adapter's input. Only retry ATI after its complete '?' reply.
+            var lines = IdentityLines(response);
+            if (lines is ["?"])
+                lines = IdentityLines(ProbeAdapterIdentity(2) ?? "");
+            if (lines is not [var identity] || !identity.StartsWith("ELM327 ", StringComparison.OrdinalIgnoreCase))
+                throw new TransportException($"Unexpected vLinker FS identification reply at {rate:N0} baud. Check the selected adapter and reconnect.");
+            if (rate != selectedBaud)
+                diagnostics?.Record("serial.startup_baud_recovered", new { selectedBaud, actualBaud = rate });
+            return;
+        }
+        throw new TransportException($"No vLinker FS reply at {string.Join(", ", rates.Select(rate => rate.ToString("N0")))} baud. Check the USB connection, adapter power and selected COM port, then reconnect.");
+    }
+    private static string[] IdentityLines(string response) =>
+        response.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(line => !line.Equals("ATI", StringComparison.OrdinalIgnoreCase)).ToArray();
+
     private void SetBaud(int baud)
     {
         if (baud == Serial.BaudRate)
@@ -352,7 +395,7 @@ public sealed partial class VLinkerReadTransport : ElmTransport
             if (Serial.IsOpen && !Failed)
                 try
                 {
-                    SetBaud(115200);
+                    SetBaud(DefaultBaud);
                 }
                 catch (Exception error) { CloseWarning = error.Message; }
         }

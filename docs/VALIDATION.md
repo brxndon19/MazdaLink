@@ -1,5 +1,15 @@
 # Alpha validation scope
 
+## vLinker FS reconnection · 0.8.0-alpha.8
+
+- Startup tests cover the selected baud, a retained transfer rate, an adapter
+  that stays silent, and malformed replies. The baud probe uses only adapter
+  identification commands. ECU exchanges retain their existing no-retry rules.
+- On a Gen 1 bench ECU, the previous build timed out with vLinker FS left at
+  2,000,000 baud. The fixed build found it, read the ECU identity, and restored
+  115,200 baud on disconnect. A second connection identified the ECU directly
+  at the default startup rate.
+
 ## Map headers and fuel feedback definitions · 0.8.0-alpha.7
 
 - Desktop checks cover pointer input across blank map header space and access to

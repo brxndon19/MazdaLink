@@ -154,7 +154,7 @@ driver setup and reporting results.
 
 1. Download **SpeedLink.exe** from [Releases](https://github.com/mrphyslaw/SpeedLink/releases).
 2. Save it in a writable folder and double-click it. No installer or .NET installation is needed.
-3. Connect a **Vgate vLinker FS USB** or **Tactrix Openport 2.0** with its manufacturer's driver installed. Select the adapter in SpeedLink; vLinker also needs its COM port.
+3. Connect a **Vgate vLinker FS USB** or **Tactrix Openport 2.0** with its manufacturer's driver installed. Select the adapter in SpeedLink; vLinker also needs its COM port. Leave vLinker at **115200** unless you know it uses a different startup rate. SpeedLink can find it if a failed session left it at the faster transfer rate.
 4. Turn the ignition on with the engine stopped, then select **Connect & identify**.
 5. For an unknown Gen 2 ECU, select **Gen 2 read protocol (experimental)**; known ROMs choose automatically. Select **Read & verify backup**. SpeedLink saves a verified backup after two complete reads match.
 
