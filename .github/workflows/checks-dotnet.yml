@@ -58,6 +58,21 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Bench tools build failed.' }
           & ./tools/SpeedLink.Bench/bin/Release/net10.0/win-x86/SpeedLink.Bench.exe --mode peer-parser-self-test --report TestResults/PeerParser.json
           if ($LASTEXITCODE -ne 0) { throw 'Peer parser regression checks failed.' }
+      - name: Build MazdaLink Reader
+        run: |
+          dotnet publish tools/MazdaLink.Reader -c Release --no-restore -o reader-publish -p:ContinuousIntegrationBuild=true
+          if ($LASTEXITCODE -ne 0) { throw 'MazdaLink Reader build failed.' }
+          & ./reader-publish/MazdaLinkReader.exe --help
+          if ($LASTEXITCODE -ne 0) { throw 'MazdaLink Reader did not start.' }
+      - name: Upload MazdaLink Reader
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: MazdaLinkReader-${{ github.run_id }}
+          path: |
+            dotnet/reader-publish/*
+            dotnet/tools/MazdaLink.Reader/README.md
+          if-no-files-found: error
+          retention-days: 14
       - run: ./tools/Publish-Windows.ps1 -Output publish
       - run: ./tools/Test-CrashUi.ps1 -Output TestResults/CrashUi -Executable ./publish/SpeedLink.exe
       - run: ./tools/Test-SupportUi.ps1 -Output TestResults/Standalone_Support -Executable ./publish/SpeedLink.exe
