@@ -7,4 +7,5 @@
   <Project Path="tools/SpeedLink.Bench/SpeedLink.Bench.csproj" />
   <Project Path="tools/SpeedLink.UiHarness/SpeedLink.UiHarness.csproj" />
   <Project Path="tools/SpeedLink.EditorAudit/SpeedLink.EditorAudit.csproj" />
+  <Project Path="tools/MazdaLink.Reader/MazdaLink.Reader.csproj" />
 </Solution>

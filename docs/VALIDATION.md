@@ -1,5 +1,12 @@
 # Alpha validation scope
 
+## MazdaLink Reader · 0.8.0-alpha.11
+
+- Offline tests cover the read probe, the read scan (with a simulated ZY87EC000 ECU using a real seed and key),
+  smaller read blocks, and the ZY87EC000 checksum policy using synthetic images. No ROM data is included.
+- Hardware: a stock ZY87EC000 ECU was probed, scanned and read twice with matching results on a
+  Mongoose-Plus ISO/CAN3. The checksum command was verified on that read and on an edited copy.
+
 ## Map cell colors · 0.8.0-alpha.10
 
 - Desktop navigation checks verify value and edit-outline contrast across

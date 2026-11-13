@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net10.0": {
+      "Microsoft.NET.ILLink.Tasks": {
+        "type": "Direct",
+        "requested": "[10.0.14, )",
+        "resolved": "10.0.14",
+        "contentHash": "YlTamXppEQls6DYWt7RdUuwWDb0lyw/vXCaGeQpLCpsLmfwGuCkOz/vIGgMTV7ECsJcavkCOkxZXv9s8rdAHkQ=="
+      },
+      "speedlink.core": {
+        "type": "Project"
+      },
+      "speedlink.j2534": {
+        "type": "Project",
+        "dependencies": {
+          "SpeedLink.Core": "[0.6.0-alpha.5, )"
+        }
+      }
+    },
+    "net10.0/win-x86": {}
+  }
+}

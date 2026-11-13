@@ -97,19 +97,41 @@ public sealed class ReadWorkflow
         if (rpm != 0)
             throw new TransportException($"Engine is running ({rpm:g} RPM). Switch it off before reading.");
     }
-    public BackupResult ReadBackup(IReadTransport transport, EcuIdentity expected, string vault, IProgress<ReadProgress>? progress = null, CancellationToken cancellation = default, ReadFamily unknownFamily = ReadFamily.Gen1)
-        => Capture(transport, expected, vault, progress, cancellation, unknownFamily, null);
+    /// <summary>Enters the read session and unlocks it once. Returns true when the ECU required a security key.</summary>
+    public static bool OpenReadSession(IReadTransport transport, ReadProtocol protocol, CancellationToken cancellation = default)
+    {
+        var session = transport.Exchange([0x10, protocol.Session]);
+        if ((protocol.Family == ReadFamily.Gen2 ? session.Length != 6 : session.Length < 2) || session[0] != 0x50 || session[1] != protocol.Session)
+            throw new TransportException($"ECU did not acknowledge read session {protocol.Session:X2}.");
+        cancellation.ThrowIfCancellationRequested();
+        var seed = transport.Exchange([0x27, protocol.SeedLevel]);
+        if (seed.Length != 5 || seed[0] != 0x67 || seed[1] != protocol.SeedLevel)
+            throw new TransportException("Unexpected security seed format.");
+        if (seed.AsSpan(2).SequenceEqual(new byte[3]))
+            return false;
+        cancellation.ThrowIfCancellationRequested();
+        var response = transport.Exchange([0x27, protocol.KeyLevel, .. SecurityAccess.SeedKey(seed.AsSpan(2))]);
+        if (!response.AsSpan().SequenceEqual(new byte[] { 0x67, protocol.KeyLevel }))
+            throw new TransportException("Read-session key was not acknowledged. No retry was attempted.");
+        return true;
+    }
+    public BackupResult ReadBackup(IReadTransport transport, EcuIdentity expected, string vault, IProgress<ReadProgress>? progress = null, CancellationToken cancellation = default, ReadFamily unknownFamily = ReadFamily.Gen1, int? maximumBlock = null)
+    {
+        if (maximumBlock is < 1)
+            throw new ArgumentOutOfRangeException(nameof(maximumBlock));
+        return Capture(transport, expected, vault, progress, cancellation, unknownFamily, null, maximumBlock);
+    }
 
     public string VerifyKnownImage(IReadTransport transport, EcuIdentity expected, string vault, ReadOnlySpan<byte> expectedImage,
         IProgress<ReadProgress>? progress = null, CancellationToken cancellation = default)
     {
         if (expectedImage.Length != RomInspector.RomSize)
             throw new ArgumentException("Verification requires the complete expected ROM.", nameof(expectedImage));
-        return Capture(transport, expected, vault, progress, cancellation, ReadFamily.Gen1, expectedImage.ToArray()).Path;
+        return Capture(transport, expected, vault, progress, cancellation, ReadFamily.Gen1, expectedImage.ToArray(), null).Path;
     }
 
     private BackupResult Capture(IReadTransport transport, EcuIdentity expected, string vault, IProgress<ReadProgress>? progress,
-        CancellationToken cancellation, ReadFamily unknownFamily, byte[]? expectedImage)
+        CancellationToken cancellation, ReadFamily unknownFamily, byte[]? expectedImage, int? maximumBlock)
     {
         int passes = expectedImage is null ? 2 : 1;
         if (transport.Mode == "hardware")
@@ -139,22 +161,11 @@ public sealed class ReadWorkflow
                 });
                 cancellation.ThrowIfCancellationRequested();
                 var protocol = ReadProtocol.For(identity, unknownFamily);
+                if (maximumBlock is { } limit && limit < protocol.MaximumBlock)
+                    protocol = protocol with { MaximumBlock = limit };
                 journal.Append("read_protocol", new() { ["family"] = protocol.Family.ToString(), ["session"] = protocol.Session, ["securityLevel"] = protocol.SeedLevel, ["maximumBlock"] = protocol.MaximumBlock });
                 transport.Diagnostics?.Record("read.protocol", new { family = protocol.Family.ToString(), protocol.Session, protocol.SeedLevel, protocol.MaximumBlock });
-                var session = transport.Exchange([0x10, protocol.Session]);
-                if ((protocol.Family == ReadFamily.Gen2 ? session.Length != 6 : session.Length < 2) || session[0] != 0x50 || session[1] != protocol.Session)
-                    throw new TransportException($"ECU did not acknowledge read session {protocol.Session:X2}.");
-                cancellation.ThrowIfCancellationRequested();
-                var seed = transport.Exchange([0x27, protocol.SeedLevel]);
-                if (seed.Length != 5 || seed[0] != 0x67 || seed[1] != protocol.SeedLevel)
-                    throw new TransportException("Unexpected security seed format.");
-                if (!seed.AsSpan(2).SequenceEqual(new byte[3]))
-                {
-                    cancellation.ThrowIfCancellationRequested();
-                    var response = transport.Exchange([0x27, protocol.KeyLevel, .. SecurityAccess.SeedKey(seed.AsSpan(2))]);
-                    if (!response.AsSpan().SequenceEqual(new byte[] { 0x67, protocol.KeyLevel }))
-                        throw new TransportException("Read-session key was not acknowledged. No retry was attempted.");
-                }
+                OpenReadSession(transport, protocol, cancellation);
                 journal.Append("read_session_ready");
                 var hashes = new List<string>();
                 byte[] data = [];

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.0-alpha.11
+
+- Add **MazdaLinkReader.exe**, a read-only command-line ROM reader for the Mongoose-Plus ISO/CAN3 or Tactrix cable. `probe` checks access, `scan` finds the read sizes an ECU accepts, and `read` saves the ROM only after two matching reads. Double-click it for a menu.
+- Read the Mazda 2 (DE) 1.5 ZY-VE ECU, calibration ZY87EC000, with `--gen2 --block 512`.
+- Correct the checksum of an edited ZY87EC000 ROM with `checksum <edited.bin> --stock <original.bin>`. It refuses edits outside the calibration maps and never overwrites a file. Flashing this ECU is not supported.
+
 ## 0.8.0-alpha.10
 
 - Shade map cells from rose through gold to mint in Light mode and from plum through amber to green in Dark mode.
