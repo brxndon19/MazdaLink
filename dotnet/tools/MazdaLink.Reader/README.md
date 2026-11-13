@@ -68,6 +68,26 @@ it prints:
   captures, a manifest and the read journal. Keep this safe; it is your stock ROM.
 - Whether a bundled definition matches your calibration, and whether the ROM's checksum is valid.
 
+## 3. After editing: fix the checksum (Mazda 2 ZY87EC000)
+
+The ECU checks 19 checksum ranges while it runs. Editors such as EcuFlash don't know this ROM's
+checksum, so every edited ROM must be corrected before it is flashed:
+
+```
+.\MazdaLinkReader.exe checksum "my-edit.bin" --stock "...\backups\hardware\<run>\rom.bin"
+```
+
+You can also drag the edited `.bin` onto `MazdaLinkReader.exe`, or choose **5** from the menu.
+
+- It refuses any file that isn't a 1 MiB `ZY87EC000` ROM with the known checksum table and boot marker.
+- With `--stock`, it compares against the original and refuses the file if the boot block or the
+  engine program code changed. Only calibration maps should be edited.
+- It recalculates the correction words, saves `my-edit_checksum-fixed.bin` next to your file,
+  reads it back and verifies all 19 ranges. It never overwrites a file.
+- Running it on an untouched original reports `CHECKSUM OK`, which is a good first test.
+
+Flash only the `_checksum-fixed.bin` file. The reader itself never writes to the ECU.
+
 ## Options
 
 | Option | Meaning |

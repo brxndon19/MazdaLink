@@ -14,6 +14,10 @@ Usage:
   MazdaLinkReader scan    [options]   Try a set of small reads to work out which sizes and addresses the ECU accepts.
   MazdaLinkReader read    [options]   Read the whole ROM twice and save it only if both reads match.
   MazdaLinkReader drivers [options]   List the installed J2534 drivers for the selected adapter.
+  MazdaLinkReader checksum <edited.bin> --stock <original.bin>
+                                      Check and correct the checksum of an edited ZY87EC000 ROM.
+                                      Writes a new file; never changes the edited file or the original.
+                                      You can also drag an edited .bin onto MazdaLinkReader.exe.
 
 Options:
   --adapter mongoose|tactrix   Cable to use (default: mongoose, the Mongoose-Plus ISO/CAN3).
@@ -26,8 +30,11 @@ Before probe or read: ignition ON, engine OFF, headlights, fan and accessories O
 and a healthy battery or charger connected.
 """;
 
-bool interactive = args.Length == 0 && !Console.IsInputRedirected && !Console.IsOutputRedirected;
-if (interactive)
+bool dropped = args.Length == 1 && File.Exists(args[0]);
+bool interactive = (args.Length == 0 || dropped) && !Console.IsInputRedirected && !Console.IsOutputRedirected;
+if (dropped)
+    args = ["checksum", args[0]];
+else if (interactive)
     args = AskForCommand();
 int code = await RunAsync(args);
 if (interactive)
@@ -43,6 +50,7 @@ static async Task<int> RunAsync(string[] args)
     string? command = null;
     int? block = null;
     string adapterName = "mongoose", driverName = "", outputFolder = "";
+    string? inputFile = null, stockFile = null;
     bool gen2 = false;
     for (int index = 0; index < args.Length; index++)
     {
@@ -56,12 +64,14 @@ static async Task<int> RunAsync(string[] args)
                 case "--driver": driverName = Next(); break;
                 case "--out": outputFolder = Next(); break;
                 case "--gen2": gen2 = true; break;
+                case "--stock": stockFile = Next(); break;
                 case "--block":
                     block = int.TryParse(Next(), out int size) && size is >= 1 and <= 3968 ? size : throw new ArgumentException("--block needs a size from 1 to 3968 bytes.");
                     break;
                 case "-h" or "--help" or "help": Console.WriteLine(Usage); return 0;
                 default:
                     if (command is null && !arg.StartsWith('-')) command = arg.ToLowerInvariant();
+                    else if (command == "checksum" && inputFile is null && !arg.StartsWith('-')) inputFile = arg;
                     else throw new ArgumentException($"Unknown option: {arg}");
                     break;
             }
@@ -73,6 +83,8 @@ static async Task<int> RunAsync(string[] args)
             return 2;
         }
     }
+    if (command == "checksum")
+        return FixChecksum(inputFile, stockFile);
     if (command is not ("probe" or "scan" or "read" or "drivers"))
     {
         Console.WriteLine(Usage);
@@ -269,6 +281,79 @@ static async Task<int> RunAsync(string[] args)
     return exit;
 }
 
+static int FixChecksum(string? inputFile, string? stockFile)
+{
+    if (string.IsNullOrWhiteSpace(inputFile))
+    {
+        Console.Error.WriteLine("Name the edited ROM, for example: MazdaLinkReader checksum edited.bin --stock original.bin");
+        return 2;
+    }
+    try
+    {
+        string input = Path.GetFullPath(inputFile.Trim('"'));
+        byte[] edited = File.ReadAllBytes(input);
+        Console.WriteLine($"Edited ROM: {input}");
+        var before = Zy87Integrity.Check(edited);
+        if (stockFile is not null)
+        {
+            string stockPath = Path.GetFullPath(stockFile.Trim('"'));
+            byte[] stock = File.ReadAllBytes(stockPath);
+            if (Zy87Integrity.Check(stock).Any(range => !range.Valid))
+                throw new InvalidDataException("The --stock file fails its own checksum, so it is not an untouched original. Use the backup the reader saved.");
+            var changes = Zy87Integrity.Compare(stock, edited);
+            Console.WriteLine($"Compared with: {stockPath}");
+            Console.WriteLine($"Changed bytes: calibration {changes.Calibration:N0} · program {changes.Program:N0} · boot {changes.Boot:N0} · other {changes.Other:N0}");
+            if (changes.Boot > 0)
+                throw new InvalidDataException("The boot block differs from the original. This file must not be flashed; start again from a copy of the original.");
+            if (changes.Program > 0)
+                throw new InvalidDataException("The engine program code differs from the original. Only calibration maps should be edited; start again from a copy of the original.");
+            if (changes.Other > 0)
+                Console.WriteLine("Warning: bytes outside the main calibration block changed. Check that these edits were intended.");
+            if (changes.Calibration + changes.Other == 0)
+                Console.WriteLine("No map changes compared with the original.");
+        }
+        else
+            Console.WriteLine("Tip: add --stock <original.bin> so MazdaLink can confirm only calibration maps were changed.");
+
+        var failing = before.Where(range => !range.Valid).ToList();
+        if (failing.Count == 0)
+        {
+            Console.WriteLine();
+            Console.WriteLine("CHECKSUM OK · all 19 ranges are valid. No new file is needed.");
+            return 0;
+        }
+        foreach (var range in failing)
+            Console.WriteLine($"Range {range.Index} (0x{range.Start:X6}-0x{range.End:X6}) needs correcting.");
+        byte[] corrected = Zy87Integrity.Correct(edited);
+        string output = Path.Combine(Path.GetDirectoryName(input)!, Path.GetFileNameWithoutExtension(input) + "_checksum-fixed.bin");
+        if (File.Exists(output))
+            throw new IOException($"{Path.GetFileName(output)} already exists. Move or rename it first; existing files are never overwritten.");
+        string partial = output + ".partial";
+        using (var stream = new FileStream(partial, FileMode.CreateNew, FileAccess.Write))
+        {
+            stream.Write(corrected);
+            stream.Flush(flushToDisk: true);
+        }
+        byte[] readback = File.ReadAllBytes(partial);
+        if (!readback.AsSpan().SequenceEqual(corrected) || Zy87Integrity.Check(readback).Any(range => !range.Valid))
+        {
+            File.Delete(partial);
+            throw new InvalidDataException("The saved file did not verify. Nothing was saved.");
+        }
+        File.Move(partial, output, overwrite: false);
+        Console.WriteLine();
+        Console.WriteLine("CHECKSUM FIXED · all 19 ranges verified after saving.");
+        Console.WriteLine($"Corrected ROM: {output}");
+        Console.WriteLine($"SHA-256:       {RomInspector.Hash(corrected)}");
+        return 0;
+    }
+    catch (Exception error) when (error is InvalidDataException or IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+    {
+        Console.Error.WriteLine("Not corrected: " + error.Message);
+        return 1;
+    }
+}
+
 static string[] AskForCommand()
 {
     Console.WriteLine("""
@@ -281,14 +366,26 @@ static string[] AskForCommand()
       2  Scan:  work out which read sizes and addresses this ECU accepts
       3  Read:  read the whole ROM and save it
       4  List the installed cable drivers
+      5  Fix the checksum of an edited ROM
     Or type a full command, for example: scan --gen2
     """);
     Console.Write("> ");
     string choice = (Console.ReadLine() ?? "").Trim();
-    string? command = choice switch { "1" => "probe", "2" => "scan", "3" => "read", "4" => "drivers", _ => null };
+    string? command = choice switch { "1" => "probe", "2" => "scan", "3" => "read", "4" => "drivers", "5" => "checksum", _ => null };
     if (command is null)
         return choice.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
     var result = new List<string> { command };
+    if (command == "checksum")
+    {
+        Console.Write("Drag the EDITED .bin into this window, then press Enter: ");
+        result.Add((Console.ReadLine() ?? "").Trim().Trim('"'));
+        Console.Write("Drag the ORIGINAL backup rom.bin in too (recommended), then press Enter: ");
+        string stock = (Console.ReadLine() ?? "").Trim().Trim('"');
+        if (stock.Length > 0)
+            result.AddRange(["--stock", stock]);
+        Console.WriteLine();
+        return [.. result];
+    }
     if (command != "drivers")
     {
         Console.Write("Use the Gen 2 read protocol? (yes for the Mazda 2 ZY87 ECU) [y/N] ");
