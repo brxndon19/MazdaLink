@@ -115,19 +115,23 @@ public sealed class ReadWorkflow
             throw new TransportException("Read-session key was not acknowledged. No retry was attempted.");
         return true;
     }
-    public BackupResult ReadBackup(IReadTransport transport, EcuIdentity expected, string vault, IProgress<ReadProgress>? progress = null, CancellationToken cancellation = default, ReadFamily unknownFamily = ReadFamily.Gen1)
-        => Capture(transport, expected, vault, progress, cancellation, unknownFamily, null);
+    public BackupResult ReadBackup(IReadTransport transport, EcuIdentity expected, string vault, IProgress<ReadProgress>? progress = null, CancellationToken cancellation = default, ReadFamily unknownFamily = ReadFamily.Gen1, int? maximumBlock = null)
+    {
+        if (maximumBlock is < 1)
+            throw new ArgumentOutOfRangeException(nameof(maximumBlock));
+        return Capture(transport, expected, vault, progress, cancellation, unknownFamily, null, maximumBlock);
+    }
 
     public string VerifyKnownImage(IReadTransport transport, EcuIdentity expected, string vault, ReadOnlySpan<byte> expectedImage,
         IProgress<ReadProgress>? progress = null, CancellationToken cancellation = default)
     {
         if (expectedImage.Length != RomInspector.RomSize)
             throw new ArgumentException("Verification requires the complete expected ROM.", nameof(expectedImage));
-        return Capture(transport, expected, vault, progress, cancellation, ReadFamily.Gen1, expectedImage.ToArray()).Path;
+        return Capture(transport, expected, vault, progress, cancellation, ReadFamily.Gen1, expectedImage.ToArray(), null).Path;
     }
 
     private BackupResult Capture(IReadTransport transport, EcuIdentity expected, string vault, IProgress<ReadProgress>? progress,
-        CancellationToken cancellation, ReadFamily unknownFamily, byte[]? expectedImage)
+        CancellationToken cancellation, ReadFamily unknownFamily, byte[]? expectedImage, int? maximumBlock)
     {
         int passes = expectedImage is null ? 2 : 1;
         if (transport.Mode == "hardware")
@@ -157,6 +161,8 @@ public sealed class ReadWorkflow
                 });
                 cancellation.ThrowIfCancellationRequested();
                 var protocol = ReadProtocol.For(identity, unknownFamily);
+                if (maximumBlock is { } limit && limit < protocol.MaximumBlock)
+                    protocol = protocol with { MaximumBlock = limit };
                 journal.Append("read_protocol", new() { ["family"] = protocol.Family.ToString(), ["session"] = protocol.Session, ["securityLevel"] = protocol.SeedLevel, ["maximumBlock"] = protocol.MaximumBlock });
                 transport.Diagnostics?.Record("read.protocol", new { family = protocol.Family.ToString(), protocol.Session, protocol.SeedLevel, protocol.MaximumBlock });
                 OpenReadSession(transport, protocol, cancellation);

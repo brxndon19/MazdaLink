@@ -24,6 +24,12 @@ This produces `publish-reader\MazdaLinkReader.exe` (32-bit, because J2534 cable 
 - Ignition ON, engine OFF. Turn off headlights, fan and accessories.
 - Use a healthy battery, or connect a battery charger.
 
+## Starting it
+
+Open PowerShell in the folder and type the commands below. You can also double-click
+`MazdaLinkReader.exe`: it shows a short menu, asks a couple of questions and waits for Enter
+before closing.
+
 ## 1. Probe
 
 ```
@@ -35,6 +41,18 @@ log), checks the engine is off, unlocks the read session once, and reads 16 byte
 and 16 bytes from the end of a 1 MiB ROM. It does not read the whole ROM.
 
 If it ends with `PROBE PASSED`, turn the ignition off and on again, then run the read.
+
+## If the probe or a read is refused: scan
+
+```
+.\MazdaLinkReader.exe scan --gen2
+```
+
+Some ECUs unlock fine but refuse the read size or address the reader asks for (`NRC 31`,
+"request out of range"). The scan unlocks once, then tries reads of 1 to 1023 bytes at the start
+of the ROM and 16-byte reads at ten addresses across 1 MiB. It prints a table of what was
+accepted, and the exact `read` command to use next, for example `read --gen2 --block 255`.
+It only sends read requests.
 
 ## 2. Read
 
@@ -56,7 +74,8 @@ it prints:
 |---|---|
 | `--adapter mongoose\|tactrix` | Cable to use. Default `mongoose`. |
 | `--driver <name or dll>` | Choose a driver when more than one is installed. `drivers` lists them. |
-| `--gen2` | Use the Gen 2 read protocol when the calibration isn't recognised. |
+| `--gen2` | Use the Gen 2 read protocol when the calibration isn't recognised. The Mazda 2 `ZY87EC000` ECU uses this. |
+| `--block <bytes>` | Read in smaller blocks. Use the size `scan` recommends. |
 | `--out <folder>` | Save ROMs and logs somewhere other than `Documents\MazdaLink`. |
 
 ## When something fails
