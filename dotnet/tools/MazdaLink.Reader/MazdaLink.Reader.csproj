@@ -5,6 +5,9 @@
     <!-- J2534 cable drivers are 32-bit DLLs, so the reader must run as a 32-bit process. -->
     <RuntimeIdentifier>win-x86</RuntimeIdentifier>
     <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <PublishTrimmed>false</PublishTrimmed>
     <AssemblyName>MazdaLinkReader</AssemblyName>
     <RootNamespace>MazdaLink.Reader</RootNamespace>
   </PropertyGroup>

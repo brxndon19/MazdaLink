@@ -62,6 +62,8 @@ jobs:
         run: |
           dotnet publish tools/MazdaLink.Reader -c Release --no-restore -o reader-publish -p:ContinuousIntegrationBuild=true
           if ($LASTEXITCODE -ne 0) { throw 'MazdaLink Reader build failed.' }
+          $unexpected = @(Get-ChildItem -LiteralPath reader-publish -File | Where-Object Name -ne 'MazdaLinkReader.exe')
+          if ($unexpected.Count -ne 0) { throw "Unexpected reader files: $($unexpected.Name -join ', ')" }
           & ./reader-publish/MazdaLinkReader.exe --help
           if ($LASTEXITCODE -ne 0) { throw 'MazdaLink Reader did not start.' }
       - name: Upload MazdaLink Reader
@@ -116,7 +118,7 @@ jobs:
           if ($result.passed -ne $true -or $result.hardwareAccessed -ne $false -or $result.rows -ne 300 -or $before -ne (Get-FileHash -LiteralPath $fixture -Algorithm SHA256).Hash) { throw 'Unexpected standalone viewer result.' }
 
       - name: Package the tested executable and exact source
-        run: ./tools/Package-Release.ps1 -Executable publish/SpeedLink.exe -Output release
+        run: ./tools/Package-Release.ps1 -Executable publish/SpeedLink.exe -Reader reader-publish/MazdaLinkReader.exe -Output release
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: ${{ inputs.release == true }}
         with:

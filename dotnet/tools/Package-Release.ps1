@@ -1,4 +1,4 @@
-param([string]$Executable = 'publish/SpeedLink.exe', [string]$Output = 'release')
+param([string]$Executable = 'publish/SpeedLink.exe', [string]$Reader = 'reader-publish/MazdaLinkReader.exe', [string]$Output = 'release')
 $ErrorActionPreference = 'Stop'
 $version = ([xml](Get-Content (Join-Path $PSScriptRoot '../Directory.Build.props') -Raw)).Project.PropertyGroup.Version
 if ($version -notmatch '^\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?$') { throw 'Invalid release version.' }
@@ -14,13 +14,14 @@ $folder = [IO.Path]::GetFullPath($Output)
 if (Test-Path -LiteralPath $folder) { throw 'Release destination must be new.' }
 New-Item -ItemType Directory -Path $folder | Out-Null
 Copy-Item -LiteralPath $Executable -Destination (Join-Path $folder 'SpeedLink.exe')
+Copy-Item -LiteralPath $Reader -Destination (Join-Path $folder 'MazdaLinkReader.exe')
 $archiveName = "SpeedLink-v$version-source.zip"
 $archive = Join-Path $folder $archiveName
 git -C $repository archive --format=zip --prefix=SpeedLink/ -o $archive HEAD
 if ($LASTEXITCODE -ne 0) { throw 'Source archive failed.' }
 & (Join-Path $PSScriptRoot 'Verify-SourceArchive.ps1') -Archive $archive -Repository $repository -Commit $commit
 $hashes = @{}
-foreach ($name in @('SpeedLink.exe', $archiveName)) { $hashes[$name] = (Get-FileHash -LiteralPath (Join-Path $folder $name) -Algorithm SHA256).Hash.ToLowerInvariant() }
+foreach ($name in @('SpeedLink.exe', 'MazdaLinkReader.exe', $archiveName)) { $hashes[$name] = (Get-FileHash -LiteralPath (Join-Path $folder $name) -Algorithm SHA256).Hash.ToLowerInvariant() }
 $manifest = [ordered]@{ schemaVersion=1; version=$version; tag="v$version"; sourceCommit=$commit; sdk=$sdk; runtime=$runtime; architecture='win-x86'; files=$hashes; ecuProgrammingEnabled=$true; programmingFamily='Gen1'; realEcuAcceptance='limited-bench' }
 $manifest | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $folder 'release.json') -Encoding utf8NoBOM
 $hashes['release.json'] = (Get-FileHash -LiteralPath (Join-Path $folder 'release.json') -Algorithm SHA256).Hash.ToLowerInvariant()
