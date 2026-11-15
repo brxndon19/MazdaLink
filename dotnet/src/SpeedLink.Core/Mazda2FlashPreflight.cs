@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 
 namespace SpeedLink.Core;
 
@@ -32,7 +33,18 @@ public static class Mazda2FlashPreflight
         if (string.IsNullOrWhiteSpace(originalPath) || string.IsNullOrWhiteSpace(modifiedPath))
             throw new ArgumentException("Select both the original ECU backup and the modified ROM.");
 
-        var original = File.ReadAllBytes(originalPath);
+        // The original must be an intact MazdaLink hardware backup, not an arbitrary
+        // same-calibration file: validate its manifest, journal, dual read captures and hash.
+        var loaded = new BackupStore().Load(originalPath, "hardware");
+        using (var manifest = JsonDocument.Parse(loaded.Manifest.ToJsonString()))
+        {
+            string? savedCalibration = manifest.RootElement.TryGetProperty("identity", out var identity) &&
+                identity.TryGetProperty("calibration", out var calibration) && calibration.ValueKind == JsonValueKind.String
+                    ? calibration.GetString() : null;
+            if (savedCalibration is null || !savedCalibration.StartsWith(Zy87Integrity.Calibration, StringComparison.Ordinal))
+                throw new InvalidDataException("The original hardware backup identity is not ZY87EC000.");
+        }
+        var original = loaded.Data;
         var modified = File.ReadAllBytes(modifiedPath);
         Zy87Integrity.RequireLayout(original);
         Zy87Integrity.RequireLayout(modified);
