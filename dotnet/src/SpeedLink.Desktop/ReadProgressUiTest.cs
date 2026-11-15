@@ -45,8 +45,9 @@ public partial class MainWindow
             !IdentityText.Text.Contains("Calibration: " + identity.Calibration, StringComparison.Ordinal))
             throw new InvalidOperationException("Connected ECU identifier/calibration is not displayed correctly.");
         Controls();
-        if (!ReadFamilyBox.IsEnabled) throw new InvalidOperationException("Read protocol cannot be selected.");
-        // The desktop defaults to Mazda 2 / Gen 2; this offline Gen 1 fixture must select its own protocol.
+        // The offline fixture must explicitly choose its protocol, even when the UI locks
+        // the selector for a recognized calibration. Disabled WPF controls remain settable
+        // programmatically; this does not enable protocol selection for the user.
         ReadFamilyBox.SelectedIndex = unknownGen2 ? 1 : 0;
         bool firstPass = false, secondPass = false, locked = false, estimate = false, reset = false;
         void Capture(string name)
