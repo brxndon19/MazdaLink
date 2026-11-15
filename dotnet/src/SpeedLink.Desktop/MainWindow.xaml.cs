@@ -69,7 +69,7 @@ public partial class MainWindow : Window
         AdapterBox.ItemsSource = new[] { "Vgate vLinker FS", "Tactrix Openport 2.0", "Mongoose-Plus ISO/CAN3 (experimental)" };
         AdapterBox.SelectedIndex = 0;
         ReadFamilyBox.ItemsSource = new[] { "Gen 1 read protocol", "Gen 2 read protocol (experimental)" };
-        ReadFamilyBox.SelectedIndex = 0;
+        ReadFamilyBox.SelectedIndex = 1;
         InitializeLogger();
         RefreshPorts();
         RefreshHistory();
@@ -417,7 +417,7 @@ public partial class MainWindow : Window
                 int offset = text.Text.IndexOf("\n## " + heading, StringComparison.Ordinal);
                 if (offset >= 0) text.ScrollToLine(text.GetLineIndexFromCharacterIndex(offset + 1));
             };
-        return new Window { Owner = owner, Title = "SpeedLink — Help & licenses", Width = 860, Height = 650, Content = panel };
+        return new Window { Owner = owner, Title = "MazdaLink — Help & licenses", Width = 860, Height = 650, Content = panel };
     }
     private void Help_Click(object sender, RoutedEventArgs e) => HelpWindow().Show();
     private bool closeApproved;
