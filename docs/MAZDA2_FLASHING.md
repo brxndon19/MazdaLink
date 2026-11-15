@@ -6,7 +6,7 @@ MazdaLink's flashing preflight is intentionally limited to the 2008 Mazda 2 DE, 
 
 ## Current implementation
 
-- Select an original full 1 MiB ECU backup and a modified 1 MiB ROM.
+- Select an original full 1 MiB hardware backup created by MazdaLink and a modified 1 MiB ROM. The original backup's manifest, completed read journal, two captured read files, and SHA-256 are validated before it is accepted.
 - Require the known ZY87EC000 identity and checksum table layout.
 - Verify all 19 independently established checksum ranges in both images.
 - Require the original and modified software identity to match.
