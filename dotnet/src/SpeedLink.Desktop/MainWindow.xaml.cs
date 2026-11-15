@@ -62,7 +62,7 @@ public partial class MainWindow : Window
         Height = Math.Min(Height, Math.Max(MinHeight, SystemParameters.WorkArea.Height));
         Navigate(0);
         Closed += (_, _) => { RecordingsPane.CancelLoading(); readProgressTimer?.Stop(); };
-        Title = $"SpeedLink · Alpha {Version}";
+        Title = $"MazdaLink · Alpha {Version}";
         VersionLabel.Text = $"ALPHA {Version}";
         BaudBox.ItemsSource = new[] { 115200, 38400, 57600, 230400, 500000, 1000000, 2000000 };
         BaudBox.SelectedItem = 115200;
@@ -254,6 +254,7 @@ public partial class MainWindow : Window
             catch { FinishReadProgress(false); throw; }
             BackupText.Text = "Verified backup: " + result.Path;
             OfferBackupForFlash(result);
+            OfferBackupForMazda2Flash(result);
             Log("Verified backup saved: " + result.Path);
             if (!result.Inspection.ProfileRecognized)
                 Log("Unknown ROM saved. The two reads match; checksum validation is unavailable for this layout.");
@@ -463,7 +464,7 @@ public partial class MainWindow : Window
         UpdateLayout();
         if (new System.Windows.Automation.Peers.TabControlAutomationPeer(Pages).GetChildren()?.Count != Pages.Items.Count)
             throw new InvalidOperationException("Workspace automation containers missing.");
-        if (Pages.Items.Count != FlashPage + 1 || !ReferenceEquals(Pages.Items[FlashPage], FlashTab) ||
+        if (Pages.Items.Count != 8 || !ReferenceEquals(Pages.Items[FlashPage], FlashTab) || !ReferenceEquals(Pages.Items[7], Mazda2FlashTab) ||
             transport is not null || image is not null || !ConnectButton.IsEnabled || ReadButton.IsEnabled || CorrectButton.IsEnabled)
             throw new InvalidOperationException("Unexpected startup state.");
         if (AdapterBox.Items.Count != 3 || AdapterBox.SelectedIndex != 0 || typeof(ReadWorkflow).Assembly.GetType("SpeedLink.Core.Simulator") is not null)
