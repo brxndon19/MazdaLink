@@ -20,6 +20,13 @@ public sealed class Mazda2FlashPreflightTests
         return Path.Combine(operationFolder, "rom.bin");
     }
 
+    private static void Cleanup(string folder)
+    {
+        foreach (string file in Directory.GetFiles(folder, "*", SearchOption.AllDirectories))
+            File.SetAttributes(file, FileAttributes.Normal);
+        Directory.Delete(folder, true);
+    }
+
     private static byte[] Synthetic(int seed = 87)
     {
         var rom = new byte[RomInspector.RomSize];
@@ -64,7 +71,7 @@ public sealed class Mazda2FlashPreflightTests
             Assert.Equal(19, result.OriginalChecksums.Count);
             Assert.Equal(19, result.ModifiedChecksums.Count);
         }
-        finally { Directory.Delete(folder, true); }
+        finally { Cleanup(folder); }
     }
 
     [Theory]
