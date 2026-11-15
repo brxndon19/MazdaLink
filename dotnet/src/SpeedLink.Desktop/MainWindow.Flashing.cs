@@ -29,6 +29,7 @@ public partial class MainWindow
     }
 
     private void Gen1Flash_Click(object sender, RoutedEventArgs e) => Navigate(FlashPage);
+    private void Mazda2Flash_Click(object sender, RoutedEventArgs e) => Navigate(Mazda2FlashPage);
 
     private const int Mazda2FlashPage = 7;
     private Mazda2FlashWorkspace? mazda2FlashWorkspace;
@@ -50,7 +51,7 @@ public partial class MainWindow
 
     private void OfferBackupForMazda2Flash(BackupResult result)
     {
-        if (result.Inspection.Calibration == Zy87Integrity.Calibration && result.Inspection.Size == RomInspector.RomSize)
+        if (result.Inspection.Size == RomInspector.RomSize)
         {
             try
             {
