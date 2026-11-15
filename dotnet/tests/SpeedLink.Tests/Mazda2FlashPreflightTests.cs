@@ -92,7 +92,7 @@ public sealed class Mazda2FlashPreflightTests
             File.WriteAllBytes(b, modified);
             Assert.Throws<InvalidDataException>(() => Mazda2FlashPreflight.Analyze(a, b));
         }
-        finally { Directory.Delete(folder, true); }
+        finally { Cleanup(folder); }
     }
 
     [Fact]
@@ -125,6 +125,6 @@ public sealed class Mazda2FlashPreflightTests
             File.WriteAllBytes(b, modified);
             Assert.Throws<InvalidDataException>(() => Mazda2FlashPreflight.Analyze(a, b));
         }
-        finally { Directory.Delete(folder, true); }
+        finally { Cleanup(folder); }
     }
 }
