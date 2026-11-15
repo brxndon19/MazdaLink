@@ -35,7 +35,12 @@ public static class Mazda2FlashPreflight
 
         // The original must be an intact MazdaLink hardware backup, not an arbitrary
         // same-calibration file: validate its manifest, journal, dual read captures and hash.
-        var loaded = new BackupStore().Load(originalPath, "hardware");
+        LoadedBackup loaded;
+        try { loaded = new BackupStore().Load(originalPath, "hardware"); }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or JsonException or InvalidOperationException or ArgumentException)
+        {
+            throw new InvalidDataException("The original must be a complete, intact MazdaLink hardware backup (rom.bin) with its manifest, read journal and two matching capture files.", error);
+        }
         using (var manifest = JsonDocument.Parse(loaded.Manifest.ToJsonString()))
         {
             string? savedCalibration = manifest.RootElement.TryGetProperty("identity", out var identity) &&
