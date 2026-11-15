@@ -89,6 +89,7 @@ public partial class MainWindow : Window
         ApplicationMenu.IsEnabled = Navigation.IsEnabled = NavigationToggle.IsEnabled = !flashUsingAdapter;
         flashWorkspace?.SetConnectionUnavailable(busy || closing || exportingReport || transport is not null);
         FlashBackupButton.IsEnabled = idle && handoffBackup is not null;
+        Mazda2FlashBackupButton.IsEnabled = idle && handoffMazda2Backup is not null;
         DefinitionsButton.IsEnabled = idle && transport is null;
         CrashReportsButton.IsEnabled = idle;
         SessionText.Text = transport is null ? "Offline" : identity?.Calibration ?? "Adapter connected";
@@ -393,7 +394,7 @@ public partial class MainWindow : Window
         return reader.ReadToEnd();
     }
     private void About_Click(object sender, RoutedEventArgs e) => MessageBox.Show(this,
-        Resource("SpeedLink.About.txt").Replace("{version}", Version).Replace("{runtime}", Environment.Version.ToString()), "About SpeedLink");
+        Resource("SpeedLink.About.txt").Replace("{version}", Version).Replace("{runtime}", Environment.Version.ToString()), "About MazdaLink");
     private Window HelpWindow(string document = "Getting started") => HelpWindow(document, null, this);
     internal static Window HelpWindow(string document, string? heading, Window? owner)
     {
