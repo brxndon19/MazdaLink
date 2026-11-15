@@ -494,6 +494,10 @@ public partial class MainWindow : Window
         if (AdapterNote.Visibility != Visibility.Collapsed || DriverBox.Items.Cast<J2534Driver>().Any(d => d.Kind != J2534AdapterKind.Tactrix))
             throw new InvalidOperationException("Experimental driver selection leaked into the Tactrix path.");
         AdapterBox.SelectedIndex = 0;
+        Navigate(7); UpdateLayout();
+        if (Mazda2FlashTab.Content is not Mazda2FlashWorkspace || transport is not null)
+            throw new InvalidOperationException("Mazda 2 dry-run workspace did not open safely.");
+        Navigate(0); UpdateLayout();
         VerifyLoggerSmoke(args);
         if (!Resource("SpeedLink.About.txt").Contains("{version}", StringComparison.Ordinal))
             throw new InvalidDataException("About resource missing.");
@@ -535,6 +539,9 @@ public partial class MainWindow : Window
                 runtimeVersion = Environment.Version.ToString(),
                 framework = "WPF / .NET 10",
                 pages = Pages.Items.Count,
+                mazda2FlashWorkspace = Mazda2FlashTab.Content is Mazda2FlashWorkspace,
+                mazda2LiveProgrammingEnabled = false,
+                mazda2FactoryRecoveryEnabled = false,
                 loggerChannels = loggerRows.Count,
                 loggerProfiles = LoggerDefinition.Known.Count,
                 editorDefinitions = definitionSnapshot.Editors.Count,
