@@ -6,6 +6,20 @@ namespace SpeedLink.Tests;
 
 public sealed class Mazda2FlashPreflightTests
 {
+    private static string CreateVerifiedBackup(string folder, byte[] rom)
+    {
+        var store = new BackupStore();
+        var (operationFolder, journal) = store.CreateOperation(folder, "hardware", "read_backup");
+        var hash = RomInspector.Hash(rom);
+        File.WriteAllBytes(Path.Combine(operationFolder, "pass1.read"), rom);
+        File.WriteAllBytes(Path.Combine(operationFolder, "pass2.read"), rom);
+        journal.Append("completed", new() { ["sha256"] = hash });
+        journal.Dispose();
+        var identity = new EcuIdentity("hardware", "test", "TESTVIN00000000000", "ZY87EC000ZYV5050");
+        store.Seal(operationFolder, rom, identity, new RomInspector().Inspect(rom), hash, hash, "hardware");
+        return Path.Combine(operationFolder, "rom.bin");
+    }
+
     private static byte[] Synthetic(int seed = 87)
     {
         var rom = new byte[RomInspector.RomSize];
@@ -35,9 +49,8 @@ public sealed class Mazda2FlashPreflightTests
             modified[0x0C1000] ^= 0x10;
             modified[0x0D2000] ^= 0x01;
             modified = Zy87Integrity.Correct(modified);
-            string originalPath = Path.Combine(folder, "original.rom");
+            string originalPath = CreateVerifiedBackup(folder, original);
             string modifiedPath = Path.Combine(folder, "modified.rom");
-            File.WriteAllBytes(originalPath, original);
             File.WriteAllBytes(modifiedPath, modified);
 
             var result = Mazda2FlashPreflight.Analyze(originalPath, modifiedPath);
@@ -68,8 +81,8 @@ public sealed class Mazda2FlashPreflightTests
             var modified = original.ToArray();
             modified[address] ^= 0x01;
             modified = Zy87Integrity.Correct(modified);
-            string a = Path.Combine(folder, "a.rom"), b = Path.Combine(folder, "b.rom");
-            File.WriteAllBytes(a, original); File.WriteAllBytes(b, modified);
+            string a = CreateVerifiedBackup(folder, original), b = Path.Combine(folder, "b.rom");
+            File.WriteAllBytes(b, modified);
             Assert.Throws<InvalidDataException>(() => Mazda2FlashPreflight.Analyze(a, b));
         }
         finally { Directory.Delete(folder, true); }
@@ -85,8 +98,8 @@ public sealed class Mazda2FlashPreflightTests
             var original = Synthetic();
             var modified = original.ToArray();
             modified[0x0C1000] ^= 0x10;
-            string a = Path.Combine(folder, "a.rom"), b = Path.Combine(folder, "b.rom");
-            File.WriteAllBytes(a, original); File.WriteAllBytes(b, modified);
+            string a = CreateVerifiedBackup(folder, original), b = Path.Combine(folder, "b.rom");
+            File.WriteAllBytes(b, modified);
             Assert.Throws<InvalidDataException>(() => Mazda2FlashPreflight.Analyze(a, b));
         }
         finally { Directory.Delete(folder, true); }
