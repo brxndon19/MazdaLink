@@ -45,11 +45,9 @@ public partial class MainWindow
             !IdentityText.Text.Contains("Calibration: " + identity.Calibration, StringComparison.Ordinal))
             throw new InvalidOperationException("Connected ECU identifier/calibration is not displayed correctly.");
         Controls();
-        if (unknownGen2)
-        {
-            if (!ReadFamilyBox.IsEnabled) throw new InvalidOperationException("Unknown ROM protocol cannot be selected.");
-            ReadFamilyBox.SelectedIndex = 1;
-        }
+        if (!ReadFamilyBox.IsEnabled) throw new InvalidOperationException("Read protocol cannot be selected.");
+        // The desktop defaults to Mazda 2 / Gen 2; this offline Gen 1 fixture must select its own protocol.
+        ReadFamilyBox.SelectedIndex = unknownGen2 ? 1 : 0;
         bool firstPass = false, secondPass = false, locked = false, estimate = false, reset = false;
         void Capture(string name)
         {
