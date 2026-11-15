@@ -12,6 +12,7 @@ public partial class MainWindow
     private FlashBackupLibrary flashBackups = null!;
     private FlashWorkspace? flashWorkspace;
     private string? handoffBackup;
+    private string? handoffMazda2Backup;
 
     private FlashWorkspace ShowFlashWorkspace(FlashWorkspace? workspace = null)
     {
@@ -28,6 +29,45 @@ public partial class MainWindow
     }
 
     private void Gen1Flash_Click(object sender, RoutedEventArgs e) => Navigate(FlashPage);
+
+    private const int Mazda2FlashPage = 7;
+    private Mazda2FlashWorkspace? mazda2FlashWorkspace;
+
+    private void ShowMazda2FlashWorkspace()
+    {
+        if (mazda2FlashWorkspace is not null) return;
+        mazda2FlashWorkspace = new Mazda2FlashWorkspace();
+        Mazda2FlashTab.Content = mazda2FlashWorkspace;
+    }
+
+    private void OpenBackupInMazda2Flash_Click(object sender, RoutedEventArgs e)
+    {
+        if (handoffMazda2Backup is null || !Mazda2FlashBackupButton.IsEnabled) return;
+        Navigate(Mazda2FlashPage);
+        ShowMazda2FlashWorkspace();
+        mazda2FlashWorkspace!.UseOriginalBackup(handoffMazda2Backup);
+    }
+
+    private void OfferBackupForMazda2Flash(BackupResult result)
+    {
+        if (result.Inspection.Calibration == Zy87Integrity.Calibration && result.Inspection.Size == RomInspector.RomSize)
+        {
+            try
+            {
+                var checks = Zy87Integrity.Check(File.ReadAllBytes(result.Path));
+                if (checks.All(check => check.Valid))
+                {
+                    handoffMazda2Backup = result.Path;
+                    Mazda2FlashBackupButton.Visibility = Visibility.Visible;
+                    return;
+                }
+            }
+            catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException)
+            { Log("Mazda 2 backup could not be prevalidated for flash preflight: " + error.Message); }
+        }
+        handoffMazda2Backup = null;
+        Mazda2FlashBackupButton.Visibility = Visibility.Collapsed;
+    }
 
     private void OpenBackupInFlash_Click(object sender, RoutedEventArgs e)
     {
