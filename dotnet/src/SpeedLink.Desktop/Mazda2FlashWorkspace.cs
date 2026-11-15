@@ -14,12 +14,10 @@ internal sealed class Mazda2FlashWorkspace : UserControl
     private readonly TextBlock report = new() { TextWrapping = TextWrapping.Wrap, Margin = new(0, 12, 0, 12) };
     private readonly TextBlock recovery = new() { TextWrapping = TextWrapping.Wrap, Margin = new(0, 8, 0, 0) };
     private readonly Button run = new() { Content = "Validate & run dry-run", MinWidth = 190 };
-    private readonly RomInspector inspector;
     private string? preferredOriginal;
 
-    internal Mazda2FlashWorkspace(RomInspector inspector)
+    internal Mazda2FlashWorkspace()
     {
-        this.inspector = inspector;
         Background = UiTheme.Panel;
         Foreground = UiTheme.Text;
         var panel = new StackPanel { Margin = new(22), MaxWidth = 1050 };
@@ -39,7 +37,7 @@ internal sealed class Mazda2FlashWorkspace : UserControl
         report.FontFamily = new System.Windows.Media.FontFamily("Consolas");
         panel.Children.Add(report);
         panel.Children.Add(new TextBlock { Text = "Factory recovery research", FontSize = 18, FontWeight = FontWeights.SemiBold, Margin = new(0, 22, 0, 4) });
-        recovery.Text = "RESEARCH ONLY — The SH7058 silicon documents a hardware-selected boot mode using MD/FWE mode pins and its SCI serial interface. This is distinct from the ECU's normal CAN/OBD read session. We have not yet verified the Mazda 2 ECU board pinout, watchdog requirements, connector wiring, or exact boot command sequence. Do not enter this mode experimentally: Renesas documents automatic full flash erasure when boot mode is selected. Recovery must remain disabled until the exact ECU-level procedure and a successful bench recovery are independently verified.";
+        recovery.Text = "RESEARCH ONLY — The SH7058 silicon documents a hardware-selected boot mode using MD/FWE mode pins and its SCI serial interface. This is distinct from the ECU's normal CAN/OBD read session. We have not yet verified the Mazda 2 ECU board pinout, watchdog requirements, connector wiring, or exact boot command sequence. Do not enter this mode experimentally: the full user MAT and user boot MAT are erased after the inquiry/selection phase, before programming starts. Recovery must remain disabled until the exact ECU-level procedure and a successful bench recovery are independently verified.";
         panel.Children.Add(recovery);
         if (preferredOriginal is not null) original.Text = preferredOriginal;
     }
