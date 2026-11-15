@@ -96,6 +96,22 @@ public sealed class Mazda2FlashPreflightTests
     }
 
     [Fact]
+    public void RejectsAnOriginalRomThatIsNotAnIntactHardwareBackup()
+    {
+        string folder = Path.Combine(Path.GetTempPath(), "Mazda2FlashPreflight-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(folder);
+        try
+        {
+            string original = Path.Combine(folder, "not-a-backup.rom");
+            string modified = Path.Combine(folder, "modified.rom");
+            File.WriteAllBytes(original, Synthetic());
+            File.WriteAllBytes(modified, Synthetic(88));
+            Assert.Throws<InvalidDataException>(() => Mazda2FlashPreflight.Analyze(original, modified));
+        }
+        finally { Cleanup(folder); }
+    }
+
+    [Fact]
     public void RejectsUncorrectedModifiedChecksum()
     {
         string folder = Path.Combine(Path.GetTempPath(), "Mazda2FlashPreflight-" + Guid.NewGuid().ToString("N"));
