@@ -1,4 +1,15 @@
-# SpeedLink requirements
+# MazdaLink requirements
+
+## Product scope
+
+- The current product is the independent terminal application in `dotnet/src/MazdaLink*`.
+  Ship only `MazdaLink.exe`, never the legacy desktop or reader binaries.
+- Enforce the exact `ZY87EC000ZYV5050` identity before ECU unlock/read operations and
+  verify it in captured ROM bytes. No user protocol/target override is permitted.
+- MazdaLink has no enabled flash/recovery implementation. A flash command must refuse
+  before driver open; do not infer a Mazda 2 writer from generic UDS or Gen 1 code.
+- Preserve original GPL credits. Legacy sources/definitions and their core integrity
+  regression matrix remain archived in place, but are not application dependencies.
 
 ## Reliability and releases
 
@@ -38,8 +49,8 @@
 - Raw ECU backups must preserve the captured bytes exactly. Apply checksum
   correction to editor exports; retain immutable original read captures.
 
-ECU programming is limited to the bundled Gen 1 profiles and the separate
-programming workflow. Keep the reader and logger allowlists read-only and keep
+Legacy ECU programming remains limited to its bundled Gen 1 profiles and separate
+archived workflow; none of that code is shipped in MazdaLink. Keep the reader and logger allowlists read-only and keep
 Gen 2 programming disabled until independently qualified. Do not publish ROM
 binaries, private research, customer data, proprietary material or local evidence
 paths.
