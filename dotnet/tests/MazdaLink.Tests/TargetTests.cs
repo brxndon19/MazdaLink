@@ -34,6 +34,7 @@ public sealed class TargetTests
     {
         public string Identity { get; set; } = TargetPolicy.SoftwareId;
         public List<byte[]> Requests { get; } = [];
+        public Action<byte[]>? OnRequest { get; set; }
         public int Rpm { get; set; }
         public bool Mismatch { get; set; }
         public bool Short { get; set; }
@@ -42,7 +43,7 @@ public sealed class TargetTests
         public byte[] Exchange(byte[] r)
         {
             DiagnosticProtocol.CheckReadOnly(r);
-            Requests.Add(r.ToArray());
+            Requests.Add(r.ToArray()); OnRequest?.Invoke(r);
             return r[0] switch
             {
                 9 => [0x49, 4, 1, .. Encoding.ASCII.GetBytes(++identities > IdentityChangesAfter ? "L38KEH000" : Identity)],
@@ -164,6 +165,22 @@ public sealed class TargetTests
         Assert.Equal(1,terminal.Run(["read","--gen2"]));Assert.Equal(1,terminal.Run(["flash","anything.rom"]));Assert.Equal(0,opens);
         Assert.DoesNotContain("SpeedLink",Terminal.Help);Assert.Contains(TargetPolicy.SoftwareId,Terminal.Help);
         Assert.DoesNotContain(typeof(ReadWorkflow).Assembly.GetReferencedAssemblies(),a=>a.Name!.StartsWith("SpeedLink"));
+    }
+    [Fact]
+    public void CancellationDuringSessionPreventsTheNextSecurityRequest()
+    {
+        using var folder=new Folder();using var cancel=new CancellationTokenSource();using var peer=new Peer(Image());
+        peer.OnRequest=r=>{if(r[0]==0x10)cancel.Cancel();};
+        Assert.Throws<OperationCanceledException>(()=>new ReadWorkflow().Capture(peer,folder.Path,cancel:cancel.Token));
+        Assert.DoesNotContain(peer.Requests,r=>r[0] is 0x27 or 0x23);
+    }
+    [Fact]
+    public void OnlyRegisteredMongooseIsoCanDriversMatch()
+    {
+        Assert.True(J2534Drivers.AcceptsRegistration(J2534AdapterKind.MongoosePlusIsoCan3,"Mongoose-Plus ISO/CAN3","DrewTech",true));
+        Assert.False(J2534Drivers.AcceptsRegistration(J2534AdapterKind.MongoosePlusIsoCan3,"Openport 2.0","Tactrix",true));
+        Assert.False(J2534Drivers.AcceptsRegistration(J2534AdapterKind.MongoosePlusIsoCan3,"Mongoose-Plus ISO/CAN3","DrewTech",false));
+        Assert.DoesNotContain(typeof(J2534ReadTransport).Assembly.GetReferencedAssemblies(),a=>a.Name!.StartsWith("SpeedLink"));
     }
     private sealed class Channel(string identity):IJ2534Channel
     {

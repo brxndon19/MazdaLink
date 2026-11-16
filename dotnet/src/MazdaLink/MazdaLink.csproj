@@ -8,5 +8,7 @@
     <ProjectReference Include="../MazdaLink.Core/MazdaLink.Core.csproj"/><ProjectReference Include="../MazdaLink.J2534/MazdaLink.J2534.csproj"/>
     <EmbeddedResource Include="../../../LICENSE" LogicalName="MazdaLink.LICENSE"/>
     <EmbeddedResource Include="../../../ATTRIBUTIONS.md" LogicalName="MazdaLink.ATTRIBUTIONS"/>
+    <EmbeddedResource Include="$(NuGetPackageRoot)/microsoft.netcore.app.runtime.win-x86/$(RuntimeFrameworkVersion)/LICENSE.TXT" LogicalName="MazdaLink.Runtime.LICENSE"/>
+    <EmbeddedResource Include="$(NuGetPackageRoot)/microsoft.netcore.app.runtime.win-x86/$(RuntimeFrameworkVersion)/THIRD-PARTY-NOTICES.TXT" LogicalName="MazdaLink.Runtime.NOTICES"/>
   </ItemGroup>
 </Project>

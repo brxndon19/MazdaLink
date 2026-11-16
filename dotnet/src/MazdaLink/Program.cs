@@ -9,7 +9,7 @@ try
 {
     if (args.SequenceEqual(new[] { "license" }))
     {
-        foreach (string resource in new[] { "MazdaLink.ATTRIBUTIONS", "MazdaLink.LICENSE" })
+        foreach (string resource in new[] { "MazdaLink.ATTRIBUTIONS", "MazdaLink.LICENSE", "MazdaLink.Runtime.LICENSE", "MazdaLink.Runtime.NOTICES" })
         {
             using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(resource)!;
             using var reader = new StreamReader(stream); Console.WriteLine(reader.ReadToEnd());

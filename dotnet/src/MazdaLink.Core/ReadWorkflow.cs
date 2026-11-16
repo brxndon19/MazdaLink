@@ -6,8 +6,14 @@ namespace MazdaLink.Core;
 
 public sealed class ReadWorkflow
 {
+    private sealed class CancellableLink(IReadTransport inner, CancellationToken cancellation) : IReadTransport
+    {
+        public byte[] Exchange(byte[] request) { cancellation.ThrowIfCancellationRequested(); return inner.Exchange(request); }
+        public void Dispose() => inner.Dispose();
+    }
     public string Capture(IReadTransport link, string root, Action<int, int>? progress = null, CancellationToken cancel = default)
     {
+        link = new CancellableLink(link, cancel);
         cancel.ThrowIfCancellationRequested();
         TargetPolicy.Identify(link); // No unlock or memory request before exact identity match.
         byte[] rpm = link.Exchange([1, 0x0C]);

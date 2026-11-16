@@ -5,5 +5,6 @@ $passed = @($run.TestRun.Results.UnitTestResult | Where-Object outcome -eq 'Pass
 foreach ($name in @('MazdaLink.Tests.TargetTests.EveryPrepareCorrectsAllRangesVerifiesDiskAndPreservesInputs','MazdaLink.Tests.TargetTests.ReadsBothPassesAt512AndExportsExactBytesWithNoOverwrite','MazdaLink.Tests.TargetTests.TransportRequiresExactIdentityBeforeSecurityEvenForDirectCalls','MazdaLink.Tests.TargetTests.MenuAndCommandsCannotOpenHardwareForFlashingOrOverrides')) {
     if ($passed -notcontains $name) { throw "Missing mandatory MazdaLink integrity/scope case: $name" }
 }
+if ([int]$run.TestRun.ResultSummary.Counters.total -lt 35) { throw 'Focused scope/integrity matrix is incomplete.' }
 if ([int]$run.TestRun.ResultSummary.Counters.failed -ne 0 -or [int]$run.TestRun.ResultSummary.Counters.notExecuted -ne 0) { throw 'Focused test suite has failures or skipped tests.' }
 Write-Output 'Exact-target, all-19-range correction/readback, raw-export and no-programming gates passed.'
