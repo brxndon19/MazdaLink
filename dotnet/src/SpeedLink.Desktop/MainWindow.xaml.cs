@@ -27,6 +27,7 @@ public partial class MainWindow : Window
     private EcuIdentity? identity;
     private byte[]? image;
     private string? imagePath;
+    private string? exportBackupPath;
     private RomInspection? inspection;
     private bool busy, closing;
     private CancellationTokenSource? stop;
@@ -88,6 +89,7 @@ public partial class MainWindow : Window
         bool idle = !busy && !closing && !exportingReport && !flashUsingAdapter;
         ApplicationMenu.IsEnabled = Navigation.IsEnabled = NavigationToggle.IsEnabled = !flashUsingAdapter;
         flashWorkspace?.SetConnectionUnavailable(busy || closing || exportingReport || transport is not null);
+        ExportBackupButton.IsEnabled = idle && exportBackupPath is not null;
         FlashBackupButton.IsEnabled = idle && handoffBackup is not null;
         Mazda2FlashBackupButton.IsEnabled = idle && handoffMazda2Backup is not null;
         DefinitionsButton.IsEnabled = idle && transport is null;
@@ -99,7 +101,9 @@ public partial class MainWindow : Window
         ReadButton.ToolTip = loggerReadReconnectRequired ? "Disconnect and reconnect before reading a ROM after logging." : "Read and verify two matching copies of the ECU ROM.";
         var readProfiles = RomInspector.KnownProfiles.Where(p => RomInspector.MatchesCalibrationId(p, identity?.Calibration)).ToArray();
         if (readProfiles.Length == 1) ReadFamilyBox.SelectedIndex = readProfiles[0].Family == "Gen2" ? 1 : 0;
-        ReadFamilyBox.IsEnabled = idle && readProfiles.Length == 0;
+        bool mazda2 = ReadProtocol.IsMazda2(identity?.Calibration);
+        if (mazda2) ReadFamilyBox.SelectedIndex = 1;
+        ReadFamilyBox.IsEnabled = idle && readProfiles.Length == 0 && !mazda2;
         StopButton.IsEnabled = busy;
         OpenRomButton.IsEnabled = idle;
         CorrectButton.IsEnabled = idle && inspection?.CanCorrectChecksum == true;
@@ -253,6 +257,7 @@ public partial class MainWindow : Window
             }
             catch (OperationCanceledException) { FinishReadProgress(false, stopped: true); throw; }
             catch { FinishReadProgress(false); throw; }
+            exportBackupPath = result.Path;
             BackupText.Text = "Verified backup: " + result.Path;
             OfferBackupForFlash(result);
             OfferBackupForMazda2Flash(result);
@@ -264,6 +269,21 @@ public partial class MainWindow : Window
             StatusText.Text = "Backup verified · two matching reads";
             RefreshHistory();
         });
+    }
+    private void ExportBackup_Click(object sender, RoutedEventArgs e)
+    {
+        if (exportBackupPath is null || !ExportBackupButton.IsEnabled) return;
+        var dialog = new SaveFileDialog
+        {
+            Title = "Save raw verified backup", FileName = "Mazda2-backup.rom", DefaultExt = ".rom",
+            Filter = "ROM image|*.rom|Binary image|*.bin"
+        };
+        if (dialog.ShowDialog(this) == true)
+            TryFile(() =>
+            {
+                BackupExport.SaveNew(exportBackupPath, dialog.FileName);
+                Log("Saved byte-for-byte verified backup: " + dialog.FileName);
+            });
     }
     private void Stop_Click(object sender, RoutedEventArgs e)
     {

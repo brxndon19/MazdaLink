@@ -1,7 +1,7 @@
 # MazdaLink Reader
 
 A small, read-only command-line tool that reads the ROM from a Mazda ECU over a J2534 cable
-and saves it as a `.bin` you can open in EcuFlash or another editor.
+and saves it as a `.rom` you can open in EcuFlash or another editor.
 
 It uses the same cable code and read workflow as the desktop app. Every request passes
 through the read-only filter (`DiagnosticProtocol.CheckReadOnly`), which blocks erase, write
@@ -63,7 +63,7 @@ It only sends read requests.
 The reader reads the whole ROM twice and only saves it if both passes match. When it finishes,
 it prints:
 
-- **ROM to edit**: `Documents\MazdaLink\<calibration>_<date>.bin`. Open copies of this in your editor.
+- **ROM to edit**: `Documents\MazdaLink\<calibration>_<date>.rom`. Open copies of this in your editor.
 - **Original backup**: a read-only folder under `Documents\MazdaLink\backups\` with the matching
   captures, a manifest and the read journal. Keep this safe; it is your stock ROM.
 - Whether a bundled definition matches your calibration, and whether the ROM's checksum is valid.
@@ -86,7 +86,7 @@ You can also drag the edited `.bin` onto `MazdaLinkReader.exe`, or choose **5** 
   reads it back and verifies all 19 ranges. It never overwrites a file.
 - Running it on an untouched original reports `CHECKSUM OK`, which is a good first test.
 
-Flash only the `_checksum-fixed.bin` file. The reader itself never writes to the ECU.
+Checksum correction does not establish programming support. Mazda 2 flashing is not implemented; do not attempt to use the Gen 1 programmer. The output preserves a `.rom` input extension (otherwise `.bin`). The reader itself never writes to the ECU.
 
 ## Options
 
@@ -94,7 +94,7 @@ Flash only the `_checksum-fixed.bin` file. The reader itself never writes to the
 |---|---|
 | `--adapter mongoose\|tactrix` | Cable to use. Default `mongoose`. |
 | `--driver <name or dll>` | Choose a driver when more than one is installed. `drivers` lists them. |
-| `--gen2` | Use the Gen 2 read protocol when the calibration isn't recognised. The Mazda 2 `ZY87EC000` ECU uses this. |
+| `--gen2` | Use the Gen 2 read protocol when the calibration isn't recognised. Known Mazda 2 `ZY87EC000` / `ZY87EC000ZYV5050` IDs select this automatically, with a 512-byte limit. |
 | `--block <bytes>` | Read in smaller blocks. Use the size `scan` recommends. |
 | `--out <folder>` | Save ROMs and logs somewhere other than `Documents\MazdaLink`. |
 

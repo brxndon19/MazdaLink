@@ -230,12 +230,8 @@ static async Task<int> RunAsync(string[] args)
             Console.WriteLine();
             var inspection = backup.Inspection;
             string calibration = string.Concat((inspection.Calibration ?? identity.Calibration ?? "unknown").Where(char.IsLetterOrDigit));
-            string copy = Path.Combine(root, $"{calibration}_{DateTime.Now:yyyyMMdd-HHmmss}.bin");
-            using (var source = File.OpenRead(backup.Path))
-            using (var target = new FileStream(copy, FileMode.CreateNew, FileAccess.Write))
-                source.CopyTo(target);
-            if (RomInspector.Hash(File.ReadAllBytes(copy)) != inspection.Sha256)
-                throw new InvalidDataException("The saved copy does not match the verified backup.");
+            string copy = Path.Combine(root, $"{calibration}_{DateTime.Now:yyyyMMdd-HHmmss}.rom");
+            BackupExport.SaveNew(backup.Path, copy);
             Console.WriteLine();
             Console.WriteLine("READ COMPLETE · both reads matched");
             Console.WriteLine($"ROM to edit:      {copy}");
@@ -325,7 +321,7 @@ static int FixChecksum(string? inputFile, string? stockFile)
         foreach (var range in failing)
             Console.WriteLine($"Range {range.Index} (0x{range.Start:X6}-0x{range.End:X6}) needs correcting.");
         byte[] corrected = Zy87Integrity.Correct(edited);
-        string output = Path.Combine(Path.GetDirectoryName(input)!, Path.GetFileNameWithoutExtension(input) + "_checksum-fixed.bin");
+        string output = Path.Combine(Path.GetDirectoryName(input)!, Path.GetFileNameWithoutExtension(input) + "_checksum-fixed" + (Path.GetExtension(input).Equals(".rom", StringComparison.OrdinalIgnoreCase) ? ".rom" : ".bin"));
         if (File.Exists(output))
             throw new IOException($"{Path.GetFileName(output)} already exists. Move or rename it first; existing files are never overwritten.");
         string partial = output + ".partial";

@@ -7,7 +7,7 @@ public sealed class ReadScanTests
     // Seed and key from a real ZY87EC000 (Mazda 2, ZY-VE) Gen 2 read session that the ECU accepted.
     private static TestEcu Mazda2(Func<int, int, bool> rejects) => new(Fixture.Rom)
     {
-        ReportedCalibration = "ZY87EC000ZYV5050",
+        ReportedCalibration = "UNRECOGNIZED",
         FamilyOverride = ReadFamily.Gen2,
         Seed = [0x1C, 0x2C, 0x75],
         ModifyResponse = (request, response) =>
@@ -35,6 +35,35 @@ public sealed class ReadScanTests
         Assert.Empty(ecu.Programs);
         foreach (var request in ecu.Requests)
             DiagnosticProtocol.CheckReadOnly(request, 3968);
+    }
+
+    [Theory]
+    [InlineData("ZY87EC000")]
+    [InlineData("ZY87EC000ZYV5050")]
+    public void Mazda2AutomaticallyUsesObservedSessionAnd512ByteBlocks(string calibration)
+    {
+        using var ecu = Mazda2((_, count) => count > 512);
+        ecu.ReportedCalibration = calibration;
+        using var vault = new TempFolder();
+        var identity = ReadWorkflow.Identify(ecu);
+        var result = new ReadWorkflow().ReadBackup(ecu, identity, vault.Path);
+        Assert.Equal(RomInspector.Hash(Fixture.Rom), result.Inspection.Sha256);
+        var reads = ecu.Requests.Where(r => r[0] == 0x23).ToArray();
+        Assert.Equal(4096, reads.Length); // two complete 1 MiB passes
+        Assert.All(reads, r => Assert.Equal(512, System.Buffers.Binary.BinaryPrimitives.ReadUInt16BigEndian(r.AsSpan(6))));
+        Assert.DoesNotContain(ecu.Requests, r => Convert.ToHexString(r) == "1087");
+        Assert.Single(ecu.Requests, r => r.Length == 5 && r[0] == 0x27);
+        Assert.Contains(ecu.Requests, r => Convert.ToHexString(r) == "2704F9624C");
+        Assert.Empty(ecu.Programs);
+    }
+
+    [Theory]
+    [InlineData("ZY87EC000X")]
+    [InlineData("ZY87EC000ZYV9999")]
+    public void UnverifiedMazda2IdentifiersDoNotAutomaticallySelectAProtocol(string calibration)
+    {
+        Assert.False(ReadProtocol.IsMazda2(calibration));
+        Assert.Equal(ReadFamily.Gen1, ReadProtocol.For(new("test", "fixture", null, calibration)).Family);
     }
 
     [Fact]

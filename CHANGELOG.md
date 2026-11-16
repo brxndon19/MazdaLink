@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.8.0-alpha.12
+
+- Automatically select the observed ZY87EC000 Mazda 2 read session and 512-byte block limit; reject automatic matching of unverified software IDs.
+- Add verified raw `.rom` backup export in the desktop app and use `.rom` for reader exports. Preserve original capture bytes and existing files; verify the export on disk before publishing its filename.
+- Include the Mazda 2 offline flash preflight workspace from the existing development branch. Mazda 2 erase, programming and recovery remain disabled; only Gen 1 has a live programming workflow.
+- Restore the Gen 1 menu/guide and sidebar destination removed by the Mazda 2 workspace change, and check both workspaces in Windows menu smoke tests.
+- Preserve `.rom` extensions when correcting externally edited files with the reader. Research documents and ROM binaries are excluded from the release.
+
+Testing scope: synthetic regression and Windows standalone/UI checks. No physical Mazda 2 ECU, Mongoose cable, Windows 10 installation, or vehicle programming qualification is supplied by CI.
+
 ## 0.8.0-alpha.11
 
 - Add **MazdaLinkReader.exe**, a read-only command-line ROM reader for the Mongoose-Plus ISO/CAN3 or Tactrix cable. `probe` checks access, `scan` finds the read sizes an ECU accepts, and `read` saves the ROM only after two matching reads. Double-click it for a menu.

@@ -36,6 +36,15 @@ session and can run with the engine running. Read-only query and recording
 workflows passed on one L3M6EG000 bench ECU. Running-engine rates and physical
 sensor accuracy remain to be checked.
 
+## Mazda 2 DE ZY87EC000
+
+Known ZY87EC000 identifiers automatically select read session 10 03, security 27 03/04,
+and a maximum 512-byte block. The desktop exports exact raw `.rom` copies after two
+matching full reads; the original backup folder is retained. The separate Mazda 2
+preflight checks modified images offline. Mazda 2 ECU programming and recovery
+remain disabled. Use MazdaLinkReader's checksum command for externally edited ZY87
+images; this ECU has no bundled desktop editor definition.
+
 ## Offline ROM editing
 
 Open **Editor**. The ten bundled tuning
