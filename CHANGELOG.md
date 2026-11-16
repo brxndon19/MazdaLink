@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.9.0-alpha.1
+
+- Replace the user-facing release with the independent MazdaLink terminal app. No SpeedLink desktop/reader executable, general editor, logger or other-car programmer is shipped.
+- Restrict live access to exactly ZY87EC000ZYV5050. Missing, shortened and different software IDs fail before unlock; the transport and captured memory identity are independently checked.
+- Add a focused Mongoose-only J2534 path with a strict 512-byte, read-only protocol gate and no Gen 1 programming dependency.
+- Add matching two-pass raw ROM backups, completed journals, immutable originals and non-overwriting verified `.rom` export.
+- Prepare externally edited calibration-only ROMs through mandatory correction/verification of all 19 checksum words and durable file readback.
+- Keep Mazda 2 flashing/recovery unavailable. Flash commands refuse before driver open; no programming procedure or hardware qualification is claimed.
+- Retain the full existing core regression/all-profile integrity matrix, plus new terminal/target/transport/integrity checks. Preserve the historical GUI checks as a manual legacy workflow.
+- Release only the tested MazdaLink.exe with exact source, target-specific manifest, hashes and provenance. Preserve GPL credits and exclude ROM payloads/private research.
+
 ## 0.8.0-alpha.12
 
 - Automatically select the observed ZY87EC000 Mazda 2 read session and 512-byte block limit; reject automatic matching of unverified software IDs.

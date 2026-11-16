@@ -17,7 +17,7 @@ permissions:
 jobs:
   windows:
     runs-on: windows-latest
-    timeout-minutes: 75
+    timeout-minutes: 60
     env:
       DOTNET_CLI_TELEMETRY_OPTOUT: '1'
       DOTNET_NOLOGO: '1'
@@ -33,92 +33,27 @@ jobs:
         with:
           global-json-file: dotnet/global.json
       - run: node --test ../.github/scripts/*.test.mjs
-      - run: dotnet restore SpeedLink.slnx --locked-mode
-      - run: dotnet test SpeedLink.slnx -c Release --no-restore --logger "trx;LogFileName=CSharp.trx" --results-directory TestResults
-      - run: ./tools/Verify-Regression.ps1 -Results TestResults/CSharp.trx
-      - run: ./tools/Verify-RomSaveIntegrity.ps1 -Results TestResults/CSharp.trx -Report TestResults/RomSaveIntegrity.json
-      - run: ./tools/Test-SupportUi.ps1 -Output TestResults/SupportUi
-      - run: ./tools/Test-ReadProgressUi.ps1 -Output TestResults/ReadProgressUi
-      - run: ./tools/Test-MenuUi.ps1 -Output TestResults/MenuUi
-      - run: ./tools/Test-NavigationUi.ps1 -Output TestResults/NavigationUi
-      - run: ./tools/Test-MapWindowsUi.ps1 -Output TestResults/MapWindowsUi
-      - run: ./tools/Test-LayoutUi.ps1 -Output TestResults/LayoutUi
-      - run: ./tools/Test-AxisUi.ps1 -Output TestResults/AxisUi
-      - run: ./tools/Test-LoggerUi.ps1 -Output TestResults/LoggerUi
-      - run: ./tools/Test-LoggerRendering.ps1 -Output TestResults/LoggerRendering
-      - run: ./tools/Test-ReplayUi.ps1 -Output TestResults/ReplayUi
-      - run: ./tools/Test-EditorUi.ps1 -Output TestResults/EditorUi
-      - run: ./tools/Test-WorkbenchUi.ps1 -Output TestResults/WorkbenchUi
-      - run: ./tools/Test-DefinitionImportUi.ps1 -Output TestResults/DefinitionImportUi
-      - run: ./tools/Test-ReliabilityUi.ps1 -Output TestResults/ReliabilityUi
-      - run: ./tools/Test-BenchDiagnostics.ps1 -Output TestResults/BenchDiagnostics
-      - name: Check developer ECU peer parser
+      - name: Restore MazdaLink and retained regression suite
         run: |
-          dotnet build tools/SpeedLink.Bench -c Release --no-restore
-          if ($LASTEXITCODE -ne 0) { throw 'Bench tools build failed.' }
-          & ./tools/SpeedLink.Bench/bin/Release/net10.0/win-x86/SpeedLink.Bench.exe --mode peer-parser-self-test --report TestResults/PeerParser.json
-          if ($LASTEXITCODE -ne 0) { throw 'Peer parser regression checks failed.' }
-      - name: Build MazdaLink Reader
+          dotnet restore MazdaLink.slnx --locked-mode
+          if ($LASTEXITCODE -ne 0) { throw 'MazdaLink locked restore failed.' }
+          dotnet restore tests/SpeedLink.Tests --locked-mode
+          if ($LASTEXITCODE -ne 0) { throw 'Retained regression restore failed.' }
+      - name: Test the exact-target application
         run: |
-          dotnet publish tools/MazdaLink.Reader -c Release --no-restore -o reader-publish -p:ContinuousIntegrationBuild=true
-          if ($LASTEXITCODE -ne 0) { throw 'MazdaLink Reader build failed.' }
-          $unexpected = @(Get-ChildItem -LiteralPath reader-publish -File | Where-Object Name -ne 'MazdaLinkReader.exe')
-          if ($unexpected.Count -ne 0) { throw "Unexpected reader files: $($unexpected.Name -join ', ')" }
-          & ./reader-publish/MazdaLinkReader.exe --help
-          if ($LASTEXITCODE -ne 0) { throw 'MazdaLink Reader did not start.' }
-      - name: Upload MazdaLink Reader
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
-        with:
-          name: MazdaLinkReader-${{ github.run_id }}
-          path: |
-            dotnet/reader-publish/*
-            dotnet/tools/MazdaLink.Reader/README.md
-          if-no-files-found: error
-          retention-days: 14
-      - run: ./tools/Publish-Windows.ps1 -Output publish
-      - run: ./tools/Test-CrashUi.ps1 -Output TestResults/CrashUi -Executable ./publish/SpeedLink.exe
-      - run: ./tools/Test-SupportUi.ps1 -Output TestResults/Standalone_Support -Executable ./publish/SpeedLink.exe
-      - run: ./tools/Test-Gen1FlashingUi.ps1 -Output TestResults/Standalone_Gen1Flashing -Executable ./publish/SpeedLink.exe
-      - name: Check standalone editor menus
+          dotnet test tests/MazdaLink.Tests -c Release --no-restore --logger "trx;LogFileName=MazdaLink.trx" --results-directory TestResults/MazdaLink
+          if ($LASTEXITCODE -ne 0) { throw 'Focused tests failed.' }
+          ./tools/Verify-MazdaLinkIntegrity.ps1 -Results TestResults/MazdaLink/MazdaLink.trx
+      - name: Retain all existing regression and ROM integrity gates
         run: |
-          $folder = Join-Path (Get-Location) 'TestResults/Standalone_Menus'
-          New-Item -ItemType Directory -Path $folder -Force | Out-Null
-          $report = Join-Path $folder 'report.json'
-          $process = Start-Process -FilePath './publish/SpeedLink.exe' -ArgumentList @('--menus-smoke','--output',('"' + $folder + '"'),'--smoke-report',('"' + $report + '"')) -WindowStyle Hidden -PassThru
-          if (-not $process.WaitForExit(30000)) { $process.Kill(); throw 'Standalone menu check timed out.' }
-          if ($process.ExitCode -ne 0) { Get-Content -LiteralPath $report -Raw; throw 'Standalone menus failed.' }
-          $result = Get-Content -LiteralPath $report -Raw | ConvertFrom-Json
-          if (!$result.passed -or $result.hardwareAccessed -or !$result.keyboardActivation -or !$result.escapeCloses -or !$result.permanentMenus -or !$result.labeledNavigation -or !$result.navigationRemembered -or $result.menus.Count -ne 5) { throw 'Unexpected standalone menu result.' }
-      - name: Check standalone startup and bundled resources
-        run: |
-          $report = Join-Path (Get-Location) 'TestResults/Standalone_GUI.json'
-          $process = Start-Process -FilePath './publish/SpeedLink.exe' -ArgumentList @('--smoke-test', '--smoke-report', ('"' + $report + '"')) -WindowStyle Hidden -PassThru
-          if (-not $process.WaitForExit(45000)) { $process.Kill(); throw 'Standalone startup timed out.' }
-          if ($process.ExitCode -ne 0) {
-            if (Test-Path -LiteralPath $report) { Get-Content -LiteralPath $report -Raw }
-            throw 'Standalone startup failed.'
-          }
-          $result = Get-Content -LiteralPath $report -Raw | ConvertFrom-Json
-          if ($result.passed -ne $true -or $result.pages -ne 8 -or $result.simulatorAvailable -ne $false -or $result.liveProgrammingEnabled -ne $true -or $result.programmingFamily -ne 'Gen1' -or $result.programmingTargets.Count -ne 9 -or $result.programmingTargets -contains 'L3CGEE000' -or !$result.mazda2FlashWorkspace -or $result.mazda2LiveProgrammingEnabled -or $result.mazda2FactoryRecoveryEnabled -or $result.mongooseSelectionVerified -ne $true -or $result.experimentalProgrammingAdapters -notcontains 'Mongoose-Plus ISO/CAN3') { throw 'Unexpected standalone smoke-test result.' }
-          $expectedRuntime = ([xml](Get-Content -LiteralPath Directory.Build.props -Raw)).Project.PropertyGroup.RuntimeFrameworkVersion
-          $expectedVersion = ([xml](Get-Content -LiteralPath Directory.Build.props -Raw)).Project.PropertyGroup.Version
-          if ($result.version -ne $expectedVersion) { throw 'Application version differs from package version.' }
-          if ($result.runtimeVersion -ne $expectedRuntime -or $result.processBits -ne 32) { throw 'Standalone EXE did not use the pinned x86 runtime.' }
-      - name: Check standalone saved-log viewer
-        run: |
-          $report = Join-Path (Get-Location) 'TestResults/Standalone_Replay.json'
-          $fixture = Join-Path (Get-Location) 'tests/fixtures/Synthetic-Speed6-log.csv'
-          $image = Join-Path (Get-Location) 'TestResults/Standalone_Replay.png'
-          $before = (Get-FileHash -LiteralPath $fixture -Algorithm SHA256).Hash
-          $args = @('--replay-smoke', '--file', ('"' + $fixture + '"'), '--screenshot', ('"' + $image + '"'), '--smoke-report', ('"' + $report + '"'))
-          $process = Start-Process -FilePath './publish/SpeedLink.exe' -ArgumentList $args -WindowStyle Hidden -PassThru
-          if (-not $process.WaitForExit(45000)) { $process.Kill(); throw 'Standalone viewer timed out.' }
-          if ($process.ExitCode -ne 0) { throw 'Standalone viewer failed.' }
-          $result = Get-Content -LiteralPath $report -Raw | ConvertFrom-Json
-          if ($result.passed -ne $true -or $result.hardwareAccessed -ne $false -or $result.rows -ne 300 -or $before -ne (Get-FileHash -LiteralPath $fixture -Algorithm SHA256).Hash) { throw 'Unexpected standalone viewer result.' }
-
-      - name: Package the tested executable and exact source
-        run: ./tools/Package-Release.ps1 -Executable publish/SpeedLink.exe -Reader reader-publish/MazdaLinkReader.exe -Output release
+          dotnet test tests/SpeedLink.Tests -c Release --no-restore --logger "trx;LogFileName=CSharp.trx" --results-directory TestResults
+          if ($LASTEXITCODE -ne 0) { throw 'Retained regressions failed.' }
+          ./tools/Verify-Regression.ps1 -Results TestResults/CSharp.trx
+          ./tools/Verify-RomSaveIntegrity.ps1 -Results TestResults/CSharp.trx -Report TestResults/RomSaveIntegrity.json
+      - name: Publish and exercise standalone MazdaLink
+        run: ./tools/Test-MazdaLink.ps1 -Output TestResults/MazdaLinkStandalone
+      - name: Package only tested MazdaLink and exact source
+        run: ./tools/Package-Release.ps1 -Executable publish-mazdalink/MazdaLink.exe -Output release
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: ${{ inputs.release == true }}
         with:
@@ -126,7 +61,7 @@ jobs:
           path: dotnet/release/*
           if-no-files-found: error
           retention-days: 7
-      - name: Retain synthetic test reports and screenshots
+      - name: Retain synthetic test evidence without ROM payloads
         if: ${{ always() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
@@ -134,6 +69,6 @@ jobs:
           path: |
             dotnet/TestResults/**/*.trx
             dotnet/TestResults/**/*.json
-            dotnet/TestResults/**/*.png
+            dotnet/TestResults/**/*.txt
           if-no-files-found: warn
           retention-days: 14

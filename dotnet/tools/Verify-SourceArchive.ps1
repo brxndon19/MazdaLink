@@ -1,9 +1,9 @@
-param([Parameter(Mandatory)][string]$Archive, [Parameter(Mandatory)][string]$Repository, [Parameter(Mandatory)][string]$Commit)
+param([Parameter(Mandatory)][string]$Archive, [Parameter(Mandatory)][string]$Repository, [Parameter(Mandatory)][string]$Commit, [string]$Prefix = 'SpeedLink/')
 $ErrorActionPreference = 'Stop'
 $tracked = @(git -C $Repository -c core.quotepath=false ls-tree -r '--format=%(objectname) %(path)' $Commit)
 if ($LASTEXITCODE -ne 0 -or !$tracked.Count) { throw 'Cannot enumerate the release source.' }
 $expected = [Collections.Generic.Dictionary[string,string]]::new([StringComparer]::Ordinal)
-foreach ($line in $tracked) { $parts=$line -split ' ',2; $expected.Add('SpeedLink/'+$parts[1],$parts[0]) }
+foreach ($line in $tracked) { $parts=$line -split ' ',2; $expected.Add($Prefix+$parts[1],$parts[0]) }
 $zip = [IO.Compression.ZipFile]::OpenRead([IO.Path]::GetFullPath($Archive))
 try {
     $files = @($zip.Entries | Where-Object { !$_.FullName.EndsWith('/') })

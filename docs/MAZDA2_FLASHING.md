@@ -6,15 +6,24 @@ MazdaLink's flashing preflight is intentionally limited to the 2008 Mazda 2 DE, 
 
 ## Current implementation
 
-- Select an original full 1 MiB hardware backup created by MazdaLink and a modified 1 MiB ROM. The original backup's manifest, completed read journal, two captured read files, and SHA-256 are validated before it is accepted.
-- Require the known ZY87EC000 identity and checksum table layout.
-- Verify all 19 independently established checksum ranges in both images.
-- Require the original and modified software identity to match.
-- Reject any differences in the boot block, engine program, or other memory regions.
-- Report calibration-region changes and image SHA-256 hashes.
-- No ECU programming transport is connected to this workflow. No erase, download, transfer, reset, or recovery command is generated or sent.
+The current standalone application is `MazdaLink.exe`, a terminal program, not the
+historical SpeedLink GUI. It only accepts the complete software identity
+`ZY87EC000ZYV5050`, including before security access and in captured memory.
+Other vehicles are accepted only when they report and contain that exact software.
 
-This is a preflight and dry-run only. A passing result is not authorization to flash.
+Two matching complete reads are retained as `pass1.read` and `pass2.read`, with
+`original.rom`, `backup.json` and a completed `journal.json`. Keep the entire folder.
+The Export command creates a separate raw `.rom` copy without altering checksums.
+The Prepare command compares an externally edited file with the complete original
+backup, refuses changes outside the calibration region or to the software identity,
+and corrects/verifies all 19 checksum ranges before and after saving a new file.
+The Validate command rechecks the prepared image and its original backup.
+
+Flashing and recovery remain unavailable. The Flash command refuses before opening
+an adapter or sending any ECU request. No Gen 1 programmer or generic UDS write
+sequence is included in the shipped binary. A checksum pass does not prove tuning
+safety, factory provenance or a programming procedure. Actual Mazda 2 ECU/cable
+qualification remains separate from synthetic software tests.
 
 ## Factory recovery / SH7058 boot mode
 

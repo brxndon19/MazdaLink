@@ -1,3 +1,9 @@
+> **Historical SpeedLink documentation.** The current release is the independent
+> `MazdaLink.exe` terminal app for exactly `ZY87EC000ZYV5050`.
+> See the [current README](../README.md) and `MazdaLink.slnx`.
+> The desktop, other profiles and reader described below are archived source,
+> not executables in current MazdaLink releases.
+
 # SpeedLink — C#/.NET
 
 ROM reading, offline editing, data logging, and Gen 1 flashing and recovery for Mazdaspeed and Mazda MPS, built with .NET 10 and WPF for Windows.

@@ -1,0 +1,1 @@
+<Solution><Project Path="src/MazdaLink.Core/MazdaLink.Core.csproj"/><Project Path="src/MazdaLink.J2534/MazdaLink.J2534.csproj"/><Project Path="src/MazdaLink/MazdaLink.csproj"/><Project Path="tests/MazdaLink.Tests/MazdaLink.Tests.csproj"/></Solution>
