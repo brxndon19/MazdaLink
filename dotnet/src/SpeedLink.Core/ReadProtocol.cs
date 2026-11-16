@@ -9,8 +9,12 @@ public sealed record ReadProtocol(ReadFamily Family, byte Session, byte SeedLeve
 {
     public static ReadProtocol For(EcuIdentity identity, ReadFamily unknownFamily = ReadFamily.Gen1)
     {
+        // Only the two observed identifiers select the Mazda 2 protocol automatically.
+        // This is a read-access policy, not authorization to program this ECU.
+        bool mazda2 = IsMazda2(identity.Calibration);
         var matches = RomInspector.KnownProfiles.Where(p => RomInspector.MatchesCalibrationId(p, identity.Calibration)).ToArray();
-        if (matches.Length > 1) throw new TransportException("Ambiguous ECU calibration; no read was started.");
+        if (matches.Length > 1 || mazda2 && matches.Length != 0) throw new TransportException("Ambiguous ECU calibration; no read was started.");
+        if (mazda2) return new(ReadFamily.Gen2, 0x03, 0x03, 0x04, 512);
         var family = matches.Length == 1 ? matches[0].Family switch
         {
             "Gen1" => ReadFamily.Gen1,
@@ -24,6 +28,8 @@ public sealed record ReadProtocol(ReadFamily Family, byte Session, byte SeedLeve
             _ => throw new ArgumentOutOfRangeException(nameof(unknownFamily))
         };
     }
+
+    public static bool IsMazda2(string? calibration) => calibration is "ZY87EC000" or "ZY87EC000ZYV5050";
 
     public byte[] ReadRequest(int address, int count)
     {

@@ -63,7 +63,24 @@ public partial class MainWindow
     private void ApplicationSave_Click(object sender, RoutedEventArgs e) => EditorPane.RequestSave();
     private void ApplicationOpenRecording_Click(object sender, RoutedEventArgs e) { Navigate(3); RecordingsPane.RequestOpen(); }
     private void ApplicationExit_Click(object sender, RoutedEventArgs e) => Close();
-    private void ApplicationGuide_Click(object sender, RoutedEventArgs e) => HelpWindow((sender as MenuItem)?.Tag as string ?? "Getting started").Show();
+    private void ApplicationGuide_Click(object sender, RoutedEventArgs e)
+    {
+        var document = (sender as MenuItem)?.Tag as string ?? "Getting started";
+        if (document == "Mazda 2 flashing and recovery")
+        {
+            var text = new TextBox
+            {
+                IsReadOnly = true,
+                TextWrapping = TextWrapping.Wrap,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                Padding = new Thickness(12),
+                Text = Resource("SpeedLink.Mazda2FlashHelp.md")
+            };
+            new Window { Owner = this, Title = "MazdaLink — Mazda 2 Flashing & Recovery", Width = 860, Height = 650, Content = text }.Show();
+            return;
+        }
+        HelpWindow(document).Show();
+    }
     private void NavigationLabels_Click(object sender, RoutedEventArgs e)
     {
         navigationIsCollapsed = !NavigationLabelsMenu.IsChecked;
@@ -78,7 +95,8 @@ public partial class MainWindow
         if (Keyboard.Modifiers != ModifierKeys.Control || flashWorkspace?.HardwareInUse == true) return;
         if (e.Key == Key.O) ApplicationOpenRom_Click(sender, e);
         else if (e.Key == Key.S && ApplicationSaveMenu.IsEnabled) ApplicationSave_Click(sender, e);
-        else if (e.Key is >= Key.D1 and <= Key.D7) Navigate(e.Key - Key.D1);
+        else if (e.Key is >= Key.D1 and <= Key.D6) Navigate(e.Key - Key.D1);
+        else if (e.Key == Key.D7) Navigate(7);
         else return;
         e.Handled = true;
     }

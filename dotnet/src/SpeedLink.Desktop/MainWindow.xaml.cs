@@ -27,6 +27,7 @@ public partial class MainWindow : Window
     private EcuIdentity? identity;
     private byte[]? image;
     private string? imagePath;
+    private string? exportBackupPath;
     private RomInspection? inspection;
     private bool busy, closing;
     private CancellationTokenSource? stop;
@@ -62,14 +63,14 @@ public partial class MainWindow : Window
         Height = Math.Min(Height, Math.Max(MinHeight, SystemParameters.WorkArea.Height));
         Navigate(0);
         Closed += (_, _) => { RecordingsPane.CancelLoading(); readProgressTimer?.Stop(); };
-        Title = $"SpeedLink · Alpha {Version}";
+        Title = $"MazdaLink · Alpha {Version}";
         VersionLabel.Text = $"ALPHA {Version}";
         BaudBox.ItemsSource = new[] { 115200, 38400, 57600, 230400, 500000, 1000000, 2000000 };
         BaudBox.SelectedItem = 115200;
         AdapterBox.ItemsSource = new[] { "Vgate vLinker FS", "Tactrix Openport 2.0", "Mongoose-Plus ISO/CAN3 (experimental)" };
         AdapterBox.SelectedIndex = 0;
         ReadFamilyBox.ItemsSource = new[] { "Gen 1 read protocol", "Gen 2 read protocol (experimental)" };
-        ReadFamilyBox.SelectedIndex = 0;
+        ReadFamilyBox.SelectedIndex = 1;
         InitializeLogger();
         RefreshPorts();
         RefreshHistory();
@@ -88,7 +89,9 @@ public partial class MainWindow : Window
         bool idle = !busy && !closing && !exportingReport && !flashUsingAdapter;
         ApplicationMenu.IsEnabled = Navigation.IsEnabled = NavigationToggle.IsEnabled = !flashUsingAdapter;
         flashWorkspace?.SetConnectionUnavailable(busy || closing || exportingReport || transport is not null);
+        ExportBackupButton.IsEnabled = idle && exportBackupPath is not null;
         FlashBackupButton.IsEnabled = idle && handoffBackup is not null;
+        Mazda2FlashBackupButton.IsEnabled = idle && handoffMazda2Backup is not null;
         DefinitionsButton.IsEnabled = idle && transport is null;
         CrashReportsButton.IsEnabled = idle;
         SessionText.Text = transport is null ? "Offline" : identity?.Calibration ?? "Adapter connected";
@@ -98,7 +101,9 @@ public partial class MainWindow : Window
         ReadButton.ToolTip = loggerReadReconnectRequired ? "Disconnect and reconnect before reading a ROM after logging." : "Read and verify two matching copies of the ECU ROM.";
         var readProfiles = RomInspector.KnownProfiles.Where(p => RomInspector.MatchesCalibrationId(p, identity?.Calibration)).ToArray();
         if (readProfiles.Length == 1) ReadFamilyBox.SelectedIndex = readProfiles[0].Family == "Gen2" ? 1 : 0;
-        ReadFamilyBox.IsEnabled = idle && readProfiles.Length == 0;
+        bool mazda2 = ReadProtocol.IsMazda2(identity?.Calibration);
+        if (mazda2) ReadFamilyBox.SelectedIndex = 1;
+        ReadFamilyBox.IsEnabled = idle && readProfiles.Length == 0 && !mazda2;
         StopButton.IsEnabled = busy;
         OpenRomButton.IsEnabled = idle;
         CorrectButton.IsEnabled = idle && inspection?.CanCorrectChecksum == true;
@@ -252,8 +257,10 @@ public partial class MainWindow : Window
             }
             catch (OperationCanceledException) { FinishReadProgress(false, stopped: true); throw; }
             catch { FinishReadProgress(false); throw; }
+            exportBackupPath = result.Path;
             BackupText.Text = "Verified backup: " + result.Path;
             OfferBackupForFlash(result);
+            OfferBackupForMazda2Flash(result);
             Log("Verified backup saved: " + result.Path);
             if (!result.Inspection.ProfileRecognized)
                 Log("Unknown ROM saved. The two reads match; checksum validation is unavailable for this layout.");
@@ -262,6 +269,21 @@ public partial class MainWindow : Window
             StatusText.Text = "Backup verified · two matching reads";
             RefreshHistory();
         });
+    }
+    private void ExportBackup_Click(object sender, RoutedEventArgs e)
+    {
+        if (exportBackupPath is null || !ExportBackupButton.IsEnabled) return;
+        var dialog = new SaveFileDialog
+        {
+            Title = "Save raw verified backup", FileName = "Mazda2-backup.rom", DefaultExt = ".rom",
+            Filter = "ROM image|*.rom|Binary image|*.bin"
+        };
+        if (dialog.ShowDialog(this) == true)
+            TryFile(() =>
+            {
+                BackupExport.SaveNew(exportBackupPath, dialog.FileName);
+                Log("Saved byte-for-byte verified backup: " + dialog.FileName);
+            });
     }
     private void Stop_Click(object sender, RoutedEventArgs e)
     {
@@ -392,7 +414,7 @@ public partial class MainWindow : Window
         return reader.ReadToEnd();
     }
     private void About_Click(object sender, RoutedEventArgs e) => MessageBox.Show(this,
-        Resource("SpeedLink.About.txt").Replace("{version}", Version).Replace("{runtime}", Environment.Version.ToString()), "About SpeedLink");
+        Resource("SpeedLink.About.txt").Replace("{version}", Version).Replace("{runtime}", Environment.Version.ToString()), "About MazdaLink");
     private Window HelpWindow(string document = "Getting started") => HelpWindow(document, null, this);
     internal static Window HelpWindow(string document, string? heading, Window? owner)
     {
@@ -415,7 +437,7 @@ public partial class MainWindow : Window
                 int offset = text.Text.IndexOf("\n## " + heading, StringComparison.Ordinal);
                 if (offset >= 0) text.ScrollToLine(text.GetLineIndexFromCharacterIndex(offset + 1));
             };
-        return new Window { Owner = owner, Title = "SpeedLink — Help & licenses", Width = 860, Height = 650, Content = panel };
+        return new Window { Owner = owner, Title = "MazdaLink — Help & licenses", Width = 860, Height = 650, Content = panel };
     }
     private void Help_Click(object sender, RoutedEventArgs e) => HelpWindow().Show();
     private bool closeApproved;
@@ -463,7 +485,7 @@ public partial class MainWindow : Window
         UpdateLayout();
         if (new System.Windows.Automation.Peers.TabControlAutomationPeer(Pages).GetChildren()?.Count != Pages.Items.Count)
             throw new InvalidOperationException("Workspace automation containers missing.");
-        if (Pages.Items.Count != FlashPage + 1 || !ReferenceEquals(Pages.Items[FlashPage], FlashTab) ||
+        if (Pages.Items.Count != 8 || !ReferenceEquals(Pages.Items[FlashPage], FlashTab) || !ReferenceEquals(Pages.Items[7], Mazda2FlashTab) ||
             transport is not null || image is not null || !ConnectButton.IsEnabled || ReadButton.IsEnabled || CorrectButton.IsEnabled)
             throw new InvalidOperationException("Unexpected startup state.");
         if (AdapterBox.Items.Count != 3 || AdapterBox.SelectedIndex != 0 || typeof(ReadWorkflow).Assembly.GetType("SpeedLink.Core.Simulator") is not null)
@@ -492,6 +514,10 @@ public partial class MainWindow : Window
         if (AdapterNote.Visibility != Visibility.Collapsed || DriverBox.Items.Cast<J2534Driver>().Any(d => d.Kind != J2534AdapterKind.Tactrix))
             throw new InvalidOperationException("Experimental driver selection leaked into the Tactrix path.");
         AdapterBox.SelectedIndex = 0;
+        Navigate(7); UpdateLayout();
+        if (Mazda2FlashTab.Content is not Mazda2FlashWorkspace || transport is not null)
+            throw new InvalidOperationException("Mazda 2 dry-run workspace did not open safely.");
+        Navigate(0); UpdateLayout();
         VerifyLoggerSmoke(args);
         if (!Resource("SpeedLink.About.txt").Contains("{version}", StringComparison.Ordinal))
             throw new InvalidDataException("About resource missing.");
@@ -533,6 +559,9 @@ public partial class MainWindow : Window
                 runtimeVersion = Environment.Version.ToString(),
                 framework = "WPF / .NET 10",
                 pages = Pages.Items.Count,
+                mazda2FlashWorkspace = Mazda2FlashTab.Content is Mazda2FlashWorkspace,
+                mazda2LiveProgrammingEnabled = false,
+                mazda2FactoryRecoveryEnabled = false,
                 loggerChannels = loggerRows.Count,
                 loggerProfiles = LoggerDefinition.Known.Count,
                 editorDefinitions = definitionSnapshot.Editors.Count,

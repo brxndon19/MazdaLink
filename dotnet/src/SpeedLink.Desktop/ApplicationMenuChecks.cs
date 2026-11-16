@@ -25,9 +25,12 @@ public partial class MainWindow
             !menu[4].Items.OfType<MenuItem>().Any(item => Equals(item.Tag, "Gen 1 flashing and recovery")) ||
             !Resource("SpeedLink.FlashingHelp.md").Contains("Gen 2 flashing is planned", StringComparison.Ordinal))
             throw new InvalidOperationException("Gen 1 flashing or the built-in guide is missing from the menus.");
+        if (!menu[3].Items.OfType<MenuItem>().Any(item => Equals(item.Header, "Mazda 2 _flash preflight…")) ||
+            !Resource("SpeedLink.Mazda2FlashHelp.md").Contains("ZY87EC000", StringComparison.Ordinal))
+            throw new InvalidOperationException("Mazda 2 preflight or its built-in guide is missing.");
         if (ApplicationSaveMenu.IsEnabled || EditorPane.UndoButton.IsEnabled || EditorPane.CompareButton.IsEnabled)
             throw new InvalidOperationException("Editing is available without a ROM.");
-        var labels = new[] { NavLabel0, NavLabel1, NavLabel2, NavLabel3, NavLabel4, NavLabel5, NavLabel6 };
+        var labels = new[] { NavLabel0, NavLabel1, NavLabel2, NavLabel3, NavLabel4, NavLabel5, NavLabel6, NavLabel7 };
         if (navigationIsCollapsed || labels.Any(l => !l.IsVisible) || !NavigationLabelsMenu.IsChecked || NavigationColumn.ActualWidth is < 140 or > 160)
             throw new InvalidOperationException("Fresh navigation does not explain its destinations.");
         foreach (var button in Navigation.Children.OfType<RadioButton>())

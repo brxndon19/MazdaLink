@@ -45,11 +45,10 @@ public partial class MainWindow
             !IdentityText.Text.Contains("Calibration: " + identity.Calibration, StringComparison.Ordinal))
             throw new InvalidOperationException("Connected ECU identifier/calibration is not displayed correctly.");
         Controls();
-        if (unknownGen2)
-        {
-            if (!ReadFamilyBox.IsEnabled) throw new InvalidOperationException("Unknown ROM protocol cannot be selected.");
-            ReadFamilyBox.SelectedIndex = 1;
-        }
+        // The offline fixture must explicitly choose its protocol, even when the UI locks
+        // the selector for a recognized calibration. Disabled WPF controls remain settable
+        // programmatically; this does not enable protocol selection for the user.
+        ReadFamilyBox.SelectedIndex = unknownGen2 ? 1 : 0;
         bool firstPass = false, secondPass = false, locked = false, estimate = false, reset = false;
         void Capture(string name)
         {
@@ -90,6 +89,16 @@ public partial class MainWindow
             throw new InvalidOperationException("Unexpected read progress result: " + ReadProgressStage.Text + " · " + StatusText.Text);
         var entries = store.Scan(vault);
         if (entries.Count != 1 || entries[0].Complete != complete) throw new InvalidOperationException("Progress and durable backup disagree.");
+        if (ExportBackupButton.IsEnabled != complete)
+            throw new InvalidOperationException("Raw backup export is available without a verified read.");
+        if (complete)
+        {
+            string exported = Path.Combine(output, "SYNTHETIC_BACKUP_NOT_ECU_FIRMWARE.rom");
+            BackupExport.SaveNew(exportBackupPath!, exported);
+            if (!File.ReadAllBytes(exported).AsSpan().SequenceEqual(File.ReadAllBytes(exportBackupPath!)))
+                throw new InvalidOperationException("Raw backup export changed the captured bytes.");
+            File.Delete(exported);
+        }
         if (currentReadProgress is { Pass: > 0 } savedProgress)
         {
             var capture = new FileInfo(Path.Combine(Path.GetDirectoryName(entries[0].Path)!, $"pass{savedProgress.Pass}.read"));
