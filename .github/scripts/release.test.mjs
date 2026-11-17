@@ -12,7 +12,7 @@ function fixture() {
   const names = ['MazdaLink.exe', `MazdaLink-${tag}-source.zip`];
   for (const name of names) writeFileSync(join(folder, name), 'synthetic packaging test');
   const files = Object.fromEntries(names.map(name => [name, digest(name)]));
-  writeFileSync(join(folder, 'release.json'), JSON.stringify({ schemaVersion: 2, version: tag.slice(1), tag, sourceCommit: sha, files, architecture: 'win-x86', ecuProgrammingEnabled: false, programmingFamily: 'None', targetSoftwareId: 'ZY87EC000ZYV5050' }));
+  writeFileSync(join(folder, 'release.json'), JSON.stringify({ schemaVersion: 3, version: tag.slice(1), tag, sourceCommit: sha, files, architecture: 'win-x86', ecuProgrammingEnabled: false, programmingFamily: 'None', readIdentityPolicy: 'reported-calibration', checksumSoftwareId: 'ZY87EC000ZYV5050' }));
   writeFileSync(join(folder, 'SHA256SUMS.txt'), [...names, 'release.json'].map(name => `${digest(name)}  ${name}`).join('\n') + '\n');
   return folder;
 }
@@ -71,7 +71,7 @@ for (const failure of ['changed executable', 'wrong commit', 'wrong tag', 'extra
   } finally { rmSync(folder, { recursive: true }); }
 });
 
-for (const override of [{targetSoftwareId:'ZY87EC000ZYV9999'}, {ecuProgrammingEnabled:true,programmingFamily:'Gen1'}]) test(`rejects target/programming override ${JSON.stringify(override)}`, () => {
+for (const override of [{checksumSoftwareId:'ZY87EC000ZYV9999'}, {readIdentityPolicy:'fixed-target'}, {ecuProgrammingEnabled:true,programmingFamily:'Gen1'}]) test(`rejects target/programming override ${JSON.stringify(override)}`, () => {
   const folder = fixture();
   try {
     const path = join(folder, 'release.json');

@@ -2,14 +2,20 @@
 
 ## Supported target
 
-MazdaLink's flashing preflight is intentionally limited to the 2008 Mazda 2 DE, ZY-VE, Denso ECU using the Renesas SH7058 and software identity `ZY87EC000ZYV5050`.
+MazdaLink's checksum preparation/validation is intentionally limited to the 2008 Mazda 2 DE, ZY-VE, Denso ECU using the Renesas SH7058 and software identity `ZY87EC000ZYV5050`.
 
 ## Current implementation
 
 The current standalone application is `MazdaLink.exe`, a terminal program, not the
-historical SpeedLink GUI. It only accepts the complete software identity
-`ZY87EC000ZYV5050`, including before security access and in captured memory.
-Other vehicles are accepted only when they report and contain that exact software.
+historical SpeedLink GUI. Raw reads and exports have no calibration whitelist:
+`ZYJ2EA000ZYV5050` and other valid reported identities can attempt the fixed bounded
+read-only procedure. The identity is recorded and rechecked before unlocking.
+Raw captures do not assume a ZY87 header, memory identity offset or checksum table.
+This is not qualification of every ECU's read or programming procedure.
+
+Checksum preparation/validation remains limited to `ZY87EC000ZYV5050` and its
+independently established layout. Unknown-calibration captures are never relabelled
+as ZY87 or corrected with its policy, even if their bytes look similar.
 
 Two matching complete reads are retained as `pass1.read` and `pass2.read`, with
 `original.rom`, `backup.json` and a completed `journal.json`. Keep the entire folder.

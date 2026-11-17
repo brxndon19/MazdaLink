@@ -38,6 +38,7 @@ public sealed class TargetTests
         public int Rpm { get; set; }
         public bool Mismatch { get; set; }
         public bool Short { get; set; }
+        public bool RejectReads { get; set; }
         public int IdentityChangesAfter { get; set; } = int.MaxValue;
         private int identities, bytesRead;
         public byte[] Exchange(byte[] r)
@@ -57,6 +58,7 @@ public sealed class TargetTests
         }
         private byte[] Read(byte[] r)
         {
+            if (RejectReads) throw new NegativeResponseException(0x23, 0x31);
             int a = BinaryPrimitives.ReadInt32BigEndian(r.AsSpan(2)), n = BinaryPrimitives.ReadUInt16BigEndian(r.AsSpan(6));
             byte[] reply = [0x63, .. image.AsSpan(a, n).ToArray()];
             if (n == 512) { bytesRead += n; if (Mismatch && bytesRead > TargetPolicy.RomSize) reply[1] ^= 1; if (Short) return reply[..^1]; }
@@ -65,8 +67,8 @@ public sealed class TargetTests
         public void Dispose() { }
     }
     [Theory]
-    [InlineData("ZY87EC000")][InlineData("ZY87EC000ZYV9999")][InlineData("L38KEH000")][InlineData("")][InlineData("ZY87EC000ZYV5050X")]
-    public void OtherOrIncompleteIdentitiesStopBeforeUnlockOrMemoryRead(string identity)
+    [InlineData("")][InlineData("   ")][InlineData("ZYJ2EA000\nZYV5050")][InlineData("ZYJ2EA000\u0001")][InlineData("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")]
+    public void MissingOrMalformedIdentitiesStopBeforeUnlockOrMemoryRead(string identity)
     {
         using var folder = new Folder(); using var peer = new Peer(Image()) { Identity = identity };
         if (identity.Length == 0) Assert.Throws<TransportException>(() => new ReadWorkflow().Capture(peer, folder.Path));
@@ -88,13 +90,45 @@ public sealed class TargetTests
         Assert.Throws<TransportException>(() => new ReadWorkflow().Capture(peer, folder.Path));
         Assert.DoesNotContain(peer.Requests, r => r[0] is 0x10 or 0x27 or 0x23);
     }
-    [Fact]
-    public void MemoryIdentityMismatchStopsBeforeFullRead()
+    [Theory]
+    [InlineData("ZYJ2EA000ZYV5050")]
+    [InlineData("ZY87EC000ZYV5050")]
+    [InlineData("ZY87EC000")]
+    [InlineData("ZY87EC000ZYV9999")]
+    [InlineData("L38KEH000")]
+    public void RawReadsDoNotRequireAWhitelistedIdentityOrKnownRomLayout(string identity)
     {
-        var rom = Image(); rom[Zy87Integrity.IdentityOffset+15] ^= 1;
-        using var folder = new Folder(); using var peer = new Peer(rom);
-        Assert.Throws<InvalidDataException>(() => new ReadWorkflow().Capture(peer, folder.Path));
-        Assert.Single(peer.Requests,r=>r[0]==0x23);
+        byte[] rom=new byte[TargetPolicy.RomSize];new Random(42).NextBytes(rom);
+        using var folder=new Folder();using var peer=new Peer(rom){Identity=identity};
+        string original=new ReadWorkflow().Capture(peer,folder.Path);
+        var loaded=RomStorage.LoadVerifiedBackup(original);
+        Assert.Equal(identity,loaded.ReportedCalibration);Assert.Equal(rom,loaded.Data);
+        string destination=System.IO.Path.Combine(folder.Path,"raw.rom");RomStorage.Export(original,destination);
+        Assert.Equal(rom,File.ReadAllBytes(destination));
+        using var manifest=JsonDocument.Parse(File.ReadAllText(System.IO.Path.Combine(System.IO.Path.GetDirectoryName(original)!,"backup.json")));
+        using var journal=JsonDocument.Parse(File.ReadAllText(System.IO.Path.Combine(System.IO.Path.GetDirectoryName(original)!,"journal.json")));
+        Assert.Equal(identity,manifest.RootElement.GetProperty("SoftwareId").GetString());
+        Assert.Equal(identity,journal.RootElement.GetProperty("SoftwareId").GetString());
+        Assert.Throws<InvalidDataException>(()=>RomEditor.SaveNew(original,destination,System.IO.Path.Combine(folder.Path,"not-prepared.rom")));
+        Assert.False(File.Exists(System.IO.Path.Combine(folder.Path,"not-prepared.rom")));
+    }
+    [Fact]
+    public void KnownLookingRomFromUnknownCalibrationCannotUseTheZy87ChecksumPolicy()
+    {
+        using var folder=new Folder();using var peer=new Peer(Image()){Identity="ZYJ2EA000ZYV5050"};
+        string original=new ReadWorkflow().Capture(peer,folder.Path);
+        Assert.Equal(Image(),RomStorage.LoadBackup(original));
+        Assert.Throws<InvalidDataException>(()=>RomEditor.Validate(original,original));
+        Assert.Throws<InvalidDataException>(()=>RomEditor.SaveNew(original,original,System.IO.Path.Combine(folder.Path,"bad.rom")));
+    }
+    [Fact]
+    public void RefusedReadStopsWithoutKeyRetryOrProtocolProbe()
+    {
+        using var folder=new Folder();using var peer=new Peer(Image()){Identity="ZYJ2EA000ZYV5050",RejectReads=true};
+        Assert.Throws<NegativeResponseException>(()=>new ReadWorkflow().Capture(peer,folder.Path));
+        Assert.Single(peer.Requests,r=>r[0]==0x23);Assert.Single(peer.Requests,r=>r[0]==0x27&&r[1]==4);
+        Assert.Empty(Directory.GetFiles(folder.Path,"original.rom",SearchOption.AllDirectories));
+        Assert.DoesNotContain(peer.Requests,r=>Convert.ToHexString(r)=="1087");
     }
     [Fact]
     public void ReadsBothPassesAt512AndExportsExactBytesWithNoOverwrite()
@@ -103,8 +137,8 @@ public sealed class TargetTests
         using var folder = new Folder(); using var peer = new Peer(rom);
         string original = new ReadWorkflow().Capture(peer, folder.Path);
         Assert.Equal(rom, RomStorage.LoadBackup(original));
-        var reads = peer.Requests.Where(r=>r[0]==0x23).ToArray(); Assert.Equal(4097, reads.Length);
-        Assert.All(reads.Skip(1), r=>Assert.Equal(512, BinaryPrimitives.ReadUInt16BigEndian(r.AsSpan(6))));
+        var reads = peer.Requests.Where(r=>r[0]==0x23).ToArray(); Assert.Equal(4096, reads.Length);
+        Assert.All(reads, r=>Assert.Equal(512, BinaryPrimitives.ReadUInt16BigEndian(r.AsSpan(6))));
         Assert.Equal("2324000FFE000200", Convert.ToHexString(reads[^1]));
         Assert.Single(peer.Requests,r=>r[0]==0x27&&r[1]==4);
         string export=System.IO.Path.Combine(folder.Path,"export.rom"); RomStorage.Export(original,export);
@@ -184,16 +218,23 @@ public sealed class TargetTests
     }
     private sealed class Channel(string identity):IJ2534Channel
     {
-        public string? CleanupWarning=>null; public int Writes; private bool read;
+        public string? CleanupWarning=>null; public int Writes; private bool read; private byte[] lastRequest=[];
         public J2534Version Open()=>new("test","test","04.04"); public void Connect(uint b,uint q,uint r){} public void ClearReceive(){read=false;}
-        public void Write(byte[] r){Writes++;} public J2534Frame? Read(int timeout){if(read)return null;read=true;return new(0x7E8,0,[0x49,4,1,..Encoding.ASCII.GetBytes(identity)]);} public void Dispose(){}
+        public void Write(byte[] r){Writes++;lastRequest=r;} public J2534Frame? Read(int timeout){if(read)return null;read=true;return new(0x7E8,0,lastRequest[0]==9?[0x49,4,1,..Encoding.ASCII.GetBytes(identity)]:[0x67,3,0x1C,0x2C,0x75]);} public void Dispose(){}
     }
     [Fact]
-    public void TransportRequiresExactIdentityBeforeSecurityEvenForDirectCalls()
+    public void TransportRequiresValidIdentityBeforeSecurityEvenForDirectCalls()
     {
-        var channel=new Channel("L38KEH000");using var link=new J2534ReadTransport(channel);link.Initialize();
+        var channel=new Channel("ZYJ2EA000ZYV5050");using var link=new J2534ReadTransport(channel);link.Initialize();
         Assert.Throws<TransportException>(()=>link.Exchange([0x27,3]));Assert.Equal(0,channel.Writes);
-        Assert.Throws<InvalidDataException>(()=>link.Exchange([9,4]));Assert.Equal(1,channel.Writes);
+        Assert.Equal("ZYJ2EA000ZYV5050",TargetPolicy.Identify(link));Assert.Equal(1,channel.Writes);
+        Assert.Equal(new byte[]{0x67,3,0x1C,0x2C,0x75},link.Exchange([0x27,3]));Assert.Equal(2,channel.Writes);
+    }
+    [Fact]
+    public void MalformedTransportIdentityCannotEnableSecurityAccess()
+    {
+        var channel=new Channel("");using var link=new J2534ReadTransport(channel);link.Initialize();
+        Assert.Throws<TransportException>(()=>link.Exchange([9,4]));Assert.Equal(1,channel.Writes);
         Assert.Throws<TransportException>(()=>link.Exchange([0x10,3]));Assert.Equal(1,channel.Writes);
     }
 }

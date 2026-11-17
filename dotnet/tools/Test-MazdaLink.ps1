@@ -28,8 +28,8 @@ $status = Invoke-Check -Arguments @('status') -InputText '' -Expected 0 -Name 's
 $menu = Invoke-Check -Arguments @() -InputText "6`n7`n0`n" -Expected 0 -Name 'menu'
 $flash = Invoke-Check -Arguments @('flash','does-not-exist.rom') -InputText '' -Expected 1 -Name 'flash-refused'
 $override = Invoke-Check -Arguments @('read','--gen2') -InputText '' -Expected 1 -Name 'override-refused'
-if ($help -notmatch 'ZY87EC000ZYV5050' -or $help -match 'SpeedLink' -or $menu -notmatch 'Flashing is unavailable' -or $flash -notmatch 'No adapter was opened' -or $status -notmatch 'Other-vehicle workflows: absent') { throw 'Unexpected standalone product scope.' }
+if ($help -notmatch 'ZY87EC000ZYV5050' -or $help -match 'SpeedLink' -or $help -notmatch 'no fixed calibration whitelist' -or $menu -notmatch 'no fixed calibration whitelist' -or $menu -notmatch 'Flashing is unavailable' -or $flash -notmatch 'No adapter was opened' -or $status -notmatch 'Other-vehicle workflows: absent') { throw 'Unexpected standalone product scope.' }
 $runtime = ([xml](Get-Content 'Directory.Build.props' -Raw)).Project.PropertyGroup.RuntimeFrameworkVersion
 $version = ([xml](Get-Content 'Directory.Build.props' -Raw)).Project.PropertyGroup.Version
 if ($status -notmatch 'Process: 32-bit' -or !$status.Contains("Runtime: $runtime") -or !$status.Contains("MazdaLink $version")) { throw 'Standalone runtime, architecture or version differs from the pins.' }
-@{passed=$true;product='MazdaLink';targetSoftwareId='ZY87EC000ZYV5050';programmingEnabled=$false;hardwareAccessed=$false;menu=$true;overrideRefused=$true;flashRefusedBeforeDriverOpen=$true} | ConvertTo-Json | Set-Content (Join-Path $root 'report.json') -Encoding utf8NoBOM
+@{passed=$true;product='MazdaLink';readIdentityPolicy='reported-calibration';checksumSoftwareId='ZY87EC000ZYV5050';programmingEnabled=$false;hardwareAccessed=$false;menu=$true;overrideRefused=$true;flashRefusedBeforeDriverOpen=$true} | ConvertTo-Json | Set-Content (Join-Path $root 'report.json') -Encoding utf8NoBOM

@@ -1,7 +1,7 @@
 # MazdaLink releases and maintenance
 
-The current product is `MazdaLink.exe`, a dedicated terminal application for exactly
-`ZY87EC000ZYV5050`. The release pipeline does not compile or ship the archived
+The current product is `MazdaLink.exe`, a terminal application with raw-read calibration whitelists removed.
+Checksum preparation is separately limited to `ZY87EC000ZYV5050`. The release pipeline does not compile or ship the archived
 SpeedLink desktop/reader. It runs focused target/transport/menu/integrity tests,
 the complete retained core regression and all-profile ROM-save integrity gates,
 and standalone console checks. Historical GUI checks remain a manual legacy workflow.
@@ -9,7 +9,7 @@ and standalone console checks. Historical GUI checks remain a manual legacy work
 Bump the version and changelog, pass the PR checks, merge to main, then push its
 matching version tag. The tag runs checks again and packages the exact tested EXE.
 The source archive contains every tracked file with its Git blob hash verified.
-`release.json` binds the exact commit, Windows x86 architecture, target software,
+`release.json` binds the exact commit, Windows x86 architecture, reported-calibration read policy, known checksum scope,
 disabled programming status, SDK/runtime pins, EXE and source hashes. Publication
 verifies the fixed four-file inventory, generates build provenance, verifies server
 asset digests and publishes. Confirm public downloads and hashes before reporting completion.
