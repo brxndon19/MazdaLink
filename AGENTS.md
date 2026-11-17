@@ -20,6 +20,11 @@
   No memory address, upload, execute, erase, programming or ECU reset command may
   be added to this identification path. A monitor response is not flash-recovery
   qualification; hardware acceptance is still unqualified.
+- Measure the bench-entry deadline with monotonic elapsed time. No disk/UI or
+  supply/configuration diagnostic call may run while entry traffic is active;
+  only bounded receive polling is permitted there. Bench evidence must contain
+  bounded metadata/counters, never raw frame payloads. TX echoes do not prove
+  ECU acceptance, and adapter supply snapshots do not prove ECU power cycling.
 - MazdaLink has no enabled flash/recovery implementation. A flash command must refuse
   before driver open; do not infer a Mazda 2 writer from generic UDS or Gen 1 code.
 - Preserve original GPL credits. Legacy sources/definitions and their core integrity

@@ -174,4 +174,21 @@ public class BenchRecoveryTests
             stage => { if (stage == "entry-window-armed") cancel.Cancel(); }, cancel: cancel.Token));
         Assert.Equal(new[] { "open" }, channel.Calls);
     }
+    [Fact]
+    public void EntryReceiveFailureStopsThePulseBeforeIdentification()
+    {
+        using var channel = new Channel { Fail = "read" };
+        Assert.Throws<TransportException>(() => new Zyj2BenchRecovery().IdentifyMonitor(channel, _ => { }));
+        Assert.Equal(new[] { "open", "start", "read", "stop" }, channel.Calls);
+    }
+    [Fact]
+    public void AnIdentityFrameDuringEntryDoesNotBypassTheLaterQuery()
+    {
+        using var channel = new Channel { Fail = "identity" }; channel.Replies.Enqueue(Identity());
+        var events = new List<string>();
+        Assert.Throws<TransportException>(() => new Zyj2BenchRecovery().IdentifyMonitor(channel, events.Add,
+            (_, _) => channel.Read(25)));
+        Assert.Contains("identity", channel.Calls);
+        Assert.DoesNotContain("monitor-identified-no-flash-operation", events);
+    }
 }

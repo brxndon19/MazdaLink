@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Reflection;
 
 namespace MazdaLink.Core;
 
@@ -13,20 +14,24 @@ public sealed class BenchRecoveryTerminal(Func<IReadTransport> connect, Func<IBe
             "Use the detached ZYJ2 spare on your bench harness. Keep the good ECU disconnected.\n" +
             "This checks cold-start monitor entry and normal restart. It does not test interrupted-flash recovery.\n" +
             "No erase, ROM write, kernel upload, memory write, execute or ECU reset command is implemented.\n" +
-            "The Mongoose must remain on USB while ECU battery power is cycled. Its CAN channel may fail when battery power is removed; the check will stop if that happens.\n" +
+            "Keep Mongoose USB and its OBD 12 V supply powered. Switch only the ECU positive supply feeds; keep grounds and CAN connected.\n" +
             "Type BENCH ZYJ2 to confirm the detached spare and bench setup:");
         if (input.ReadLine() != "BENCH ZYJ2") throw new InvalidDataException("Bench setup was not confirmed. No adapter was opened.");
         cancel.ThrowIfCancellationRequested();
         string folder = Path.Combine(Path.GetFullPath(dataRoot), "bench-checks", DateTime.UtcNow.ToString("yyyyMMdd-HHmmss") + "-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(folder);
         using var journal = new FileStream(Path.Combine(folder, "events.jsonl"), FileMode.CreateNew, FileAccess.Write, FileShare.Read);
+        IBenchMonitorChannel? activeChannel = null;
+        string? version = typeof(BenchRecoveryTerminal).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+        var jsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
         int sequence = 0;
         void Record(string stage)
         {
             if (++sequence > 32) throw new IOException("Bench evidence limit reached.");
-            byte[] line = JsonSerializer.SerializeToUtf8Bytes(new { sequence, utc = DateTime.UtcNow, stage,
+            byte[] line = JsonSerializer.SerializeToUtf8Bytes(new { schema = 2, version, sequence, utc = DateTime.UtcNow, stage,
                 calibration = Zyj2RecoveryPolicy.SoftwareId, backupSha256 = RomStorage.Hash(backup.Data),
-                flashOperationsImplemented = false, interruptedFlashRecoveryTested = false });
+                flashOperationsImplemented = false, interruptedFlashRecoveryTested = false,
+                diagnostics = activeChannel?.Diagnostics }, jsonOptions);
             journal.Write(line); journal.WriteByte((byte)'\n'); journal.Flush(flushToDisk: true);
             if (stage == "entry-window-armed")
                 output.WriteLine("ENTRY WINDOW: cycle the spare's battery power now; leave it connected afterwards. Waiting 20 seconds...");
@@ -50,11 +55,12 @@ public sealed class BenchRecoveryTerminal(Func<IReadTransport> connect, Func<IBe
                 "After you type START, keep battery power connected while the adapter opens.\n" +
                 "Wait for the ENTRY WINDOW message. During that 20-second window,\n" +
                 "disconnect ECU battery power for at least five seconds, then reconnect it and leave it on.\n" +
-                "Keep USB connected. Do not change ECUs, CAN wiring or adapters.\n" +
+                "Keep OBD 12 V and USB powered throughout. Do not change ECUs, grounds, CAN wiring or adapters.\n" +
                 "Type START when ready for that single power cycle:");
             if (input.ReadLine() != "START") throw new InvalidDataException("Entry window cancelled. No bench entry traffic was sent.");
             cancel.ThrowIfCancellationRequested();
             var channel = monitor();
+            activeChannel = channel;
             try
             {
                 output.WriteLine("Opening bench channel. Keep ECU battery power connected until the ENTRY WINDOW message.");

@@ -2,6 +2,7 @@
 using System.Buffers.Binary;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Diagnostics;
 using MazdaLink.Core;
 
 namespace MazdaLink.J2534;
@@ -14,6 +15,19 @@ public sealed class NativeBenchMonitorChannel : IBenchMonitorChannel
     {
         public uint ProtocolId, RxStatus, TxFlags, Timestamp, DataSize, ExtraDataIndex;
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = 4128)] public byte[] Data;
+    }
+    [StructLayout(LayoutKind.Sequential)]
+    private struct ConfigurationList { public uint Count; public nint Items; }
+    private sealed class ReceiveCounters
+    {
+        public int Calls, EmptyReads, ReturnedFrames, TxEchoes, Notifications, ExpectedIdFrames;
+        public uint Status, Count, Protocol, RxStatus, Size, ExtraIndex;
+        public uint? CanId;
+        public bool? PayloadMatched;
+        public double MaxMilliseconds;
+        public BenchReceiveDiagnostics Snapshot() => new(Calls, EmptyReads, ReturnedFrames, TxEchoes,
+            Notifications, ExpectedIdFrames, Status, Count, Protocol, RxStatus, Size, ExtraIndex,
+            CanId, PayloadMatched, MaxMilliseconds);
     }
     [UnmanagedFunctionPointer(CallingConvention.StdCall)] private delegate uint OpenFn(nint name, out uint device);
     [UnmanagedFunctionPointer(CallingConvention.StdCall)] private delegate uint CloseFn(uint device);
@@ -40,14 +54,32 @@ public sealed class NativeBenchMonitorChannel : IBenchMonitorChannel
     private StopFn? stopFilter, stopPeriodic;
     private PeriodicFn? startPeriodic;
     private IoctlFn? ioctl;
+    private string? adapterName, firmwareVersion, driverVersion, apiVersion;
+    private uint? loopbackStatus;
+    private BenchSupplyReading? beforeEntrySupply, afterEntrySupply;
+    private ReceiveCounters? entryReceive, identityReceive;
+    private int startCalls, stopCalls, identityRequests;
+    private long? entryStarted;
+    private double startMilliseconds, stopMilliseconds, identityMilliseconds;
+    private double? entryActiveMilliseconds;
+    private int[]? entryEchoBins, entryFrameBins;
     public string? CleanupWarning { get; private set; }
+    public BenchChannelDiagnostics Diagnostics => new(adapterName, firmwareVersion, driverVersion, apiVersion,
+        Zyj2RecoveryPolicy.Bitrate, Zyj2RecoveryPolicy.RequestId, Zyj2RecoveryPolicy.ResponseId,
+        loopbackStatus, beforeEntrySupply, afterEntrySupply, startCalls, stopCalls, identityRequests,
+        startMilliseconds, stopMilliseconds, identityMilliseconds, entryActiveMilliseconds,
+        (entryReceive ?? new()).Snapshot(), (identityReceive ?? new()).Snapshot(),
+        Enumerable.Range(0, 32).Where(i => (entryEchoBins?[i] ?? 0) + (entryFrameBins?[i] ?? 0) > 0)
+            .Select(i => new BenchTrafficBin(i, entryEchoBins?[i] ?? 0, entryFrameBins?[i] ?? 0)).ToArray());
 
     public NativeBenchMonitorChannel(J2534Driver driver)
     {
         var registered = J2534Drivers.Discover(driver.Kind).FirstOrDefault(d =>
             d.LibraryPath.Equals(Path.GetFullPath(driver.LibraryPath), StringComparison.OrdinalIgnoreCase) && d.RawCanSupported);
         libraryPath = registered?.LibraryPath ?? throw new TransportException("The registered Mongoose driver must advertise raw CAN support for the bench check.");
+        adapterName = Bounded(registered.Name);
     }
+    private static string Bounded(string value) => value[..Math.Min(value.Length, 128)];
     private T Bind<T>(string name, int bytes) where T : Delegate
     {
         if (!NativeLibrary.TryGetExport(module, name, out var address) &&
@@ -95,12 +127,41 @@ public sealed class NativeBenchMonitorChannel : IBenchMonitorChannel
             Check(open(0, out device), "Open bench adapter"); opened = true;
             var fw = new StringBuilder(256); var dll = new StringBuilder(256); var api = new StringBuilder(256);
             Check(version(device, fw, dll, api), "Read bench driver version");
+            firmwareVersion = Bounded(fw.ToString()); driverVersion = Bounded(dll.ToString()); apiVersion = Bounded(api.ToString());
             if (!api.ToString().StartsWith("04.04", StringComparison.Ordinal)) throw new TransportException("Bench mode requires J2534 04.04.");
             Check(connect(device, 5, 0x100, Zyj2RecoveryPolicy.Bitrate, out channel), "Connect bench extended CAN"); connected = true;
             var mask = Packet(0x1FFFFFFF, []); var pattern = Packet(Zyj2RecoveryPolicy.ResponseId, []);
             Check(startFilter(channel, 1, ref mask, ref pattern, 0, out filter), "Install bench pass filter"); filtered = true;
+            ConfigureDiagnostics();
         }
         catch { Dispose(); throw; }
+    }
+    private void ConfigureDiagnostics()
+    {
+        // SAE J2534 SET_CONFIG / LOOPBACK=1 requests adapter TX echoes only.
+        // It sends no extra ECU messages; echo availability is not an ECU acknowledgement.
+        nint item = Marshal.AllocHGlobal(8), list = Marshal.AllocHGlobal(Marshal.SizeOf<ConfigurationList>());
+        try
+        {
+            Marshal.WriteInt32(item, 3); Marshal.WriteInt32(item, 4, 1);
+            Marshal.StructureToPtr(new ConfigurationList { Count = 1, Items = item }, list, false);
+            loopbackStatus = ioctl!(channel, 1, list, 0);
+        }
+        finally { Marshal.FreeHGlobal(list); Marshal.FreeHGlobal(item); }
+        beforeEntrySupply = ReadSupply();
+    }
+    private BenchSupplyReading ReadSupply()
+    {
+        // Optional adapter-only measurement, always outside the active entry window.
+        nint result = Marshal.AllocHGlobal(4);
+        try
+        {
+            Marshal.WriteInt32(result, -1); // An untouched output must not look like a real 0 V reading.
+            uint status = ioctl!(device, 3, 0, result);
+            int millivolts = Marshal.ReadInt32(result);
+            return new(status, status == 0 && millivolts is >= 0 and <= 32000 ? millivolts : null);
+        }
+        finally { Marshal.FreeHGlobal(result); }
     }
     public void StartEntryPulse()
     {
@@ -110,7 +171,11 @@ public sealed class NativeBenchMonitorChannel : IBenchMonitorChannel
         Zyj2RecoveryPolicy.CheckTransmit(payload, periodic: true);
         var packet = Packet(Zyj2RecoveryPolicy.RequestId, payload);
         pulseAttempted = true;
-        Check(startPeriodic!(channel, ref packet, out periodic, Zyj2RecoveryPolicy.PeriodMilliseconds), "Start bounded entry pulse");
+        startCalls++; entryStarted = Stopwatch.GetTimestamp();
+        uint status;
+        try { status = startPeriodic!(channel, ref packet, out periodic, Zyj2RecoveryPolicy.PeriodMilliseconds); }
+        finally { startMilliseconds = Stopwatch.GetElapsedTime(entryStarted.Value).TotalMilliseconds; }
+        Check(status, "Start bounded entry pulse");
         pulseStarted = true;
     }
     public void StopEntryPulse()
@@ -122,9 +187,17 @@ public sealed class NativeBenchMonitorChannel : IBenchMonitorChannel
             if (pulseAttempted) { Dispose(); throw new TransportException("Entry start failed; bench channel was disconnected."); }
             return;
         }
-        uint status = stopPeriodic!(channel, periodic);
+        stopCalls++; long stopping = Stopwatch.GetTimestamp();
+        uint status;
+        try { status = stopPeriodic!(channel, periodic); }
+        finally
+        {
+            stopMilliseconds = Stopwatch.GetElapsedTime(stopping).TotalMilliseconds;
+            if (entryStarted is long began) entryActiveMilliseconds = Stopwatch.GetElapsedTime(began).TotalMilliseconds;
+        }
         if (status != 0) { Dispose(); throw new BenchCleanupException("Could not confirm entry-pulse stop. Disconnect both USB and ECU battery power before restarting MazdaLink."); }
         pulseStarted = false;
+        afterEntrySupply = ReadSupply();
     }
     public void ClearReceive()
     {
@@ -140,7 +213,11 @@ public sealed class NativeBenchMonitorChannel : IBenchMonitorChannel
         Zyj2RecoveryPolicy.CheckTransmit(payload, periodic: false);
         var packet = Packet(Zyj2RecoveryPolicy.RequestId, payload); uint count = 1;
         identityRequested = true;
-        Check(write!(channel, ref packet, ref count, 1000), "Request monitor identity");
+        identityRequests++; long writing = Stopwatch.GetTimestamp();
+        uint status;
+        try { status = write!(channel, ref packet, ref count, 1000); }
+        finally { identityMilliseconds = Stopwatch.GetElapsedTime(writing).TotalMilliseconds; }
+        Check(status, "Request monitor identity");
         if (count != 1) throw new TransportException("The adapter did not accept exactly one monitor request.");
     }
     public RecoveryFrame? Read(int timeoutMilliseconds)
@@ -148,14 +225,38 @@ public sealed class NativeBenchMonitorChannel : IBenchMonitorChannel
         RequireReady();
         if (timeoutMilliseconds is < 1 or > 25) throw new ArgumentOutOfRangeException(nameof(timeoutMilliseconds));
         var packet = new Message { Data = new byte[4128] }; uint count = 1;
+        var stats = pulseStarted ? entryReceive ??= new() : identityReceive ??= new();
+        stats.Calls++;
+        long reading = Stopwatch.GetTimestamp();
         uint status = read!(channel, ref packet, ref count, (uint)timeoutMilliseconds);
+        stats.MaxMilliseconds = Math.Max(stats.MaxMilliseconds, Stopwatch.GetElapsedTime(reading).TotalMilliseconds);
+        stats.Status = status; stats.Count = count; stats.Protocol = packet.ProtocolId;
+        stats.RxStatus = packet.RxStatus; stats.Size = packet.DataSize; stats.ExtraIndex = packet.ExtraDataIndex;
+        stats.CanId = null; stats.PayloadMatched = null;
         if (status is not (9 or 16)) Check(status, "Receive monitor identity");
-        if (count == 0) return null;
+        if (count == 0) { stats.EmptyReads++; return null; }
         if (count != 1 || packet.ProtocolId != 5) throw new TransportException("Invalid bench receive count or protocol.");
+        stats.ReturnedFrames++;
+        if (pulseStarted && entryStarted is long began)
+        {
+            int second = (int)Math.Clamp(Stopwatch.GetElapsedTime(began).TotalSeconds, 0, 31);
+            if ((packet.RxStatus & 1) != 0) (entryEchoBins ??= new int[32])[second]++;
+            else (entryFrameBins ??= new int[32])[second]++;
+        }
+        if ((packet.RxStatus & 1) != 0) stats.TxEchoes++;
+        if ((packet.RxStatus & 0x0A) != 0) stats.Notifications++;
         if ((packet.RxStatus & 0x0B) != 0) return new(0, packet.RxStatus, []);
         if (packet.DataSize is < 4 or > 12 || packet.ExtraDataIndex > packet.DataSize)
             throw new TransportException("Malformed raw CAN bench message.");
-        return new(BinaryPrimitives.ReadUInt32BigEndian(packet.Data), packet.RxStatus, packet.Data.AsSpan(4, (int)packet.DataSize - 4).ToArray());
+        uint id = BinaryPrimitives.ReadUInt32BigEndian(packet.Data);
+        stats.CanId = id;
+        var payload = packet.Data.AsSpan(4, (int)packet.DataSize - 4);
+        if (id == Zyj2RecoveryPolicy.ResponseId)
+        {
+            stats.ExpectedIdFrames++;
+            stats.PayloadMatched = payload.SequenceEqual(Zyj2RecoveryPolicy.ExpectedIdentity);
+        }
+        return new(id, packet.RxStatus, payload.ToArray());
     }
     public void Dispose()
     {
