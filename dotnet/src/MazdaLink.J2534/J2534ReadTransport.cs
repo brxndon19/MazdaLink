@@ -34,6 +34,7 @@ public sealed class J2534ReadTransport : IReadTransport
     public int ReadChunkSize => 512;
     public bool ReadAttempted { get; set; }
     public string? CloseWarning => channel.CleanupWarning;
+    public string? CleanupWarning => channel.CleanupWarning;
 
     public J2534ReadTransport(IJ2534Channel channel, TimeSpan? responseTimeout = null, TimeSpan? pendingTimeout = null, IDiagnosticSink? diagnostics = null)
     {

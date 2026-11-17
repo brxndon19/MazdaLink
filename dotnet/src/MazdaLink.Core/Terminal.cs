@@ -1,6 +1,7 @@
 namespace MazdaLink.Core;
 
-public sealed class Terminal(Func<IReadTransport> connect, TextReader input, TextWriter output, string dataRoot)
+public sealed class Terminal(Func<IReadTransport> connect, TextReader input, TextWriter output, string dataRoot,
+    Func<IBenchMonitorChannel>? benchMonitor = null)
 {
     public const string Help = """
 MazdaLink — Mazda 2 DE / ZY-VE
@@ -18,6 +19,9 @@ Commands:
                               ZY87 only: prepare calibration-only edits and verify all 19 checksums.
   validate <original.rom> <edited.rom>
                               ZY87 only: check permitted changes and all 19 checksums.
+  bench-recovery-check <original.rom>
+                              ZYJ2 spare only: identify its boot monitor and check normal restart.
+                              Requires a complete MazdaLink backup and a detached bench ECU.
   flash                       Unavailable: Mazda 2 write/recovery protocol is unverified.
   status                      Show read policy, checksum support, storage and programming status.
   license                     Show licence and attribution information.
@@ -27,6 +31,8 @@ Use read with ignition ON and engine OFF. Keep the entire backup folder.
 Modified ROMs must be edited externally. A checksum pass does not establish tuning safety.
 Raw reading uses one bounded read-only protocol; matching backups do not prove checksum or flashing compatibility.
 No protocol override, ECU erase, write, or reset is available.
+The ZYJ2 bench check sends only fixed monitor-entry and identification messages.
+It does not qualify recovery after interrupted flashing or enable a flash kernel.
 """;
     public int Run(string[] args, CancellationToken cancel = default)
     {
@@ -35,7 +41,7 @@ No protocol override, ECU erase, write, or reset is available.
         output.WriteLine($"Raw reads: no fixed calibration whitelist. Checksum preparation: {TargetPolicy.SoftwareId} only.\nStorage: {Path.GetFullPath(dataRoot)}\nFlashing: unavailable — write/recovery procedure is unverified.");
         while (!cancel.IsCancellationRequested)
         {
-            output.WriteLine("\n1  Identify ECU\n2  Read ECU and save backup\n3  Export backup as .rom\n4  Prepare an externally edited ROM\n5  Validate modified ROM\n6  Flash ROM back — unavailable\n7  Help\n8  Licence / credits\n0  Exit");
+            output.WriteLine("\n1  Identify ECU\n2  Read ECU and save backup\n3  Export backup as .rom\n4  Prepare an externally edited ROM\n5  Validate modified ROM\n6  Flash ROM back — unavailable\n7  Help\n8  Licence / credits\n9  ZYJ2 spare: bench monitor identification check\n0  Exit");
             output.Write("> ");
             string? choice = input.ReadLine()?.Trim();
             if (choice is null or "0") return 0;
@@ -50,6 +56,7 @@ No protocol override, ECU erase, write, or reset is available.
                 case "6": command = ["flash"]; break;
                 case "7": command = ["help"]; break;
                 case "8": command = ["license"]; break;
+                case "9": command = ["bench-recovery-check", Ask("ZYJ2 backup original.rom")]; break;
                 default: output.WriteLine("Choose a listed number."); continue;
             }
             Execute(command, cancel); // Each hardware action creates/disposes a fresh connection; never retries.
@@ -74,6 +81,12 @@ No protocol override, ECU erase, write, or reset is available.
             }
             if (args.Length > 0 && args[0] == "flash")
                 throw new InvalidDataException("Flashing is unavailable. This ECU's erase/write/recovery procedure has not been verified. No adapter was opened and no ECU command was sent.");
+            if (args.Length == 2 && args[0] == "bench-recovery-check")
+            {
+                if (benchMonitor is null) throw new TransportException("The bench monitor backend is unavailable. No adapter was opened.");
+                new BenchRecoveryTerminal(connect, benchMonitor, input, output, dataRoot).Run(args[1], cancel);
+                return 0;
+            }
             if (args.Length == 1 && args[0] is "read" or "identify")
             {
                 using var link = connect();
