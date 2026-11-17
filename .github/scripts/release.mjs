@@ -6,7 +6,8 @@ import { pathToFileURL } from 'node:url';
 export function verifyPackage(folder, tag, commit) {
   const manifest = JSON.parse(readFileSync(join(folder, 'release.json'), 'utf8'));
   if (!/^v\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?$/.test(tag) || !/^[a-f0-9]{40}$/.test(commit)) throw Error('Invalid tag or commit');
-  if (manifest.schemaVersion !== 3 || manifest.tag !== tag || `v${manifest.version}` !== tag || manifest.sourceCommit !== commit || manifest.architecture !== 'win-x86' || manifest.ecuProgrammingEnabled !== false || manifest.programmingFamily !== 'None' || manifest.readIdentityPolicy !== 'reported-calibration' || manifest.checksumSoftwareId !== 'ZY87EC000ZYV5050') throw Error('Release identity mismatch');
+  if (manifest.schemaVersion !== 4 || manifest.tag !== tag || `v${manifest.version}` !== tag || manifest.sourceCommit !== commit || manifest.architecture !== 'win-x86' || manifest.ecuProgrammingEnabled !== false || manifest.programmingFamily !== 'None' || manifest.readIdentityPolicy !== 'reported-calibration' || manifest.checksumSoftwareId !== 'ZY87EC000ZYV5050') throw Error('Release identity mismatch');
+  if (manifest.benchRecoveryCheck !== 'ZYJ2EA000ZYV5050-identification-only' || manifest.realEcuAcceptance !== 'unqualified') throw Error('Bench scope mismatch');
   const expected = ['MazdaLink.exe', `MazdaLink-${tag}-source.zip`];
   if (Object.keys(manifest.files).sort().join() !== [...expected].sort().join()) throw Error('Unexpected package inventory');
   const digest = name => createHash('sha256').update(readFileSync(join(folder, name))).digest('hex');
@@ -28,7 +29,7 @@ export async function publishRelease({ repo, folder, tag, commit, token, notes, 
   };
   const releases = await api('/releases?per_page=100');
   if (releases.some(r => r.tag_name === manifest.tag)) throw Error('Release already exists; never replace published assets');
-  const release = await api('/releases', 'POST', { tag_name: manifest.tag, target_commitish: manifest.sourceCommit, name: `MazdaLink ${manifest.tag}`, draft: true, prerelease: manifest.version.includes('-'), body: `${notes}\n\nMazdaLink.exe is a terminal application with calibration-unrestricted raw backups and ZY87EC000ZYV5050-only checksum preparation, with matching source, SHA-256 checksums and build provenance. Mazda 2 flashing and recovery remain unavailable; no other-vehicle programmer is shipped.` });
+  const release = await api('/releases', 'POST', { tag_name: manifest.tag, target_commitish: manifest.sourceCommit, name: `MazdaLink ${manifest.tag}`, draft: true, prerelease: manifest.version.includes('-'), body: `${notes}\n\nMazdaLink.exe provides calibration-unrestricted raw backups, ZY87EC000ZYV5050-only checksum preparation, and a separately selected ZYJ2 spare bench monitor identification check. ECU flashing and interrupted-flash recovery remain unavailable. Hardware acceptance is unqualified. Exact source, SHA-256 checksums and build provenance accompany the executable.` });
   for (const name of readdirSync(folder).sort()) {
     const url = new URL(release.upload_url.split('{')[0]);
     if (url.protocol !== 'https:' || url.hostname !== 'uploads.github.com') throw Error('Unexpected upload host');

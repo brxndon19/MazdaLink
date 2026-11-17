@@ -6,7 +6,7 @@ namespace MazdaLink.J2534;
 
 public enum J2534AdapterKind { MongoosePlusIsoCan3 }
 
-public sealed record J2534Driver(string Name, string LibraryPath, J2534AdapterKind Kind = J2534AdapterKind.MongoosePlusIsoCan3)
+public sealed record J2534Driver(string Name, string LibraryPath, J2534AdapterKind Kind = J2534AdapterKind.MongoosePlusIsoCan3, bool RawCanSupported = false)
 {
     public bool Experimental => Kind == J2534AdapterKind.MongoosePlusIsoCan3;
     public string AdapterName => Name + (Experimental ? " (experimental)" : "");
@@ -61,7 +61,7 @@ public static class J2534Drivers
                     path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.SystemX86), path[system.Length..]);
             }
             if (File.Exists(path) && !result.Any(item => item.LibraryPath.Equals(path, StringComparison.OrdinalIgnoreCase)))
-                result.Add(new(name, path, kind));
+                result.Add(new(name, path, kind, key.GetValue("CAN") is int can && can > 0));
         }
         return result;
     }

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.0-alpha.3
+
+- Add an explicitly selected ZYJ2 spare bench monitor identification check. Require a complete verified backup, exact reported calibration, stopped engine and examined boot-code fingerprints before entering the bench workflow.
+- Use an isolated, registered Mongoose raw extended-CAN backend with only two permitted payloads: a bounded monitor-entry pulse and a single identification request. No kernel upload, memory write, erase, programming, execute or ECU reset is implemented.
+- Check normal diagnostic restart separately after a second operator power cycle. Keep bounded local evidence and report monitor identification independently from interrupted-flash recovery qualification.
+- Preserve the existing unrestricted raw-read/export policy and ZY87-only checksum preparation. Hardware qualification and all Mazda 2 flashing remain pending; the good ECU is outside this bench experiment.
+
 ## 0.9.0-alpha.2
 
 - Remove the calibration whitelist from raw identify/read/export workflows, including support for attempting backups from reported ZYJ2EA000ZYV5050 ECUs.

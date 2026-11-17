@@ -10,8 +10,16 @@
 - Checksum preparation/validation remains limited to independently established policies:
   currently only `ZY87EC000ZYV5050`. Never relabel an unknown backup or apply a known
   correction policy merely because read procedures or software suffixes look similar.
-- Keep the fixed bounded read-only protocol, engine-stopped gate and matching dual reads.
-  No protocol probing, automatic key retry or write/reset override is permitted.
+- Keep the fixed bounded raw-read protocol, engine-stopped gate and matching dual reads.
+  No automatic protocol probing, key retry or write/reset override is permitted.
+- The separately selected bench monitor check is limited to ZYJ2EA000ZYV5050,
+  a complete verified backup with the examined boot-code fingerprints, and a
+  detached spare confirmed by the operator. Its raw extended-CAN channel may send
+  only the fixed bounded entry pulse and monitor-identification request. It must
+  stop periodic traffic on every exit and check normal restart independently.
+  No memory address, upload, execute, erase, programming or ECU reset command may
+  be added to this identification path. A monitor response is not flash-recovery
+  qualification; hardware acceptance is still unqualified.
 - MazdaLink has no enabled flash/recovery implementation. A flash command must refuse
   before driver open; do not infer a Mazda 2 writer from generic UDS or Gen 1 code.
 - Preserve original GPL credits. Legacy sources/definitions and their core integrity

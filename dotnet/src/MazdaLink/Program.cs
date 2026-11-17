@@ -17,10 +17,12 @@ try
         return 0;
     }
     string selectedDriver = "";
+    J2534Driver? connectionDriver = null;
     // Only an installed registered Mongoose driver can be selected, never an arbitrary DLL.
     if (args.Length >= 2 && args[^2] == "--driver") { selectedDriver = args[^1]; args = args[..^2]; }
-    IReadTransport Connect()
+    J2534Driver SelectDriver()
     {
+        if (connectionDriver is not null) return connectionDriver;
         if (!OperatingSystem.IsWindows() || IntPtr.Size != 4) throw new TransportException("Use MazdaLink.exe on Windows with the manufacturer's 32-bit J2534 04.04 driver.");
         var drivers = J2534Drivers.Discover().Where(d => selectedDriver.Length == 0 || d.Name.Equals(selectedDriver, StringComparison.OrdinalIgnoreCase)).ToArray();
         if (drivers.Length == 0) throw new TransportException("No matching registered Mongoose-Plus ISO/CAN3 32-bit J2534 driver. Install the manufacturer's driver. Use drivers to list registrations.");
@@ -34,7 +36,11 @@ try
             if (!int.TryParse(Console.ReadLine(), out int choice) || choice < 1 || choice > drivers.Length) throw new TransportException("Driver selection cancelled.");
             driver = drivers[choice - 1];
         }
-        var transport = new J2534ReadTransport(new NativeJ2534Channel(driver));
+        return connectionDriver = driver;
+    }
+    IReadTransport Connect()
+    {
+        var transport = new J2534ReadTransport(new NativeJ2534Channel(SelectDriver()));
         try { transport.Initialize(); return transport; } catch { transport.Dispose(); throw; }
     }
     if (args.SequenceEqual(new[] { "drivers" }))
@@ -45,7 +51,8 @@ try
         return 0;
     }
     Console.WriteLine($"MazdaLink {Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion.Split('+')[0]}");
-    return new Terminal(Connect, Console.In, Console.Out, root).Run(args, cancel.Token);
+    return new Terminal(Connect, Console.In, Console.Out, root,
+        () => new NativeBenchMonitorChannel(SelectDriver())).Run(args, cancel.Token);
 }
 catch (Exception error)
 {

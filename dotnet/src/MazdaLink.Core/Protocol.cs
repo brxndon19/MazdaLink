@@ -13,6 +13,7 @@ public interface IDiagnosticSink { void Record(string name, object? value = null
 public interface IReadTransport : IDisposable
 {
     byte[] Exchange(byte[] request);
+    string? CleanupWarning => null;
 }
 public static class TargetPolicy
 {

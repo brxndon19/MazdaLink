@@ -30,6 +30,16 @@ Download **MazdaLink.exe** from [Releases](https://github.com/brxndon19/MazdaLin
 
 Run `MazdaLink.exe help` for commands or `MazdaLink.exe drivers` to list registered drivers. If several are installed, the menu asks which one to use. Command-line operations accept `--driver "exact registered name"` at the end.
 
+## ZYJ2 spare: bench monitor check
+
+Menu **9**, or `MazdaLink.exe bench-recovery-check "path\to\original.rom"`, checks boot-monitor identification and a subsequent normal diagnostic restart on a **detached ZYJ2 spare**. It requires a complete MazdaLink backup folder for `ZYJ2EA000ZYV5050`, the examined monitor/loader code fingerprints, matching ZYC3 fields, a matching live calibration and an engine-stopped check. A standalone `.bin` without its verified backup journal is not sufficient; use **Read ECU and save backup** first.
+
+Keep the Mongoose connected to USB. During the prompted 20-second entry window, disconnect the spare's ECU battery power for at least five seconds, reconnect it, and leave it on. The Mongoose CAN channel must survive the loss of battery power; USB connectivity alone does not establish that. After identification, follow the second power-cycle prompt so MazdaLink can check normal diagnostics again. Any driver error, malformed reply, cancellation or missing restart stops the experiment. Do not change ECUs, adapters or CAN wiring during the check. No alternative bitrate or CAN pin configuration is probed.
+
+The isolated bench channel sends only a bounded fixed entry pulse and one identification request. It implements no kernel upload, memory write, execute, erase, ROM programming or ECU reset. A successful check is **not** recovery qualification after interrupted flashing. If the check stops after entry, power-cycle the spare before normal diagnostics. Bounded local evidence is saved under `Documents\MazdaLink\bench-checks`; it contains stages and the backup hash, never ROM payloads or security keys. The hardware workflow remains experimental and awaits physical acceptance on the spare and Mongoose adapter.
+
+If driver cleanup cannot be confirmed, MazdaLink exits. Disconnect both USB and ECU battery power before reconnecting and restarting the application so stale adapter traffic cannot continue into another attempt.
+
 ## Source and validation
 
 The current product lives in `dotnet/src/MazdaLink*`, with tests in `dotnet/tests/MazdaLink.Tests`. It has no project reference to SpeedLink assemblies. Historical SpeedLink source and definitions remain for provenance, GPL compliance and retained regression/integrity tests; they are not compiled into the new application. The old desktop UI workflow is available manually as **Legacy SpeedLink desktop checks** and is not the product release pipeline.
