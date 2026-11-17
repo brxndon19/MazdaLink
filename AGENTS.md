@@ -4,8 +4,14 @@
 
 - The current product is the independent terminal application in `dotnet/src/MazdaLink*`.
   Ship only `MazdaLink.exe`, never the legacy desktop or reader binaries.
-- Enforce the exact `ZY87EC000ZYV5050` identity before ECU unlock/read operations and
-  verify it in captured ROM bytes. No user protocol/target override is permitted.
+- Raw reads and exports have no calibration whitelist. Require a valid reported
+  calibration, recheck it before unlock, and retain its actual value in backup metadata.
+  Do not impose ZY87 header/checksum-layout assumptions on raw captures.
+- Checksum preparation/validation remains limited to independently established policies:
+  currently only `ZY87EC000ZYV5050`. Never relabel an unknown backup or apply a known
+  correction policy merely because read procedures or software suffixes look similar.
+- Keep the fixed bounded read-only protocol, engine-stopped gate and matching dual reads.
+  No protocol probing, automatic key retry or write/reset override is permitted.
 - MazdaLink has no enabled flash/recovery implementation. A flash command must refuse
   before driver open; do not infer a Mazda 2 writer from generic UDS or Gen 1 code.
 - Preserve original GPL credits. Legacy sources/definitions and their core integrity

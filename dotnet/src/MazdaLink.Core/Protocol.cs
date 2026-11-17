@@ -20,8 +20,9 @@ public static class TargetPolicy
     public const int RomSize = 0x100000, BlockSize = 512;
     public static void RequireIdentity(string? identity)
     {
-        if (!string.Equals(identity, SoftwareId, StringComparison.Ordinal))
-            throw new InvalidDataException($"This ECU is not supported. MazdaLink requires exactly {SoftwareId}; reported: {identity ?? "unavailable"}. No unlock or ROM read was attempted.");
+        // A reported identity is required for consistency/provenance, not as a calibration whitelist.
+        if (string.IsNullOrEmpty(identity) || identity.Length > 64 || identity.Any(c => c < 0x21 || c > 0x7E))
+            throw new InvalidDataException("The ECU reported a missing or malformed calibration identity. No unlock or ROM read was attempted.");
     }
     public static void RequireSoftware(ReadOnlySpan<byte> rom)
     {

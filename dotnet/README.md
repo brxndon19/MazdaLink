@@ -1,5 +1,5 @@
 > **Historical SpeedLink documentation.** The current release is the independent
-> `MazdaLink.exe` terminal app for exactly `ZY87EC000ZYV5050`.
+> `MazdaLink.exe` terminal app with calibration-unrestricted raw reads; checksum preparation remains ZY87-only.
 > See the [current README](../README.md) and `MazdaLink.slnx`.
 > The desktop, other profiles and reader described below are archived source,
 > not executables in current MazdaLink releases.

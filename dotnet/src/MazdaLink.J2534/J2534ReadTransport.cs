@@ -27,7 +27,7 @@ public sealed class J2534ReadTransport : IReadTransport
     private readonly IJ2534Channel channel;
     private readonly TimeSpan responseTimeout;
     private readonly TimeSpan pendingTimeout;
-    private bool initialized, disposed, faulted, targetConfirmed;
+    private bool initialized, disposed, faulted, identityConfirmed;
     private readonly IDiagnosticSink? diagnostics;
     public string Mode => "hardware";
     public string Adapter { get; private set; }
@@ -70,9 +70,9 @@ public sealed class J2534ReadTransport : IReadTransport
     {
         // Validate before touching the driver, including clearing its receive queue.
         DiagnosticProtocol.CheckReadOnly(request, ReadChunkSize);
-        if (!request.AsSpan().SequenceEqual(new byte[] { 9, 4 }) && !targetConfirmed)
-            throw new TransportException("Identify the exact supported ECU before read-session requests.");
-        if (request.AsSpan().SequenceEqual(new byte[] { 9, 4 })) targetConfirmed = false;
+        if (!request.AsSpan().SequenceEqual(new byte[] { 9, 4 }) && !identityConfirmed)
+            throw new TransportException("Read the ECU calibration identity before read-session requests.");
+        if (request.AsSpan().SequenceEqual(new byte[] { 9, 4 })) identityConfirmed = false;
         ObjectDisposedException.ThrowIf(disposed, this);
         if (!initialized || faulted)
             throw new TransportException("Reconnect and identify before continuing.");
@@ -126,7 +126,7 @@ public sealed class J2534ReadTransport : IReadTransport
                 {
                     if (final.Length < 4 || final[1] != 4 || final[2] != 1) throw new TransportException("Invalid calibration identity reply.");
                     TargetPolicy.RequireIdentity(System.Text.Encoding.ASCII.GetString(final.AsSpan(3).TrimEnd((byte)0)));
-                    targetConfirmed = true;
+                    identityConfirmed = true;
                 }
                 return final;
             }

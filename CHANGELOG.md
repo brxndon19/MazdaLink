@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.9.0-alpha.2
+
+- Remove the calibration whitelist from raw identify/read/export workflows, including support for attempting backups from reported ZYJ2EA000ZYV5050 ECUs.
+- Require a valid reported identity and an unchanged recheck before unlock; record the actual identity in both manifest and completed read journal. Preserve legacy ZY87 backup loading.
+- Remove ZY87-specific memory-ID sampling and checksum/header/layout gates from raw captures. Require two complete matching 1 MiB reads and verified disk copies; raw bytes remain unchanged.
+- Keep the fixed 512-byte read-only protocol, engine-off gate, single key attempt and stop-on-refusal behavior. Do not infer universal read/flash compatibility or probe protocols.
+- Separate raw backup/export from checksum preparation/validation. Only independently established ZY87EC000ZYV5050 checksum rules may prepare modified exports; unknown-calibration backups are refused before correction, even when their payload resembles ZY87.
+- Update console help, release metadata and regression coverage to distinguish raw-read compatibility from checksum support. ECU programming/recovery remain unavailable.
+
 ## 0.9.0-alpha.1
 
 - Replace the user-facing release with the independent MazdaLink terminal app. No SpeedLink desktop/reader executable, general editor, logger or other-car programmer is shipped.

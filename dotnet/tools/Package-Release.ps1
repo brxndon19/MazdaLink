@@ -21,7 +21,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Source archive failed.' }
 & (Join-Path $PSScriptRoot 'Verify-SourceArchive.ps1') -Archive $archive -Repository $repository -Commit $commit -Prefix 'MazdaLink/'
 $hashes = @{}
 foreach ($name in @('MazdaLink.exe', $archiveName)) { $hashes[$name] = (Get-FileHash -LiteralPath (Join-Path $folder $name) -Algorithm SHA256).Hash.ToLowerInvariant() }
-$manifest = [ordered]@{ schemaVersion=2; version=$version; tag="v$version"; sourceCommit=$commit; sdk=$sdk; runtime=$runtime; architecture='win-x86'; files=$hashes; ecuProgrammingEnabled=$false; programmingFamily='None'; targetSoftwareId='ZY87EC000ZYV5050'; realEcuAcceptance='unqualified' }
+$manifest = [ordered]@{ schemaVersion=3; version=$version; tag="v$version"; sourceCommit=$commit; sdk=$sdk; runtime=$runtime; architecture='win-x86'; files=$hashes; ecuProgrammingEnabled=$false; programmingFamily='None'; readIdentityPolicy='reported-calibration'; checksumSoftwareId='ZY87EC000ZYV5050'; realEcuAcceptance='unqualified' }
 $manifest | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $folder 'release.json') -Encoding utf8NoBOM
 $hashes['release.json'] = (Get-FileHash -LiteralPath (Join-Path $folder 'release.json') -Algorithm SHA256).Hash.ToLowerInvariant()
 @($hashes.Keys | Sort-Object | ForEach-Object { "$($hashes[$_])  $_" }) | Set-Content -LiteralPath (Join-Path $folder 'SHA256SUMS.txt') -Encoding utf8NoBOM

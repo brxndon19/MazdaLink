@@ -4,33 +4,35 @@ public sealed class Terminal(Func<IReadTransport> connect, TextReader input, Tex
 {
     public const string Help = """
 MazdaLink — Mazda 2 DE / ZY-VE
-Target: ZY87EC000ZYV5050 (calibration ZY87EC000, software ZYV5050; exact match required)
+Raw reads: no fixed calibration whitelist (including ZYJ2EA000ZYV5050).
+Checksum preparation: ZY87EC000ZYV5050 only; other checksum layouts remain unverified.
 Adapter: Mongoose-Plus ISO/CAN3, manufacturer's 32-bit J2534 04.04 driver
 
 Commands:
   drivers                     List registered Mongoose J2534 drivers.
-  identify                    Check the connected ECU's exact identity.
+  identify                    Show the connected ECU's reported calibration.
   read                        Read twice and save an immutable local backup.
   export <original.rom> <new.rom>
                               Export an exact copy of a complete MazdaLink backup.
   prepare <original.rom> <edited.rom> <new.rom>
-                              Prepare calibration-only edits; correct and verify all 19 checksums.
+                              ZY87 only: prepare calibration-only edits and verify all 19 checksums.
   validate <original.rom> <edited.rom>
-                              Check identity, permitted changes and all 19 checksums.
+                              ZY87 only: check permitted changes and all 19 checksums.
   flash                       Unavailable: Mazda 2 write/recovery protocol is unverified.
-  status                      Show supported target, storage and programming status.
+  status                      Show read policy, checksum support, storage and programming status.
   license                     Show licence and attribution information.
   help                        Show this help.
 
 Use read with ignition ON and engine OFF. Keep the entire backup folder.
 Modified ROMs must be edited externally. A checksum pass does not establish tuning safety.
-No other calibration, protocol override, ECU erase, write, or reset is available.
+Raw reading uses one bounded read-only protocol; matching backups do not prove checksum or flashing compatibility.
+No protocol override, ECU erase, write, or reset is available.
 """;
     public int Run(string[] args, CancellationToken cancel = default)
     {
         if (args.Length > 0) return Execute(args, cancel);
         output.WriteLine("MazdaLink — Mazda 2 DE");
-        output.WriteLine($"Only {TargetPolicy.SoftwareId} is supported.\nStorage: {Path.GetFullPath(dataRoot)}\nFlashing: unavailable — write/recovery procedure is unverified.");
+        output.WriteLine($"Raw reads: no fixed calibration whitelist. Checksum preparation: {TargetPolicy.SoftwareId} only.\nStorage: {Path.GetFullPath(dataRoot)}\nFlashing: unavailable — write/recovery procedure is unverified.");
         while (!cancel.IsCancellationRequested)
         {
             output.WriteLine("\n1  Identify ECU\n2  Read ECU and save backup\n3  Export backup as .rom\n4  Prepare an externally edited ROM\n5  Validate modified ROM\n6  Flash ROM back — unavailable\n7  Help\n8  Licence / credits\n0  Exit");
@@ -68,14 +70,14 @@ No other calibration, protocol override, ECU erase, write, or reset is available
             }
             if (args.Length == 1 && args[0] == "status")
             {
-                output.WriteLine($"MazdaLink\nTarget: {TargetPolicy.SoftwareId}\nROM: 1 MiB\nRead block: 512 bytes\nProcess: {IntPtr.Size * 8}-bit\nRuntime: {Environment.Version}\nFlashing: unavailable\nOther-vehicle workflows: absent\nStorage: {Path.GetFullPath(dataRoot)}"); return 0;
+                output.WriteLine($"MazdaLink\nRead identity policy: reported calibration; no whitelist\nChecksum preparation: {TargetPolicy.SoftwareId} only\nROM: 1 MiB\nRead block: 512 bytes\nProcess: {IntPtr.Size * 8}-bit\nRuntime: {Environment.Version}\nFlashing: unavailable\nOther-vehicle workflows: absent\nStorage: {Path.GetFullPath(dataRoot)}"); return 0;
             }
             if (args.Length > 0 && args[0] == "flash")
                 throw new InvalidDataException("Flashing is unavailable. This ECU's erase/write/recovery procedure has not been verified. No adapter was opened and no ECU command was sent.");
             if (args.Length == 1 && args[0] is "read" or "identify")
             {
                 using var link = connect();
-                if (args[0] == "identify") output.WriteLine("ECU accepted: " + TargetPolicy.Identify(link));
+                if (args[0] == "identify") output.WriteLine("ECU reported calibration: " + TargetPolicy.Identify(link));
                 else
                 {
                     int last = -1;
@@ -85,7 +87,7 @@ No other calibration, protocol override, ECU erase, write, or reset is available
                         if (percent == last) return; last = percent;
                         output.WriteLine($"Pass {pass}/2: {percent}%");
                     }, cancel);
-                    output.WriteLine($"READ COMPLETE — two full reads and disk copies match.\nOriginal: {backup}\nKeep the entire backup folder. Use Export to save another raw .rom copy.");
+                    output.WriteLine($"READ COMPLETE — two full reads and disk copies match.\nReported calibration: {RomStorage.LoadVerifiedBackup(backup).ReportedCalibration}\nOriginal: {backup}\nKeep the entire backup folder. Use Export to save another raw .rom copy. Raw backup verification does not verify checksum or programming compatibility.");
                 }
                 return 0;
             }
