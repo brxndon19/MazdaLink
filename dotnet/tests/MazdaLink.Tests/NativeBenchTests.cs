@@ -79,8 +79,10 @@ public sealed class NativeBenchTests
     public void AdapterDiagnosticsConfigureOnlyLocalEchoAndMeasureSupplyOutsideEntry()
     {
         using var driver = new Driver(); driver.ConfigureDiagnostics();
-        Assert.Equal(new[] { "loopback:1", "supply" }, driver.Calls);
+        Assert.Equal(new[] { "set-loopback:1", "get-loopback", "supply" }, driver.Calls);
         Assert.Equal(0u, driver.Channel.Diagnostics.LoopbackConfigurationStatus);
+        Assert.True(driver.LoopbackEnabled);
+        Assert.Equal(new BenchConfigurationReading(0, 1), driver.Channel.Diagnostics.LoopbackReadback);
         Assert.Equal(12500, driver.Channel.Diagnostics.SupplyBeforeEntry!.Millivolts);
         driver.Channel.StartEntryPulse();
         driver.Channel.Read(25);
@@ -89,6 +91,25 @@ public sealed class NativeBenchTests
         Assert.Equal(12500, driver.Channel.Diagnostics.SupplyAfterEntry!.Millivolts);
         Assert.Equal(1, driver.Channel.Diagnostics.EntryReceive.Calls);
         Assert.Equal(0, driver.Channel.Diagnostics.IdentityReceive.Calls);
+    }
+    [Theory]
+    [InlineData(0u, 0u, false, false, null, 1u)]
+    [InlineData(1u, 0u, false, false, null, 0u)]
+    [InlineData(0u, 0u, true, false, null, 0u)]
+    [InlineData(0u, 1u, false, false, null, null)]
+    [InlineData(0u, 0u, false, true, null, null)]
+    [InlineData(0u, 0u, false, false, 2u, null)]
+    public void LoopbackSetAndGetAreDistinctAndMissingReadbackCannotClaimEnabled(
+        uint setStatus, uint getStatus, bool ignoredSet, bool untouched, uint? overrideValue, uint? expected)
+    {
+        using var driver = new Driver { LoopbackStatus = setStatus, LoopbackReadStatus = getStatus,
+            IgnoreLoopbackSet = ignoredSet, LeaveLoopbackOutputUntouched = untouched, LoopbackReadValue = overrideValue };
+        driver.ConfigureDiagnostics();
+        Assert.Equal(setStatus, driver.Channel.Diagnostics.LoopbackConfigurationStatus);
+        Assert.Equal(new BenchConfigurationReading(getStatus, expected), driver.Channel.Diagnostics.LoopbackReadback);
+        Assert.Equal(new[] { "set-loopback:1", "get-loopback", "supply" }, driver.Calls);
+        Assert.Equal(0, driver.Channel.Diagnostics.StartCalls);
+        Assert.Equal(0, driver.Channel.Diagnostics.IdentityRequests);
     }
     [Theory]
     [InlineData(1u, 12500, false)]
@@ -159,6 +180,11 @@ public sealed class NativeBenchTests
         public uint WriteCount { get; init; } = 1;
         public uint StopStatus { get; init; }
         public uint LoopbackStatus { get; init; }
+        public uint LoopbackReadStatus { get; init; }
+        public uint? LoopbackReadValue { get; init; }
+        public bool IgnoreLoopbackSet { get; init; }
+        public bool LeaveLoopbackOutputUntouched { get; init; }
+        public bool LoopbackEnabled { get; private set; }
         public uint SupplyStatus { get; init; }
         public int Supply { get; init; } = 12500;
         public bool LeaveSupplyOutputUntouched { get; init; }
@@ -219,13 +245,27 @@ public sealed class NativeBenchTests
                 if (!LeaveSupplyOutputUntouched) Marshal.WriteInt32(output, Supply);
                 return SupplyStatus;
             }
-            if (code == 1)
+            // ABI reference: https://quantexlab.de/en/develop/j2534/pt_ioctl_config.html
+            // Independently model GET reading state and SET changing it.
+            // Using GET where SET is required must leave loopback disabled.
+            if (code is 1 or 2)
             {
                 var list = Type.GetNestedType("ConfigurationList", BindingFlags.NonPublic)!;
                 Assert.Equal(1, Marshal.ReadInt32(input));
                 nint item = Marshal.ReadIntPtr(input, Marshal.OffsetOf(list, "Items").ToInt32());
-                Assert.Equal(3, Marshal.ReadInt32(item)); Assert.Equal(1, Marshal.ReadInt32(item, 4));
-                Calls.Add("loopback:1"); return LoopbackStatus;
+                Assert.Equal(3, Marshal.ReadInt32(item)); Assert.Equal(nint.Zero, output);
+                if (code == 2)
+                {
+                    Assert.Equal(1, Marshal.ReadInt32(item, 4));
+                    Calls.Add("set-loopback:1");
+                    if (LoopbackStatus == 0 && !IgnoreLoopbackSet) LoopbackEnabled = true;
+                    return LoopbackStatus;
+                }
+                Assert.Equal(-1, Marshal.ReadInt32(item, 4));
+                Calls.Add("get-loopback");
+                if (!LeaveLoopbackOutputUntouched)
+                    Marshal.WriteInt32(item, 4, (int)(LoopbackReadValue ?? (LoopbackEnabled ? 1u : 0u)));
+                return LoopbackReadStatus;
             }
             Assert.Equal(8u, code); Calls.Add("clear"); return 0;
         }
