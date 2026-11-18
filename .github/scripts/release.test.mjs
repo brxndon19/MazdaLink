@@ -12,7 +12,7 @@ function fixture() {
   const names = ['MazdaLink.exe', `MazdaLink-${tag}-source.zip`];
   for (const name of names) writeFileSync(join(folder, name), 'synthetic packaging test');
   const files = Object.fromEntries(names.map(name => [name, digest(name)]));
-  writeFileSync(join(folder, 'release.json'), JSON.stringify({ schemaVersion: 5, version: tag.slice(1), tag, sourceCommit: sha, files, architecture: 'win-x86', ecuProgrammingEnabled: false, programmingFamily: 'None', readIdentityPolicy: 'reported-calibration', checksumSoftwareId: 'ZY87EC000ZYV5050', benchRecoveryCheck: 'ZYJ2EA000ZYV5050-identification-only', realEcuAcceptance: 'unqualified', ramSelfTest: 'ZYJ2EA000ZYV5050-fixed-volatile-only', ramSelfTestHardwareAcceptance: 'unqualified', ramSelfTestImageSha256:'311ce48738ec5699ac0980c82e68acee4aaaaf61664755cda4d2183896b8ebb0' }));
+  writeFileSync(join(folder, 'release.json'), JSON.stringify({ schemaVersion: 5, version: tag.slice(1), tag, sourceCommit: sha, files, architecture: 'win-x86', ecuProgrammingEnabled: false, programmingFamily: 'None', readIdentityPolicy: 'reported-calibration', checksumSoftwareId: 'ZY87EC000ZYV5050', benchRecoveryCheck: 'ZYJ2EA000ZYV5050-identification-only', realEcuAcceptance: 'unqualified', ramSelfTest: 'ZYJ2EA000ZYV5050-fixed-volatile-only', ramSelfTestHardwareAcceptance: 'unqualified', ramSelfTestImageSha256:'5fbb400331919923cde4b96952c8e5ae65aa0768294776009d7796c1607d6742' }));
   writeFileSync(join(folder, 'SHA256SUMS.txt'), [...names, 'release.json'].map(name => `${digest(name)}  ${name}`).join('\n') + '\n');
   return folder;
 }

@@ -32,16 +32,16 @@ public sealed class RamSelfTestStep
 public static class Zyj2RamSelfTestPolicy
 {
     public const uint Address = 0xFFFF8000;
-    public const string ImageSha256 = "311ce48738ec5699ac0980c82e68acee4aaaaf61664755cda4d2183896b8ebb0";
+    public const string ImageSha256 = "5fbb400331919923cde4b96952c8e5ae65aa0768294776009d7796c1607d6742";
     private static readonly byte[] image = Convert.FromHexString(
-        "D607D10860108064710560108065E4C0E5069309430B000994079307432B0009" +
-        "FFFF8030FFFFE80004C20924004000094D4C523100000000");
+        "9319430B0009D6088063D10860108064710560108065E4C0E5069309430B0009" +
+        "94079307432B0009FFFF803AFFFFE80004C2092400400EE400094D4C32000000");
     private static readonly IReadOnlyList<RamSelfTestStep> steps = Build().AsReadOnly();
     public static byte[] Image => image.ToArray();
     public static IReadOnlyList<RamSelfTestStep> Steps => steps;
     private static List<RamSelfTestStep> Build()
     {
-        if (image.Length != 56 || RomStorage.Hash(image) != ImageSha256) throw new InvalidDataException("RAM self-test image integrity failed.");
+        if (image.Length != 64 || RomStorage.Hash(image) != ImageSha256) throw new InvalidDataException("RAM self-test image integrity failed.");
         var result = new List<RamSelfTestStep>();
         void SetAddress(uint value)
         {
@@ -69,14 +69,21 @@ public static class Zyj2RamSelfTestPolicy
             result.Add(new(RamSelfTestOperation.VerifyByte, request, [0x7A, 0xB1, image[offset]], offset));
         }
         SetAddress(Address);
-        result.Add(new(RamSelfTestOperation.ExecuteFixedTest, [0x7A, 0xA0, 0, 0, 0, 0, 0, 0], [0x7A, 0xC6, 0x4D, 0x4C, 0x52, 0x31]));
+        result.Add(new(RamSelfTestOperation.ExecuteFixedTest, [0x7A, 0xA0, 0, 0, 0, 0, 0, 0], [0x7A, 0xC6, 0x4D, 0x4C, 0x32]));
         result.Add(new(RamSelfTestOperation.IdentifyMonitor, Zyj2RecoveryPolicy.IdentityRequest, Zyj2RecoveryPolicy.ExpectedIdentity));
         return result;
     }
 }
 
-public sealed record RamSelfTestResult(int UploadedBytes, int VerifiedBytes, byte Fccs, byte MatSelection)
+public sealed record RamSelfTestResult(int UploadedBytes, int VerifiedBytes, byte HardwareClass, byte Fccs, byte MatSelection)
 {
+    public string HardwareClassName => HardwareClass switch
+    {
+        0 => "legacy SH705x class (SDSR high byte 0B/0D)",
+        1 => "SH7058S class (SDSR high byte 50)",
+        2 => "SH7059 class (SDSR high byte 0E/0F)",
+        _ => "unknown resident hardware class"
+    };
     public bool FlashWriteEnableObserved => (Fccs & 0x80) != 0;
     public bool FlashErrorObserved => (Fccs & 0x10) != 0;
     public bool UserBootMatSelected => MatSelection == 0xAA;
@@ -87,7 +94,7 @@ public sealed class Zyj2RamSelfTest
 {
     public RamSelfTestResult Run(IFixedRamSelfTestChannel channel, Action<string> record, CancellationToken cancel = default)
     {
-        int uploaded = 0, verified = 0; byte? fccs = null, mat = null;
+        int uploaded = 0, verified = 0; byte? hardware = null, fccs = null, mat = null;
         record("fixed-ram-self-test-started-no-flash");
         for (int index = 0; index < Zyj2RamSelfTestPolicy.Steps.Count; index++)
         {
@@ -108,14 +115,14 @@ public sealed class Zyj2RamSelfTest
             }
             if (step.Operation == RamSelfTestOperation.ExecuteFixedTest)
             {
-                fccs = frame.Data[6]; mat = frame.Data[7];
+                hardware = frame.Data[5]; fccs = frame.Data[6]; mat = frame.Data[7];
                 record("fixed-ram-marker-received-status-registers-read-only");
             }
         }
-        if (uploaded != 56 || verified != 56 || fccs is null || mat is null)
+        if (uploaded != 64 || verified != 64 || hardware is null || fccs is null || mat is null)
             throw new TransportException("RAM self-test evidence is incomplete. No flash operation was sent.");
         record("monitor-return-confirmed-after-fixed-ram-self-test");
-        return new(uploaded, verified, fccs.Value, mat.Value);
+        return new(uploaded, verified, hardware.Value, fccs.Value, mat.Value);
     }
     private static RecoveryFrame Receive(IFixedRamSelfTestChannel channel, RamSelfTestStep step, CancellationToken cancel)
     {

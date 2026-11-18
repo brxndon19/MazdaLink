@@ -187,7 +187,7 @@ public sealed class NativeBenchTests
         Assert.Throws<TransportException>(() => waiting.SendRamStep(1));
     }
     [Fact]
-    public void NativeRamCapabilityRequiresAllFiftySixByteRepliesBeforeExecutionAndCannotRestart()
+    public void NativeRamCapabilityRequiresAllSixtyFourByteRepliesBeforeExecutionAndCannotRestart()
     {
         using var driver = new Driver(allowRamSelfTest: true); driver.IdentifyMonitor();
         for (int i = 0; i < Zyj2RamSelfTestPolicy.Steps.Count; i++)
@@ -196,7 +196,7 @@ public sealed class NativeBenchTests
             if (Zyj2RamSelfTestPolicy.Steps[i].ExpectsReply)
             { driver.SetRamReply(i); driver.Channel.Read(25); }
         }
-        Assert.Equal(new RamSelfTestTransportDiagnostics(126, 56, false, false), driver.RamDiagnostics);
+        Assert.Equal(new RamSelfTestTransportDiagnostics(143, 64, false, false), driver.RamDiagnostics);
         Assert.Equal(2, driver.Channel.Diagnostics.IdentityRequests);
         Assert.Throws<TransportException>(() => driver.SendRamStep(0));
     }
@@ -287,7 +287,7 @@ public sealed class NativeBenchTests
             {
                 RamSelfTestOperation.Address => step.Payload,
                 RamSelfTestOperation.VerifyByte => [0x7A, 0xB1, Zyj2RamSelfTestPolicy.Image[step.ImageOffset], 0, 0, 0, 0, 0],
-                RamSelfTestOperation.ExecuteFixedTest => [0x7A, 0xC6, 0x4D, 0x4C, 0x52, 0x31, 0x80, 0],
+                RamSelfTestOperation.ExecuteFixedTest => [0x7A, 0xC6, 0x4D, 0x4C, 0x32, 1, 0x80, 0],
                 RamSelfTestOperation.IdentifyMonitor => Zyj2RecoveryPolicy.ExpectedIdentity,
                 _ => throw new Exception("No upload-success acknowledgement exists")
             };

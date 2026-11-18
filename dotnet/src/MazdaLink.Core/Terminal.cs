@@ -24,7 +24,7 @@ Commands:
                               Requires a complete MazdaLink backup and a detached bench ECU.
   ram-self-test <original.rom>
                               ZYJ2 spare only: upload/read back/execute one fixed volatile RAM test.
-                              Read flash-controller status; confirm monitor return and normal restart.
+                              Query resident hardware class and flash status; confirm monitor return and normal restart.
                               Experimental and unqualified; no flash-controller writes or ROM programming.
   flash                       Unavailable: Mazda 2 write/recovery protocol is unverified.
   status                      Show read policy, checksum support, storage and programming status.
@@ -40,6 +40,7 @@ The separate RAM self-test accepts no external kernel, address or executable.
 It does not qualify recovery after interrupted flashing or enable a flash kernel.
 Keep OBD 12 V and USB powered; switch only ECU positive feeds as prompted.
 Bench entry uses a 60-second ECU-off wait BEFORE its 20-second reconnect window.
+Normal restart: POWER OFF for a timed 60 seconds, then POWER ON and a 10-second startup wait.
 Bench logs include adapter status and measured timing, without frame payloads.
 """;
     public int Run(string[] args, CancellationToken cancel = default)
