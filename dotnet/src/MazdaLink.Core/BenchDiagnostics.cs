@@ -7,11 +7,12 @@ public sealed record BenchReceiveDiagnostics(int Calls, int EmptyReads, int Retu
     uint LastExtraDataIndex, uint? LastCanId, bool? LastPayloadMatched, double MaxCallMilliseconds);
 
 public sealed record BenchSupplyReading(uint DriverStatus, int? Millivolts);
+public sealed record BenchConfigurationReading(uint DriverStatus, uint? Value);
 public sealed record BenchTrafficBin(int Second, int TxEchoes, int OtherReturnedFrames);
 
 public sealed record BenchChannelDiagnostics(string? Adapter, string? FirmwareVersion,
     string? DriverVersion, string? ApiVersion, uint Bitrate, uint RequestId, uint ResponseId,
-    uint? LoopbackConfigurationStatus, BenchSupplyReading? SupplyBeforeEntry,
+    uint? LoopbackConfigurationStatus, BenchConfigurationReading? LoopbackReadback, BenchSupplyReading? SupplyBeforeEntry,
     BenchSupplyReading? SupplyAfterEntry, int StartCalls, int StopCalls, int IdentityRequests,
     double StartCallMilliseconds, double StopCallMilliseconds, double IdentityCallMilliseconds, double? EntryActiveMilliseconds,
     BenchReceiveDiagnostics EntryReceive, BenchReceiveDiagnostics IdentityReceive,

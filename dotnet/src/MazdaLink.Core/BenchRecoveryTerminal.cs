@@ -28,7 +28,7 @@ public sealed class BenchRecoveryTerminal(Func<IReadTransport> connect, Func<IBe
         void Record(string stage)
         {
             if (++sequence > 32) throw new IOException("Bench evidence limit reached.");
-            byte[] line = JsonSerializer.SerializeToUtf8Bytes(new { schema = 2, version, sequence, utc = DateTime.UtcNow, stage,
+            byte[] line = JsonSerializer.SerializeToUtf8Bytes(new { schema = 3, version, sequence, utc = DateTime.UtcNow, stage,
                 calibration = Zyj2RecoveryPolicy.SoftwareId, backupSha256 = RomStorage.Hash(backup.Data),
                 flashOperationsImplemented = false, interruptedFlashRecoveryTested = false,
                 diagnostics = activeChannel?.Diagnostics }, jsonOptions);

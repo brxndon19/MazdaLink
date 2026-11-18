@@ -10,6 +10,9 @@ namespace MazdaLink.J2534;
 /// <summary>Isolated raw-CAN bench binding. Its only transmit operations are entry and identification.</summary>
 public sealed class NativeBenchMonitorChannel : IBenchMonitorChannel
 {
+    // SAE J2534-1 04.04: GET_CONFIG=0x01, SET_CONFIG=0x02, LOOPBACK=0x03.
+    private const uint GetConfig = 0x01, SetConfig = 0x02;
+    private const int LoopbackParameter = 0x03;
     [StructLayout(LayoutKind.Sequential)]
     private struct Message
     {
@@ -56,6 +59,7 @@ public sealed class NativeBenchMonitorChannel : IBenchMonitorChannel
     private IoctlFn? ioctl;
     private string? adapterName, firmwareVersion, driverVersion, apiVersion;
     private uint? loopbackStatus;
+    private BenchConfigurationReading? loopbackReadback;
     private BenchSupplyReading? beforeEntrySupply, afterEntrySupply;
     private ReceiveCounters? entryReceive, identityReceive;
     private int startCalls, stopCalls, identityRequests;
@@ -66,7 +70,7 @@ public sealed class NativeBenchMonitorChannel : IBenchMonitorChannel
     public string? CleanupWarning { get; private set; }
     public BenchChannelDiagnostics Diagnostics => new(adapterName, firmwareVersion, driverVersion, apiVersion,
         Zyj2RecoveryPolicy.Bitrate, Zyj2RecoveryPolicy.RequestId, Zyj2RecoveryPolicy.ResponseId,
-        loopbackStatus, beforeEntrySupply, afterEntrySupply, startCalls, stopCalls, identityRequests,
+        loopbackStatus, loopbackReadback, beforeEntrySupply, afterEntrySupply, startCalls, stopCalls, identityRequests,
         startMilliseconds, stopMilliseconds, identityMilliseconds, entryActiveMilliseconds,
         (entryReceive ?? new()).Snapshot(), (identityReceive ?? new()).Snapshot(),
         Enumerable.Range(0, 32).Where(i => (entryEchoBins?[i] ?? 0) + (entryFrameBins?[i] ?? 0) > 0)
@@ -143,9 +147,18 @@ public sealed class NativeBenchMonitorChannel : IBenchMonitorChannel
         nint item = Marshal.AllocHGlobal(8), list = Marshal.AllocHGlobal(Marshal.SizeOf<ConfigurationList>());
         try
         {
-            Marshal.WriteInt32(item, 3); Marshal.WriteInt32(item, 4, 1);
+            Marshal.WriteInt32(item, LoopbackParameter); Marshal.WriteInt32(item, 4, 1);
             Marshal.StructureToPtr(new ConfigurationList { Count = 1, Items = item }, list, false);
-            loopbackStatus = ioctl!(channel, 1, list, 0);
+            loopbackStatus = ioctl!(channel, SetConfig, list, 0);
+            // A successful SET is not a readback. Sentinel protects against a
+            // driver returning success without filling GET_CONFIG's in/out list.
+            Marshal.WriteInt32(item, LoopbackParameter); Marshal.WriteInt32(item, 4, -1);
+            Marshal.StructureToPtr(new ConfigurationList { Count = 1, Items = item }, list, false);
+            uint readStatus = ioctl!(channel, GetConfig, list, 0);
+            int value = Marshal.ReadInt32(item, 4);
+            loopbackReadback = new(readStatus,
+                readStatus == 0 && Marshal.ReadInt32(list) == 1 &&
+                Marshal.ReadInt32(item) == LoopbackParameter && value is 0 or 1 ? (uint)value : null);
         }
         finally { Marshal.FreeHGlobal(list); Marshal.FreeHGlobal(item); }
         beforeEntrySupply = ReadSupply();

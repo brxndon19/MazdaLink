@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.0-alpha.5
+
+- Correct the bench diagnostics' local transmit-echo configuration: use J2534 `SET_CONFIG` (0x02), rather than `GET_CONFIG` (0x01), to request `LOOPBACK=1`. Alpha.4's zero configuration status reported a read operation and did not establish that echoes had been enabled.
+- Record a separate `GET_CONFIG` readback status and nullable loopback value in schema-3 bench evidence. Unsupported, untouched or invalid readbacks stay unavailable; a returned zero remains visibly disabled. No configuration or supply calls run during entry traffic.
+- Keep the same bounded entry pulse, single identity query and strict target/backup gates. This corrects diagnostic visibility; it does not establish why monitor entry failed or qualify ECU flashing/recovery.
+
 ## 0.9.0-alpha.4
 
 - Fix entry-window drift caused by counting sleeps rather than measuring elapsed time. Anchor the 20-second monotonic deadline before the driver's periodic-start call, and record driver start/stop latency separately.
