@@ -52,7 +52,8 @@ try
     }
     Console.WriteLine($"MazdaLink {Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion.Split('+')[0]}");
     return new Terminal(Connect, Console.In, Console.Out, root,
-        () => new NativeBenchMonitorChannel(SelectDriver())).Run(args, cancel.Token);
+        () => new NativeBenchMonitorChannel(SelectDriver()),
+        () => new NativeRamSelfTestChannel(SelectDriver())).Run(args, cancel.Token);
 }
 catch (Exception error)
 {

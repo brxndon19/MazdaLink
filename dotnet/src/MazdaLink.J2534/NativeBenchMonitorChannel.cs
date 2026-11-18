@@ -59,6 +59,11 @@ public sealed class NativeBenchMonitorChannel : IBenchMonitorChannel
     private IoctlFn? ioctl;
     private string? adapterName, firmwareVersion, driverVersion, apiVersion;
     private uint? loopbackStatus;
+    private readonly bool allowRamSelfTest;
+    private bool initialMonitorIdentified, ramFaulted;
+    private int nextRamStep, verifiedRamBytes;
+    private RamSelfTestStep? awaitingRamStep;
+    internal RamSelfTestTransportDiagnostics RamDiagnostics => new(nextRamStep, verifiedRamBytes, awaitingRamStep is not null, ramFaulted);
     private BenchConfigurationReading? loopbackReadback;
     private BenchSupplyReading? beforeEntrySupply, afterEntrySupply;
     private ReceiveCounters? entryReceive, identityReceive;
@@ -76,8 +81,10 @@ public sealed class NativeBenchMonitorChannel : IBenchMonitorChannel
         Enumerable.Range(0, 32).Where(i => (entryEchoBins?[i] ?? 0) + (entryFrameBins?[i] ?? 0) > 0)
             .Select(i => new BenchTrafficBin(i, entryEchoBins?[i] ?? 0, entryFrameBins?[i] ?? 0)).ToArray());
 
-    public NativeBenchMonitorChannel(J2534Driver driver)
+    public NativeBenchMonitorChannel(J2534Driver driver) : this(driver, false) { }
+    internal NativeBenchMonitorChannel(J2534Driver driver, bool allowRamSelfTest)
     {
+        this.allowRamSelfTest = allowRamSelfTest;
         var registered = J2534Drivers.Discover(driver.Kind).FirstOrDefault(d =>
             d.LibraryPath.Equals(Path.GetFullPath(driver.LibraryPath), StringComparison.OrdinalIgnoreCase) && d.RawCanSupported);
         libraryPath = registered?.LibraryPath ?? throw new TransportException("The registered Mongoose driver must advertise raw CAN support for the bench check.");
@@ -269,8 +276,43 @@ public sealed class NativeBenchMonitorChannel : IBenchMonitorChannel
             stats.ExpectedIdFrames++;
             stats.PayloadMatched = payload.SequenceEqual(Zyj2RecoveryPolicy.ExpectedIdentity);
         }
-        return new(id, packet.RxStatus, payload.ToArray());
+        var frame = new RecoveryFrame(id, packet.RxStatus, payload.ToArray());
+        if (identityRequested && !pulseStarted && id == Zyj2RecoveryPolicy.ResponseId && packet.RxStatus == 0x100 &&
+            payload.SequenceEqual(Zyj2RecoveryPolicy.ExpectedIdentity)) initialMonitorIdentified = true;
+        if (awaitingRamStep is not null)
+        {
+            if (!awaitingRamStep.MatchesReply(frame)) ramFaulted = true;
+            else
+            {
+                if (awaitingRamStep.Operation == RamSelfTestOperation.VerifyByte) verifiedRamBytes++;
+                awaitingRamStep = null;
+            }
+        }
+        return frame;
     }
+    // Only the separate NativeRamSelfTestChannel enables this capability.
+    // The identification backend's public interface has no upload/execute method.
+    internal void SendFixedRamSelfTestStep(int index)
+    {
+        RequireReady();
+        if (!allowRamSelfTest || !initialMonitorIdentified || pulseStarted || ramFaulted ||
+            awaitingRamStep is not null || index != nextRamStep || index < 0 || index >= Zyj2RamSelfTestPolicy.Steps.Count)
+        { ramFaulted = true; throw new TransportException("Fixed RAM self-test step blocked by capability, monitor or sequence gate."); }
+        var step = Zyj2RamSelfTestPolicy.Steps[index];
+        if (step.Operation == RamSelfTestOperation.ExecuteFixedTest && verifiedRamBytes != Zyj2RamSelfTestPolicy.Image.Length)
+        { ramFaulted = true; throw new TransportException("Every fixed RAM image byte must be read back before execution."); }
+        var packet = Packet(Zyj2RecoveryPolicy.RequestId, step.Payload); uint count = 1;
+        nextRamStep++;
+        if (step.Operation == RamSelfTestOperation.IdentifyMonitor) identityRequests++;
+        awaitingRamStep = step.ExpectsReply ? step : null;
+        try
+        {
+            Check(write!(channel, ref packet, ref count, 1000), "Send fixed RAM self-test step");
+            if (count != 1) throw new TransportException("Fixed RAM self-test write count was not one. No retry was attempted.");
+        }
+        catch { ramFaulted = true; throw; }
+    }
+    internal void FailRamSelfTest() => ramFaulted = true;
     public void Dispose()
     {
         if (disposed) return;

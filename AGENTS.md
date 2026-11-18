@@ -27,6 +27,20 @@
   ECU acceptance, and adapter supply snapshots do not prove ECU power cycling.
 - MazdaLink has no enabled flash/recovery implementation. A flash command must refuse
   before driver open; do not infer a Mazda 2 writer from generic UDS or Gen 1 code.
+- The separately selected ZYJ2 fixed RAM self-test has its own backend capability
+  and `RAM ZYJ2` confirmation. Permit only the immutable built-in 56-byte program
+  at 0xFFFF8000, its bounded upload and exact per-byte readback script, one execution,
+  then monitor identification and normal restart. Never accept external code,
+  addresses, repeated execution, skipped replies or a weak whole-image checksum
+  in place of exact byte verification. The program reads FCCS/FMATS and writes
+  only its own RAM result and the existing CAN path. No flash-controller write,
+  on-chip algorithm download, erase or ROM programming is included. Physical RAM
+  execution acceptance remains unqualified until separately demonstrated.
+- Use the observed longer-off bench sequence: normal preflight, operator-confirmed
+  ECU-only power removal, a monotonic 60-second host wait outside entry traffic,
+  then open the adapter with ECU off and reconnect during the bounded entry window.
+  The timer and adapter voltage do not measure internal ECU power or prove a
+  minimum cold-start delay. Preserve the identification-only backend's two-payload gate.
 - Preserve original GPL credits. Legacy sources/definitions and their core integrity
   regression matrix remain archived in place, but are not application dependencies.
 

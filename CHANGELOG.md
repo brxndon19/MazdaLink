@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.0-alpha.6
+
+- Add a separately selected ZYJ2 spare fixed volatile RAM self-test (menu 10). Require the complete examined backup, live calibration/RPM checks, explicit `RAM ZYJ2` confirmation and a valid native monitor reply before the RAM capability can send its immutable script.
+- Upload only MazdaLink's own 56-byte SH-2 program at its fixed RAM location. Read back every byte through one-byte resident checksum queries before one execution; check its distinct marker, identify the monitor again and independently check normal restart. No external image/address, retry, skipped reply, flash-control write, on-chip algorithm download, erase or ROM programming is available.
+- The RAM program reads only FCCS and FMATS status, writes two bytes of its own RAM result, sends the result using the examined monitor CAN helper and returns through the existing monitor stack trampoline. Include assembly/linker source, an exact GNU assembler rebuild check and an independent instruction-model test. Physical RAM execution is unqualified.
+- Adopt the successful spare's longer-off procedure for both selected bench workflows: normal preflight, operator ECU-only power removal, a 60-second monotonic host wait before entry traffic, then reconnect during the unchanged 20-second entry window. The timer does not measure ECU voltage or establish a minimum discharge duration.
+- Record schema-4 local evidence with bounded RAM step/verification counters and status observations, without raw frames or RAM payloads. Bind the fixed program hash and unqualified RAM scope in schema-5 release metadata. Flashing and interrupted-write recovery remain unavailable.
+
 ## 0.9.0-alpha.5
 
 - Correct the bench diagnostics' local transmit-echo configuration: use J2534 `SET_CONFIG` (0x02), rather than `GET_CONFIG` (0x01), to request `LOOPBACK=1`. Alpha.4's zero configuration status reported a read operation and did not establish that echoes had been enabled.

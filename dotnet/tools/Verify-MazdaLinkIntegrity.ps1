@@ -5,7 +5,7 @@ $passed = @($run.TestRun.Results.UnitTestResult | Where-Object outcome -eq 'Pass
 foreach ($name in @('MazdaLink.Tests.TargetTests.RawReadsDoNotRequireAWhitelistedIdentityOrKnownRomLayout(identity: "ZYJ2EA000ZYV5050")','MazdaLink.Tests.TargetTests.KnownLookingRomFromUnknownCalibrationCannotUseTheZy87ChecksumPolicy','MazdaLink.Tests.TargetTests.RefusedReadStopsWithoutKeyRetryOrProtocolProbe','MazdaLink.Tests.TargetTests.EveryPrepareCorrectsAllRangesVerifiesDiskAndPreservesInputs','MazdaLink.Tests.TargetTests.ReadsBothPassesAt512AndExportsExactBytesWithNoOverwrite','MazdaLink.Tests.TargetTests.TransportRequiresValidIdentityBeforeSecurityEvenForDirectCalls','MazdaLink.Tests.TargetTests.MenuAndCommandsCannotOpenHardwareForFlashingOrOverrides')) {
     if ($passed -notcontains $name) { throw "Missing mandatory MazdaLink integrity/scope case: $name" }
 }
-if ([int]$run.TestRun.ResultSummary.Counters.total -lt 92) { throw 'Focused scope/integrity matrix is incomplete.' }
+if ([int]$run.TestRun.ResultSummary.Counters.total -lt 112) { throw 'Focused scope/integrity matrix is incomplete.' }
 foreach ($name in @('MazdaLink.Tests.BenchRecoveryTests.EntryStopsBeforeOneIdentificationAndNeverUploadsOrExecutes','MazdaLink.Tests.BenchRecoveryTests.CancellationStopsPeriodicTrafficBeforeAnyIdentificationRequest','MazdaLink.Tests.BenchRecoveryTests.WireGateAllowsOnlyItsTwoFixedNonProgrammingPayloads','MazdaLink.Tests.BenchRecoveryTests.SpoofingHeaderAndCalibrationDoesNotSatisfyTheBootCodeFingerprints','MazdaLink.Tests.NativeBenchTests.NativePacketsUseRawExtendedCanAndExactlyTwoFixedPayloads','MazdaLink.Tests.NativeBenchTests.FailedNativeWriteCannotBeRetried')) {
     if ($passed -notcontains $name) { throw "Missing mandatory bench-scope case: $name" }
 }
@@ -17,4 +17,11 @@ if ($passed -notcontains 'MazdaLink.Tests.NativeBenchTests.AdapterDiagnosticsCon
     @($passed | Where-Object { $_ -like 'MazdaLink.Tests.NativeBenchTests.LoopbackSetAndGetAreDistinctAndMissingReadbackCannotClaimEnabled(*)' }).Count -ne 6) {
     throw 'Missing mandatory J2534 SET/GET loopback configuration and readback cases.'
 }
-Write-Output 'Raw-read integrity, no-programming gates, bounded identification-only bench flow and native packet checks passed. Hardware acceptance remains unqualified.'
+foreach ($name in @('MazdaLink.Tests.RamSelfTestTests.ScriptUploadsOnlyItsFixedRamImageAndReadsBackEveryByteBeforeExecute','MazdaLink.Tests.RamSelfTestTests.CancellationAfterReadbackCannotExecute','MazdaLink.Tests.RamSelfTestTests.UploadErrorIsNotLostBeforeReadbackAndCannotReachExecution','MazdaLink.Tests.RamSelfTestTests.ExternalCodeAddressOverridesAndMissingBackupsCannotOpenEitherBackend','MazdaLink.Tests.RamSelfTestTests.ColdPowerOffWaitCompletesBeforeStartAndCancellationStopsSetup','MazdaLink.Tests.NativeBenchTests.IdentificationChannelCannotAcquireTheSeparateRamCapability','MazdaLink.Tests.NativeBenchTests.RamStepsCannotSkipReadbackOrAdvancePastAnUnansweredAddress','MazdaLink.Tests.NativeBenchTests.NativeRamCapabilityRequiresAllFiftySixByteRepliesBeforeExecutionAndCannotRestart','MazdaLink.Tests.NativeBenchTests.NativeRamByteMismatchPermanentlyBlocksLaterSteps')) {
+    if ($passed -notcontains $name) { throw "Missing mandatory fixed-RAM capability case: $name" }
+}
+if (@($passed | Where-Object { $_ -like 'MazdaLink.Tests.RamSelfTestTests.FixedSh2ProgramOnlyWritesItsOwnRamResultAndReturnsToMonitor(*)' }).Count -ne 3 -or
+    @($passed | Where-Object { $_ -like 'MazdaLink.Tests.RamSelfTestTests.AnyByteMismatchPreventsExecution(*)' }).Count -ne 3) {
+    throw 'Missing mandatory independent SH-2 execution or per-byte mismatch cases.'
+}
+Write-Output 'Raw-read integrity, no-flash gates, isolated monitor and fixed volatile RAM contracts passed. Hardware acceptance remains unqualified.'
