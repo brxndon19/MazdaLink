@@ -1,7 +1,7 @@
 namespace MazdaLink.Core;
 
 public sealed class Terminal(Func<IReadTransport> connect, TextReader input, TextWriter output, string dataRoot,
-    Func<IBenchMonitorChannel>? benchMonitor = null)
+    Func<IBenchMonitorChannel>? benchMonitor = null, Func<IFixedRamSelfTestChannel>? ramSelfTest = null)
 {
     public const string Help = """
 MazdaLink — Mazda 2 DE / ZY-VE
@@ -22,6 +22,10 @@ Commands:
   bench-recovery-check <original.rom>
                               ZYJ2 spare only: identify its boot monitor and check normal restart.
                               Requires a complete MazdaLink backup and a detached bench ECU.
+  ram-self-test <original.rom>
+                              ZYJ2 spare only: upload/read back/execute one fixed volatile RAM test.
+                              Read flash-controller status; confirm monitor return and normal restart.
+                              Experimental and unqualified; no flash-controller writes or ROM programming.
   flash                       Unavailable: Mazda 2 write/recovery protocol is unverified.
   status                      Show read policy, checksum support, storage and programming status.
   license                     Show licence and attribution information.
@@ -30,10 +34,12 @@ Commands:
 Use read with ignition ON and engine OFF. Keep the entire backup folder.
 Modified ROMs must be edited externally. A checksum pass does not establish tuning safety.
 Raw reading uses one bounded read-only protocol; matching backups do not prove checksum or flashing compatibility.
-No protocol override, ECU erase, write, or reset is available.
+No protocol override, flash erase, ROM write, or ECU reset is available.
 The ZYJ2 bench check sends only fixed monitor-entry and identification messages.
+The separate RAM self-test accepts no external kernel, address or executable.
 It does not qualify recovery after interrupted flashing or enable a flash kernel.
 Keep OBD 12 V and USB powered; switch only ECU positive feeds as prompted.
+Bench entry uses a 60-second ECU-off wait BEFORE its 20-second reconnect window.
 Bench logs include adapter status and measured timing, without frame payloads.
 """;
     public int Run(string[] args, CancellationToken cancel = default)
@@ -43,7 +49,7 @@ Bench logs include adapter status and measured timing, without frame payloads.
         output.WriteLine($"Raw reads: no fixed calibration whitelist. Checksum preparation: {TargetPolicy.SoftwareId} only.\nStorage: {Path.GetFullPath(dataRoot)}\nFlashing: unavailable — write/recovery procedure is unverified.");
         while (!cancel.IsCancellationRequested)
         {
-            output.WriteLine("\n1  Identify ECU\n2  Read ECU and save backup\n3  Export backup as .rom\n4  Prepare an externally edited ROM\n5  Validate modified ROM\n6  Flash ROM back — unavailable\n7  Help\n8  Licence / credits\n9  ZYJ2 spare: bench monitor identification check\n0  Exit");
+            output.WriteLine("\n1  Identify ECU\n2  Read ECU and save backup\n3  Export backup as .rom\n4  Prepare an externally edited ROM\n5  Validate modified ROM\n6  Flash ROM back — unavailable\n7  Help\n8  Licence / credits\n9  ZYJ2 spare: bench monitor identification check\n10 ZYJ2 spare: fixed volatile RAM self-test — experimental\n0  Exit");
             output.Write("> ");
             string? choice = input.ReadLine()?.Trim();
             if (choice is null or "0") return 0;
@@ -59,6 +65,7 @@ Bench logs include adapter status and measured timing, without frame payloads.
                 case "7": command = ["help"]; break;
                 case "8": command = ["license"]; break;
                 case "9": command = ["bench-recovery-check", Ask("ZYJ2 backup original.rom")]; break;
+                case "10": command = ["ram-self-test", Ask("ZYJ2 backup original.rom")]; break;
                 default: output.WriteLine("Choose a listed number."); continue;
             }
             Execute(command, cancel); // Each hardware action creates/disposes a fresh connection; never retries.
@@ -87,6 +94,12 @@ Bench logs include adapter status and measured timing, without frame payloads.
             {
                 if (benchMonitor is null) throw new TransportException("The bench monitor backend is unavailable. No adapter was opened.");
                 new BenchRecoveryTerminal(connect, benchMonitor, input, output, dataRoot).Run(args[1], cancel);
+                return 0;
+            }
+            if (args.Length == 2 && args[0] == "ram-self-test")
+            {
+                if (ramSelfTest is null) throw new TransportException("The separate fixed RAM self-test backend is unavailable. No adapter was opened.");
+                new BenchRecoveryTerminal(connect, () => ramSelfTest(), input, output, dataRoot, runRamSelfTest: true).Run(args[1], cancel);
                 return 0;
             }
             if (args.Length == 1 && args[0] is "read" or "identify")

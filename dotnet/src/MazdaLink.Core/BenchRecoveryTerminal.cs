@@ -4,37 +4,43 @@ using System.Reflection;
 namespace MazdaLink.Core;
 
 public sealed class BenchRecoveryTerminal(Func<IReadTransport> connect, Func<IBenchMonitorChannel> monitor,
-    TextReader input, TextWriter output, string dataRoot)
+    TextReader input, TextWriter output, string dataRoot, bool runRamSelfTest = false,
+    Action<int, CancellationToken>? coldWait = null)
 {
     public void Run(string originalBackup, CancellationToken cancel)
     {
         var backup = RomStorage.LoadVerifiedBackup(originalBackup);
         Zyj2RecoveryPolicy.RequireBackup(backup);
-        output.WriteLine("ZYJ2 SPARE ECU — BENCH MONITOR IDENTIFICATION ONLY\n" +
+        output.WriteLine((runRamSelfTest ? "ZYJ2 SPARE ECU — FIXED VOLATILE RAM SELF-TEST\n" : "ZYJ2 SPARE ECU — BENCH MONITOR IDENTIFICATION ONLY\n") +
             "Use the detached ZYJ2 spare on your bench harness. Keep the good ECU disconnected.\n" +
-            "This checks cold-start monitor entry and normal restart. It does not test interrupted-flash recovery.\n" +
-            "No erase, ROM write, kernel upload, memory write, execute or ECU reset command is implemented.\n" +
+            (runRamSelfTest ? "This uploads only MazdaLink's fixed 56-byte RAM test, reads back every byte, executes it, reads flash-controller status and returns to the monitor.\n" +
+                "Only volatile RAM and CAN output are written. No flash-controller register is written; no flash kernel, erase or ROM programming is implemented.\n" :
+                "This checks cold-start monitor entry and normal restart. No upload, memory write, execute, erase, ROM programming or ECU reset is sent by this identification-only workflow.\n") +
+            "This does not test interrupted-flash recovery. RAM execution and ECU flashing remain unqualified.\n" +
             "Keep Mongoose USB and its OBD 12 V supply powered. Switch only the ECU positive supply feeds; keep grounds and CAN connected.\n" +
-            "Type BENCH ZYJ2 to confirm the detached spare and bench setup:");
-        if (input.ReadLine() != "BENCH ZYJ2") throw new InvalidDataException("Bench setup was not confirmed. No adapter was opened.");
+            $"Type {(runRamSelfTest ? "RAM ZYJ2" : "BENCH ZYJ2")} to confirm the detached spare and bench setup:");
+        if (input.ReadLine() != (runRamSelfTest ? "RAM ZYJ2" : "BENCH ZYJ2")) throw new InvalidDataException("Bench setup was not confirmed. No adapter was opened.");
         cancel.ThrowIfCancellationRequested();
-        string folder = Path.Combine(Path.GetFullPath(dataRoot), "bench-checks", DateTime.UtcNow.ToString("yyyyMMdd-HHmmss") + "-" + Guid.NewGuid().ToString("N"));
+        string folder = Path.Combine(Path.GetFullPath(dataRoot), runRamSelfTest ? "ram-self-tests" : "bench-checks", DateTime.UtcNow.ToString("yyyyMMdd-HHmmss") + "-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(folder);
         using var journal = new FileStream(Path.Combine(folder, "events.jsonl"), FileMode.CreateNew, FileAccess.Write, FileShare.Read);
         IBenchMonitorChannel? activeChannel = null;
+        RamSelfTestResult? ramResult = null;
         string? version = typeof(BenchRecoveryTerminal).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
         var jsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
         int sequence = 0;
         void Record(string stage)
         {
             if (++sequence > 32) throw new IOException("Bench evidence limit reached.");
-            byte[] line = JsonSerializer.SerializeToUtf8Bytes(new { schema = 3, version, sequence, utc = DateTime.UtcNow, stage,
+            byte[] line = JsonSerializer.SerializeToUtf8Bytes(new { schema = 4, version, sequence, utc = DateTime.UtcNow, stage,
                 calibration = Zyj2RecoveryPolicy.SoftwareId, backupSha256 = RomStorage.Hash(backup.Data),
                 flashOperationsImplemented = false, interruptedFlashRecoveryTested = false,
+                fixedRamSelfTest = runRamSelfTest, ramResult,
+                ramTransport = (activeChannel as IFixedRamSelfTestChannel)?.SelfTestDiagnostics,
                 diagnostics = activeChannel?.Diagnostics }, jsonOptions);
             journal.Write(line); journal.WriteByte((byte)'\n'); journal.Flush(flushToDisk: true);
             if (stage == "entry-window-armed")
-                output.WriteLine("ENTRY WINDOW: cycle the spare's battery power now; leave it connected afterwards. Waiting 20 seconds...");
+                output.WriteLine("ENTRY WINDOW: reconnect BOTH spare ECU positive feeds NOW and leave them connected. Waiting 20 seconds...");
         }
         void ConfirmNormal()
         {
@@ -51,20 +57,23 @@ public sealed class BenchRecoveryTerminal(Func<IReadTransport> connect, Func<IBe
             Record("started");
             ConfirmNormal();
             Record("normal-identity-and-engine-stopped-confirmed");
-            output.WriteLine("The spare reports ZYJ2EA000ZYV5050.\n" +
-                "After you type START, keep battery power connected while the adapter opens.\n" +
-                "Wait for the ENTRY WINDOW message. During that 20-second window,\n" +
-                "disconnect ECU battery power for at least five seconds, then reconnect it and leave it on.\n" +
-                "Keep OBD 12 V and USB powered throughout. Do not change ECUs, grounds, CAN wiring or adapters.\n" +
-                "Type START when ready for that single power cycle:");
-            if (input.ReadLine() != "START") throw new InvalidDataException("Entry window cancelled. No bench entry traffic was sent.");
-            cancel.ThrowIfCancellationRequested();
+            output.WriteLine("The spare reports ZYJ2EA000ZYV5050 and stopped-engine RPM.");
+            BenchColdStart.Prepare(input, output, Record, cancel, coldWait);
             var channel = monitor();
             activeChannel = channel;
             try
             {
-                output.WriteLine("Opening bench channel. Keep ECU battery power connected until the ENTRY WINDOW message.");
+                if (runRamSelfTest && channel is not IFixedRamSelfTestChannel)
+                    throw new TransportException("The separate fixed RAM self-test backend is unavailable.");
+                output.WriteLine("Opening bench channel. Keep ECU positive feeds disconnected until ENTRY WINDOW.");
                 new Zyj2BenchRecovery().IdentifyMonitor(channel, Record, cancel: cancel);
+                if (runRamSelfTest)
+                {
+                    ramResult = new Zyj2RamSelfTest().Run((IFixedRamSelfTestChannel)channel, Record, cancel);
+                    Record("fixed-ram-self-test-result-recorded-no-flash");
+                    output.WriteLine($"RAM SELF-TEST RETURNED TO MONITOR. {ramResult.VerifiedBytes} bytes verified before execution.\n" +
+                        $"Read-only status: FWE={(ramResult.FlashWriteEnableObserved ? 1 : 0)}, FLER={(ramResult.FlashErrorObserved ? 1 : 0)}, MAT=0x{ramResult.MatSelection:X2}. These observations do not authorize flashing.");
+                }
             }
             finally
             {
@@ -78,8 +87,9 @@ public sealed class BenchRecoveryTerminal(Func<IReadTransport> connect, Func<IBe
             cancel.ThrowIfCancellationRequested();
             ConfirmNormal();
             Record("normal-restart-confirmed");
+            if (runRamSelfTest) Record("fixed-ram-self-test-and-normal-restart-complete-not-flash-qualified");
             Record("identification-check-complete-not-flash-recovery-qualified");
-            output.WriteLine("BENCH CHECK COMPLETE — monitor identification and normal diagnostic restart passed.\n" +
+            output.WriteLine((runRamSelfTest ? "RAM SELF-TEST COMPLETE — fixed RAM execution, monitor return and normal restart passed.\n" : "BENCH CHECK COMPLETE — monitor identification and normal diagnostic restart passed.\n") +
                 "This does not establish recovery after an interrupted erase/write. Flashing remains unavailable.\nEvidence: " + folder);
         }
         catch (Exception error)
