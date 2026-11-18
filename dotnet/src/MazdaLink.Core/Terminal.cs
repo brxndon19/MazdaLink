@@ -33,6 +33,8 @@ Raw reading uses one bounded read-only protocol; matching backups do not prove c
 No protocol override, ECU erase, write, or reset is available.
 The ZYJ2 bench check sends only fixed monitor-entry and identification messages.
 It does not qualify recovery after interrupted flashing or enable a flash kernel.
+Keep OBD 12 V and USB powered; switch only ECU positive feeds as prompted.
+Bench logs include adapter status and measured timing, without frame payloads.
 """;
     public int Run(string[] args, CancellationToken cancel = default)
     {

@@ -3,6 +3,8 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Text.Json;
+using System.Diagnostics;
 using MazdaLink.Core;
 using MazdaLink.J2534;
 
@@ -21,7 +23,7 @@ public sealed class NativeBenchTests
         driver.Channel.RequestIdentity();
         Assert.Throws<TransportException>(() => driver.Channel.RequestIdentity());
         Assert.Throws<TransportException>(() => driver.Channel.StartEntryPulse());
-        Assert.Equal(new[] { "periodic:5:000FFFFEFF86000000000000", "stop:42", "clear", "write:1000:000FFFFE7AC0000000000000" }, driver.Calls);
+        Assert.Equal(new[] { "periodic:5:000FFFFEFF86000000000000", "stop:42", "supply", "clear", "write:1000:000FFFFE7AC0000000000000" }, driver.Calls);
         Assert.Equal(4152, Marshal.SizeOf(Driver.MessageType));
         Assert.Equal(24, Marshal.OffsetOf(Driver.MessageType, "Data").ToInt32());
     }
@@ -73,6 +75,70 @@ public sealed class NativeBenchTests
         Assert.NotNull(driver.Channel.CleanupWarning);
         Assert.DoesNotContain(driver.Calls, c => c.StartsWith("write:"));
     }
+    [Fact]
+    public void AdapterDiagnosticsConfigureOnlyLocalEchoAndMeasureSupplyOutsideEntry()
+    {
+        using var driver = new Driver(); driver.ConfigureDiagnostics();
+        Assert.Equal(new[] { "loopback:1", "supply" }, driver.Calls);
+        Assert.Equal(0u, driver.Channel.Diagnostics.LoopbackConfigurationStatus);
+        Assert.Equal(12500, driver.Channel.Diagnostics.SupplyBeforeEntry!.Millivolts);
+        driver.Channel.StartEntryPulse();
+        driver.Channel.Read(25);
+        Assert.Single(driver.Calls, c => c == "supply");
+        driver.Channel.StopEntryPulse();
+        Assert.Equal(12500, driver.Channel.Diagnostics.SupplyAfterEntry!.Millivolts);
+        Assert.Equal(1, driver.Channel.Diagnostics.EntryReceive.Calls);
+        Assert.Equal(0, driver.Channel.Diagnostics.IdentityReceive.Calls);
+    }
+    [Theory]
+    [InlineData(1u, 12500, false)]
+    [InlineData(0u, -1, true)]
+    [InlineData(0u, 40000, false)]
+    public void UnsupportedOrUnfilledSupplyMeasurementsAreNeverReportedAsZero(uint status, int voltage, bool untouched)
+    {
+        using var driver = new Driver { SupplyStatus = status, Supply = voltage, LeaveSupplyOutputUntouched = untouched, LoopbackStatus = 1 };
+        driver.ConfigureDiagnostics();
+        Assert.Null(driver.Channel.Diagnostics.SupplyBeforeEntry!.Millivolts);
+        Assert.Equal(status, driver.Channel.Diagnostics.SupplyBeforeEntry!.DriverStatus);
+        Assert.Equal(1u, driver.Channel.Diagnostics.LoopbackConfigurationStatus);
+    }
+    [Fact]
+    public void ReceiveStatisticsDistinguishEntryEchoesEmptyReadsAndIdentityWithoutPayloadLogging()
+    {
+        using var driver = new Driver(); driver.Channel.StartEntryPulse();
+        driver.Reply = Reply.Identity() with { RxStatus = 0x101 };
+        driver.Channel.Read(25);
+        driver.Reply = Reply.Identity() with { Count = 0, Status = 16 };
+        driver.Channel.Read(25); driver.Channel.StopEntryPulse();
+        driver.Channel.ClearReceive(); driver.Channel.RequestIdentity();
+        var data = Reply.Identity().Data.ToArray(); "SECRET12"u8.CopyTo(data.AsSpan(4));
+        driver.Reply = Reply.Identity() with { Data = data };
+        driver.Channel.Read(25);
+        var snapshot = driver.Channel.Diagnostics;
+        Assert.Equal(2, snapshot.EntryReceive.Calls); Assert.Equal(1, snapshot.EntryReceive.TxEchoes);
+        Assert.Equal(1, snapshot.EntryReceive.EmptyReads); Assert.Equal(1, snapshot.IdentityReceive.ExpectedIdFrames);
+        Assert.False(snapshot.IdentityReceive.LastPayloadMatched);
+        Assert.Equal(0x21u, snapshot.IdentityReceive.LastCanId);
+        Assert.Equal(1, snapshot.IdentityRequests); Assert.NotNull(snapshot.EntryActiveMilliseconds);
+        string json = JsonSerializer.Serialize(snapshot);
+        Assert.DoesNotContain("SECRET12", json); Assert.DoesNotContain("5345435245543132", json);
+        Assert.DoesNotContain("Data\"", json); Assert.DoesNotContain("LibraryPath", json);
+    }
+    [Fact]
+    public void EntryTrafficIsGroupedIntoBoundedTimeBins()
+    {
+        using var driver = new Driver(); driver.Channel.StartEntryPulse();
+        driver.Reply = Reply.Identity() with { RxStatus = 0x101 };
+        driver.SetEntryAge(3); driver.Channel.Read(25);
+        driver.Reply = Reply.Identity();
+        driver.SetEntryAge(7); driver.Channel.Read(25);
+        driver.SetEntryAge(1000); driver.Channel.Read(25);
+        var bins = driver.Channel.Diagnostics.EntryTraffic;
+        Assert.Equal(new[] { 3, 7, 31 }, bins.Select(b => b.Second));
+        Assert.Equal(1, bins[0].TxEchoes); Assert.Equal(1, bins[1].OtherReturnedFrames);
+        Assert.Equal(1, bins[2].OtherReturnedFrames);
+        Assert.InRange(bins.Count, 0, 32);
+    }
     public sealed record Reply(uint Status, uint Count, uint Protocol, uint RxStatus, uint Size, uint ExtraIndex, byte[] Data)
     {
         public static Reply Identity()
@@ -92,6 +158,10 @@ public sealed class NativeBenchTests
         public Reply Reply { get; set; } = Reply.Identity();
         public uint WriteCount { get; init; } = 1;
         public uint StopStatus { get; init; }
+        public uint LoopbackStatus { get; init; }
+        public uint SupplyStatus { get; init; }
+        public int Supply { get; init; } = 12500;
+        public bool LeaveSupplyOutputUntouched { get; init; }
         public bool EmptyInputBuffer { get; private set; }
         public Driver()
         {
@@ -117,6 +187,8 @@ public sealed class NativeBenchTests
             Bind("read", method);
         }
         private void Set(string name, object? value) => Type.GetField(name, Hidden)!.SetValue(Channel, value);
+        public void ConfigureDiagnostics() => Type.GetMethod("ConfigureDiagnostics", Hidden)!.Invoke(Channel, null);
+        public void SetEntryAge(int seconds) => Set("entryStarted", Stopwatch.GetTimestamp() - Stopwatch.Frequency * seconds);
         private static DynamicMethod Function(string name) => new(name, typeof(uint),
             [typeof(Driver), typeof(uint), MessageType.MakeByRefType(), typeof(uint).MakeByRefType(), typeof(uint)], Type, true);
         private void Bind(string name, DynamicMethod method) => Set(name, method.CreateDelegate(Type.GetField(name, Hidden)!.FieldType, this));
@@ -140,7 +212,23 @@ public sealed class NativeBenchTests
         { Assert.Equal(1u, count); Calls.Add($"write:{timeout}:{Packet(message)}"); count = WriteCount; return 0; }
         public uint Stop(uint channel, uint identifier) { Calls.Add($"stop:{identifier}"); return StopStatus; }
         public uint Ioctl(uint channel, uint code, nint input, nint output)
-        { Assert.Equal(8u, code); Calls.Add("clear"); return 0; }
+        {
+            if (code == 3)
+            {
+                Calls.Add("supply");
+                if (!LeaveSupplyOutputUntouched) Marshal.WriteInt32(output, Supply);
+                return SupplyStatus;
+            }
+            if (code == 1)
+            {
+                var list = Type.GetNestedType("ConfigurationList", BindingFlags.NonPublic)!;
+                Assert.Equal(1, Marshal.ReadInt32(input));
+                nint item = Marshal.ReadIntPtr(input, Marshal.OffsetOf(list, "Items").ToInt32());
+                Assert.Equal(3, Marshal.ReadInt32(item)); Assert.Equal(1, Marshal.ReadInt32(item, 4));
+                Calls.Add("loopback:1"); return LoopbackStatus;
+            }
+            Assert.Equal(8u, code); Calls.Add("clear"); return 0;
+        }
         public Reply Next(object message)
         {
             EmptyInputBuffer = (uint)MessageType.GetField("ProtocolId")!.GetValue(message)! == 0 &&

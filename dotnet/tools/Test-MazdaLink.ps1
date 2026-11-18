@@ -30,6 +30,7 @@ $flash = Invoke-Check -Arguments @('flash','does-not-exist.rom') -InputText '' -
 $override = Invoke-Check -Arguments @('read','--gen2') -InputText '' -Expected 1 -Name 'override-refused'
 $bench = Invoke-Check -Arguments @('bench-recovery-check','does-not-exist\original.rom') -InputText '' -Expected 1 -Name 'bench-refused-before-open'
 if ($bench -notmatch 'STOPPED' -or $help -notmatch 'bench-recovery-check' -or $menu -notmatch 'bench monitor identification check') { throw 'Bench command/backup gate is missing.' }
+if ($help -notmatch 'Keep OBD 12 V and USB powered' -or $help -notmatch 'measured timing, without frame payloads') { throw 'Bench power/diagnostics guidance is missing.' }
 if ($help -notmatch 'ZY87EC000ZYV5050' -or $help -match 'SpeedLink' -or $help -notmatch 'no fixed calibration whitelist' -or $menu -notmatch 'no fixed calibration whitelist' -or $menu -notmatch 'Flashing is unavailable' -or $flash -notmatch 'No adapter was opened' -or $status -notmatch 'Other-vehicle workflows: absent') { throw 'Unexpected standalone product scope.' }
 $runtime = ([xml](Get-Content 'Directory.Build.props' -Raw)).Project.PropertyGroup.RuntimeFrameworkVersion
 $version = ([xml](Get-Content 'Directory.Build.props' -Raw)).Project.PropertyGroup.Version

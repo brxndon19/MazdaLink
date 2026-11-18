@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.0-alpha.4
+
+- Fix entry-window drift caused by counting sleeps rather than measuring elapsed time. Anchor the 20-second monotonic deadline before the driver's periodic-start call, and record driver start/stop latency separately.
+- Drain adapter receive notifications during entry without accepting them as monitor identification. Keep the same two permitted payloads, bitrate, identifiers, target/backup gates and single identification request.
+- Add schema-2 local bench evidence with application/adapter versions, optional adapter-supply snapshots before and after entry, native receive metadata, entry/identity counters and bounded per-second traffic summaries. Store no frame payloads, ROM data, security keys or driver-library paths.
+- Request the adapter's local J2534 TX-echo setting for diagnosis. Record unsupported diagnostic calls explicitly; echoes do not establish ECU acceptance. Keep supply/configuration calls and journal writes outside the active entry window.
+- Update prompts to keep the OBD adapter's 12 V supply, USB, grounds and CAN connected while switching only the spare ECU's positive supply feeds. Flashing and interrupted-write recovery remain unqualified and disabled.
+
 ## 0.9.0-alpha.3
 
 - Add an explicitly selected ZYJ2 spare bench monitor identification check. Require a complete verified backup, exact reported calibration, stopped engine and examined boot-code fingerprints before entering the bench workflow.

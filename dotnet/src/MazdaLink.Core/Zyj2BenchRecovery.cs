@@ -15,6 +15,7 @@ public static class Zyj2RecoveryPolicy
     public const int Bitrate = 500000, PeriodMilliseconds = 5, EntryWindowMilliseconds = 20000;
     public static byte[] EntryRequest => [0xFF, 0x86, 0, 0, 0, 0, 0, 0];
     public static byte[] IdentityRequest => [0x7A, 0xC0, 0, 0, 0, 0, 0, 0];
+    public static byte[] ExpectedIdentity => [0x7A, 0xC6, 0x50, 0x79, 0x77, 0x30, 0x58, 0x41];
 
     public static void RequireBackup(VerifiedRawBackup backup)
     {
@@ -52,7 +53,7 @@ public static class Zyj2RecoveryPolicy
     {
         // CAN_29BIT_ID must be set, and no echo/notification/error status is accepted.
         if (id != ResponseId || status != 0x100 ||
-            !data.SequenceEqual(new byte[] { 0x7A, 0xC6, 0x50, 0x79, 0x77, 0x30, 0x58, 0x41 }))
+            !data.SequenceEqual(ExpectedIdentity))
             throw new TransportException("The bench reply is not the expected extended-CAN ZYJ2 monitor identification.");
     }
 }
@@ -69,6 +70,7 @@ public interface IBenchMonitorChannel : IDisposable
     void RequestIdentity();
     RecoveryFrame? Read(int timeoutMilliseconds);
     string? CleanupWarning { get; }
+    BenchChannelDiagnostics? Diagnostics => null;
 }
 
 public sealed class Zyj2BenchRecovery
@@ -76,14 +78,6 @@ public sealed class Zyj2BenchRecovery
     public void IdentifyMonitor(IBenchMonitorChannel channel, Action<string> record,
         Action<int, CancellationToken>? wait = null, CancellationToken cancel = default)
     {
-        wait ??= static (milliseconds, token) =>
-        {
-            for (int left = milliseconds; left > 0; left -= 50)
-            {
-                token.ThrowIfCancellationRequested();
-                Thread.Sleep(Math.Min(50, left));
-            }
-        };
         cancel.ThrowIfCancellationRequested();
         channel.Open();
         record("bench-channel-opened");
@@ -96,8 +90,15 @@ public sealed class Zyj2BenchRecovery
         {
             // Stop is attempted even if the driver reports a partial start failure.
             pulseAttempted = true;
+            long started = TimeProvider.System.GetTimestamp();
             channel.StartEntryPulse();
-            wait(Zyj2RecoveryPolicy.EntryWindowMilliseconds, cancel);
+            if (wait is not null) wait(Zyj2RecoveryPolicy.EntryWindowMilliseconds, cancel);
+            else BenchEntryWindow.Wait(TimeSpan.FromMilliseconds(Zyj2RecoveryPolicy.EntryWindowMilliseconds), timeout =>
+            {
+                // Drain adapter notifications while entry is active. A frame here
+                // never establishes monitor identity; that requires the later query.
+                if (channel.Read(timeout) is null) Thread.Sleep(1);
+            }, cancel, startedTimestamp: started);
             cancel.ThrowIfCancellationRequested();
         }
         finally
