@@ -7,7 +7,7 @@ using MazdaLink.Core;
 
 namespace MazdaLink.J2534;
 
-/// <summary>Isolated raw-CAN bench binding. Its only transmit operations are entry and identification.</summary>
+/// <summary>Isolated raw-CAN binding: public entry/identification interface; separate internal fixed-program capabilities.</summary>
 public sealed class NativeBenchMonitorChannel : IBenchMonitorChannel
 {
     // SAE J2534-1 04.04: GET_CONFIG=0x01, SET_CONFIG=0x02, LOOPBACK=0x03.
@@ -59,7 +59,7 @@ public sealed class NativeBenchMonitorChannel : IBenchMonitorChannel
     private IoctlFn? ioctl;
     private string? adapterName, firmwareVersion, driverVersion, apiVersion;
     private uint? loopbackStatus;
-    private readonly bool allowRamSelfTest;
+    private readonly bool allowRamSelfTest, allowProtectedInitialization;
     private bool initialMonitorIdentified, ramFaulted;
     private int nextRamStep, verifiedRamBytes;
     private RamSelfTestStep? awaitingRamStep;
@@ -82,8 +82,11 @@ public sealed class NativeBenchMonitorChannel : IBenchMonitorChannel
             .Select(i => new BenchTrafficBin(i, entryEchoBins?[i] ?? 0, entryFrameBins?[i] ?? 0)).ToArray());
 
     public NativeBenchMonitorChannel(J2534Driver driver) : this(driver, false) { }
-    internal NativeBenchMonitorChannel(J2534Driver driver, bool allowRamSelfTest)
+    internal NativeBenchMonitorChannel(J2534Driver driver, bool allowRamSelfTest) : this(driver, allowRamSelfTest, false) { }
+    internal NativeBenchMonitorChannel(J2534Driver driver, bool allowRamSelfTest, bool allowProtectedInitialization)
     {
+        if (allowRamSelfTest && allowProtectedInitialization) throw new ArgumentException("Choose one fixed RAM capability.");
+        this.allowProtectedInitialization = allowProtectedInitialization;
         this.allowRamSelfTest = allowRamSelfTest;
         var registered = J2534Drivers.Discover(driver.Kind).FirstOrDefault(d =>
             d.LibraryPath.Equals(Path.GetFullPath(driver.LibraryPath), StringComparison.OrdinalIgnoreCase) && d.RawCanSupported);
@@ -294,12 +297,22 @@ public sealed class NativeBenchMonitorChannel : IBenchMonitorChannel
     // The identification backend's public interface has no upload/execute method.
     internal void SendFixedRamSelfTestStep(int index)
     {
+        if (!allowRamSelfTest || allowProtectedInitialization) { ramFaulted = true; throw new TransportException("Read-only RAM capability is unavailable."); }
+        SendFixedStep(index, Zyj2RamSelfTestPolicy.Steps, Zyj2RamSelfTestPolicy.Image.Length);
+    }
+    internal void SendProtectedInitializationStep(int index)
+    {
+        if (!allowProtectedInitialization || allowRamSelfTest) { ramFaulted = true; throw new TransportException("Protected initialization capability is unavailable."); }
+        SendFixedStep(index, Zyj2ProtectedInitializationPolicy.Steps, Zyj2ProtectedInitializationPolicy.Image.Length);
+    }
+    private void SendFixedStep(int index, IReadOnlyList<RamSelfTestStep> steps, int imageLength)
+    {
         RequireReady();
-        if (!allowRamSelfTest || !initialMonitorIdentified || pulseStarted || ramFaulted ||
-            awaitingRamStep is not null || index != nextRamStep || index < 0 || index >= Zyj2RamSelfTestPolicy.Steps.Count)
+        if (!initialMonitorIdentified || pulseStarted || ramFaulted ||
+            awaitingRamStep is not null || index != nextRamStep || index < 0 || index >= steps.Count)
         { ramFaulted = true; throw new TransportException("Fixed RAM self-test step blocked by capability, monitor or sequence gate."); }
-        var step = Zyj2RamSelfTestPolicy.Steps[index];
-        if (step.Operation == RamSelfTestOperation.ExecuteFixedTest && verifiedRamBytes != Zyj2RamSelfTestPolicy.Image.Length)
+        var step = steps[index];
+        if (step.Operation == RamSelfTestOperation.ExecuteFixedTest && verifiedRamBytes != imageLength)
         { ramFaulted = true; throw new TransportException("Every fixed RAM image byte must be read back before execution."); }
         var packet = Packet(Zyj2RecoveryPolicy.RequestId, step.Payload); uint count = 1;
         nextRamStep++;

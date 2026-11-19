@@ -40,10 +40,26 @@
   on-chip algorithm download, erase or ROM programming is included. Physical RAM
   execution acceptance remains unqualified until separately demonstrated.
   The 64-byte alpha.7 class/status probe and normal restart passed on one spare;
-  the 120-byte read-only PD8 snapshot remains a separate unqualified revision.
+  the 120-byte read-only PD8 snapshot subsequently passed execution, monitor return
+  and normal restart on the same spare, reporting GPIO/input/low.
   Do not change GPIO configuration or infer its board-level FWE connection from
   a snapshot. Require a separately reviewed control-and-restore test before any
   hardware write-enable change.
+- The separate protected initialization capability requires `INIT ZYJ2`, exact
+  target/backup gates and only its immutable 936-byte owned program. It may copy
+  the SH7058S chip's on-chip programming/erasing algorithms into the two fixed
+  non-overlapping RAM ranges and call only base+32 initialization entries after
+  exact per-byte readback. Require class1, an internal ZYJ2 software-ID check after cold entry, low FWE/no FLER, normal MAT, zero
+  RAMER/key/selections, matching live timing on both CAN controllers, and PD8
+  GPIO/input/low before controller changes. No PD8/configuration or mapping write,
+  FKEY5A, operation entry at base+16, external code/address, erase or ROM programming
+  is permitted. Restore controller selection/key values and VBR/SR; record results,
+  monitor return and normal restart separately. Native watchdog service between
+  phases does not authorize disabling watchdogs or calling ROM during flash busy.
+  Keep this capability inaccessible to the identification and read-only RAM paths.
+  The controller-init experiment is physically unqualified; it does not qualify
+  a writer or interrupted-write recovery. Preserve its independent assembly/model
+  CI check, transport integrity gates and release metadata hash/scope binding.
 - Use the observed longer-off bench sequence: normal preflight, operator-confirmed
   ECU-only power removal, a monotonic 60-second host wait outside entry traffic,
   then open the adapter with ECU off and reconnect during the bounded entry window.

@@ -1,7 +1,7 @@
 namespace MazdaLink.Core;
 
 public sealed class Terminal(Func<IReadTransport> connect, TextReader input, TextWriter output, string dataRoot,
-    Func<IBenchMonitorChannel>? benchMonitor = null, Func<IFixedRamSelfTestChannel>? ramSelfTest = null)
+    Func<IBenchMonitorChannel>? benchMonitor = null, Func<IFixedRamSelfTestChannel>? ramSelfTest = null, Func<IProtectedInitializationChannel>? protectedInitialization = null)
 {
     public const string Help = """
 MazdaLink — Mazda 2 DE / ZY-VE
@@ -26,6 +26,10 @@ Commands:
                               ZYJ2 spare only: upload/read back/execute one fixed volatile RAM test.
                               Query resident hardware class, flash status and programming-pin snapshot; confirm monitor return and normal restart.
                               Experimental and unqualified; no flash-controller writes or ROM programming.
+  protected-flash-init <original.rom>
+                              ZYJ2 SH7058S spare: fixed protected download/initialization test.
+                              Controller selection/SCO writes; no PD8 change, erase or ROM programming.
+                              Requires INIT ZYJ2 confirmation; experimental and unqualified.
   flash                       Unavailable: Mazda 2 write/recovery protocol is unverified.
   status                      Show read policy, checksum support, storage and programming status.
   license                     Show licence and attribution information.
@@ -50,7 +54,7 @@ Bench logs include adapter status and measured timing, without frame payloads.
         output.WriteLine($"Raw reads: no fixed calibration whitelist. Checksum preparation: {TargetPolicy.SoftwareId} only.\nStorage: {Path.GetFullPath(dataRoot)}\nFlashing: unavailable — write/recovery procedure is unverified.");
         while (!cancel.IsCancellationRequested)
         {
-            output.WriteLine("\n1  Identify ECU\n2  Read ECU and save backup\n3  Export backup as .rom\n4  Prepare an externally edited ROM\n5  Validate modified ROM\n6  Flash ROM back — unavailable\n7  Help\n8  Licence / credits\n9  ZYJ2 spare: bench monitor identification check\n10 ZYJ2 spare: fixed volatile RAM self-test — experimental\n0  Exit");
+            output.WriteLine("\n1  Identify ECU\n2  Read ECU and save backup\n3  Export backup as .rom\n4  Prepare an externally edited ROM\n5  Validate modified ROM\n6  Flash ROM back — unavailable\n7  Help\n8  Licence / credits\n9  ZYJ2 spare: bench monitor identification check\n10 ZYJ2 spare: fixed volatile RAM self-test — experimental\n11 ZYJ2 spare: protected flash-algorithm initialization — experimental\n0  Exit");
             output.Write("> ");
             string? choice = input.ReadLine()?.Trim();
             if (choice is null or "0") return 0;
@@ -67,6 +71,7 @@ Bench logs include adapter status and measured timing, without frame payloads.
                 case "8": command = ["license"]; break;
                 case "9": command = ["bench-recovery-check", Ask("ZYJ2 backup original.rom")]; break;
                 case "10": command = ["ram-self-test", Ask("ZYJ2 backup original.rom")]; break;
+                case "11": command = ["protected-flash-init", Ask("ZYJ2 backup original.rom")]; break;
                 default: output.WriteLine("Choose a listed number."); continue;
             }
             Execute(command, cancel); // Each hardware action creates/disposes a fresh connection; never retries.
@@ -87,7 +92,7 @@ Bench logs include adapter status and measured timing, without frame payloads.
             }
             if (args.Length == 1 && args[0] == "status")
             {
-                output.WriteLine($"MazdaLink\nRead identity policy: reported calibration; no whitelist\nChecksum preparation: {TargetPolicy.SoftwareId} only\nROM: 1 MiB\nRead block: 512 bytes\nProcess: {IntPtr.Size * 8}-bit\nRuntime: {Environment.Version}\nFlashing: unavailable\nOther-vehicle workflows: absent\nStorage: {Path.GetFullPath(dataRoot)}"); return 0;
+                output.WriteLine($"MazdaLink\nRead identity policy: reported calibration; no whitelist\nChecksum preparation: {TargetPolicy.SoftwareId} only\nROM: 1 MiB\nRead block: 512 bytes\nProcess: {IntPtr.Size * 8}-bit\nRuntime: {Environment.Version}\nFlashing: unavailable\nProtected initialization: ZYJ2 SH7058S spare only; experimental, no erase or programming\nOther-vehicle workflows: absent\nStorage: {Path.GetFullPath(dataRoot)}"); return 0;
             }
             if (args.Length > 0 && args[0] == "flash")
                 throw new InvalidDataException("Flashing is unavailable. This ECU's erase/write/recovery procedure has not been verified. No adapter was opened and no ECU command was sent.");
@@ -101,6 +106,13 @@ Bench logs include adapter status and measured timing, without frame payloads.
             {
                 if (ramSelfTest is null) throw new TransportException("The separate fixed RAM self-test backend is unavailable. No adapter was opened.");
                 new BenchRecoveryTerminal(connect, () => ramSelfTest(), input, output, dataRoot, runRamSelfTest: true).Run(args[1], cancel);
+                return 0;
+            }
+            if (args.Length == 2 && args[0] == "protected-flash-init")
+            {
+                if (protectedInitialization is null) throw new TransportException("The separate protected initialization backend is unavailable. No adapter was opened.");
+                new BenchRecoveryTerminal(connect, () => protectedInitialization(), input, output, dataRoot,
+                    runProtectedInitialization: true).Run(args[1], cancel);
                 return 0;
             }
             if (args.Length == 1 && args[0] is "read" or "identify")

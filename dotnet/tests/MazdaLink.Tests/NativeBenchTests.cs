@@ -216,6 +216,63 @@ public sealed class NativeBenchTests
         Assert.True(driver.RamDiagnostics.Failed);
         Assert.Throws<TransportException>(() => driver.SendRamStep(mismatch + 1));
     }
+    [Fact]
+    public void ProtectedInitializationCannotBeAcquiredByIdentificationOrReadOnlyRamCapabilities()
+    {
+        foreach (bool ram in new[] { false, true })
+        {
+            using var driver = new Driver(allowRamSelfTest: ram); driver.IdentifyMonitor();
+            Assert.Throws<TransportException>(() => driver.SendInitStep(0));
+        }
+        using var init = new Driver(allowProtectedInitialization: true); init.IdentifyMonitor();
+        Assert.Throws<TransportException>(() => init.SendRamStep(0));
+        Assert.False(typeof(IFixedRamSelfTestChannel).IsAssignableFrom(typeof(NativeProtectedInitializationChannel)));
+        Assert.False(typeof(IProtectedInitializationChannel).IsAssignableFrom(typeof(NativeRamSelfTestChannel)));
+    }
+    [Fact]
+    public void ProtectedInitializationNativeSequenceRequiresEveryByteAndCannotRestart()
+    {
+        using var driver = new Driver(allowProtectedInitialization: true); driver.IdentifyMonitor();
+        for (int i = 0; i < Zyj2ProtectedInitializationPolicy.Steps.Count; i++)
+        {
+            driver.SendInitStep(i);
+            if (Zyj2ProtectedInitializationPolicy.Steps[i].ExpectsReply)
+            { driver.SetInitReply(i); driver.Channel.Read(25); }
+        }
+        Assert.Equal(new RamSelfTestTransportDiagnostics(2032, 936, false, false), driver.RamDiagnostics);
+        Assert.Equal(2, driver.Channel.Diagnostics.IdentityRequests);
+        Assert.Throws<TransportException>(() => driver.SendInitStep(0));
+    }
+    [Fact]
+    public void ProtectedInitializationCannotSkipReadbackOrAdvancePastAPendingReply()
+    {
+        using var skipped = new Driver(allowProtectedInitialization: true); skipped.IdentifyMonitor();
+        int execute = Zyj2ProtectedInitializationPolicy.Steps.ToList().FindIndex(s => s.Operation == RamSelfTestOperation.ExecuteFixedTest);
+        Assert.Throws<TransportException>(() => skipped.SendInitStep(execute));
+        using var pending = new Driver(allowProtectedInitialization: true); pending.IdentifyMonitor(); pending.SendInitStep(0);
+        Assert.Throws<TransportException>(() => pending.SendInitStep(1));
+        using var noMonitor = new Driver(allowProtectedInitialization: true);
+        Assert.Throws<TransportException>(() => noMonitor.SendInitStep(0));
+    }
+    [Fact]
+    public void ProtectedInitializationNativeMismatchPermanentlyBlocksExecution()
+    {
+        using var driver = new Driver(allowProtectedInitialization: true); driver.IdentifyMonitor();
+        for (int i = 0; ; i++)
+        {
+            driver.SendInitStep(i); var step = Zyj2ProtectedInitializationPolicy.Steps[i];
+            if (!step.ExpectsReply) continue;
+            driver.SetInitReply(i);
+            if (step.Operation == RamSelfTestOperation.VerifyByte)
+            {
+                driver.Reply.Data[6] ^= 1; driver.Channel.Read(25);
+                Assert.True(driver.RamDiagnostics.Failed);
+                Assert.Throws<TransportException>(() => driver.SendInitStep(i + 1)); break;
+            }
+            driver.Channel.Read(25);
+        }
+    }
+
     public sealed record Reply(uint Status, uint Count, uint Protocol, uint RxStatus, uint Size, uint ExtraIndex, byte[] Data)
     {
         public static Reply Identity()
@@ -245,10 +302,11 @@ public sealed class NativeBenchTests
         public int Supply { get; init; } = 12500;
         public bool LeaveSupplyOutputUntouched { get; init; }
         public bool EmptyInputBuffer { get; private set; }
-        public Driver(bool allowRamSelfTest = false)
+        public Driver(bool allowRamSelfTest = false, bool allowProtectedInitialization = false)
         {
             Channel = (NativeBenchMonitorChannel)RuntimeHelpers.GetUninitializedObject(Type);
             Set("allowRamSelfTest", allowRamSelfTest);
+            Set("allowProtectedInitialization", allowProtectedInitialization);
             Set("opened", true); Set("connected", true); Set("filtered", true);
             BindMessage("write", nameof(Write)); BindMessage("startPeriodic", nameof(Start));
             var stop = Type.GetField("stopPeriodic", Hidden)!;
@@ -279,6 +337,25 @@ public sealed class NativeBenchTests
             try { Type.GetMethod("SendFixedRamSelfTestStep", Hidden)!.Invoke(Channel, [index]); }
             catch (TargetInvocationException error) when (error.InnerException is not null)
             { System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error.InnerException).Throw(); }
+        }
+        public void SendInitStep(int index)
+        {
+            try { Type.GetMethod("SendProtectedInitializationStep", Hidden)!.Invoke(Channel, [index]); }
+            catch (TargetInvocationException error) when (error.InnerException is not null)
+            { System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error.InnerException).Throw(); }
+        }
+        public void SetInitReply(int index)
+        {
+            var step = Zyj2ProtectedInitializationPolicy.Steps[index];
+            byte[] payload = step.Operation switch
+            {
+                RamSelfTestOperation.Address => step.Payload,
+                RamSelfTestOperation.VerifyByte => [0x7A, 0xB1, Zyj2ProtectedInitializationPolicy.Image[step.ImageOffset], 0, 0, 0, 0, 0],
+                RamSelfTestOperation.ExecuteFixedTest => [0x7A, 0xC6, 0x4D, 0x49, 0, 0, 0, 0],
+                RamSelfTestOperation.IdentifyMonitor => Zyj2RecoveryPolicy.ExpectedIdentity,
+                _ => throw new Exception("Uploads have no success acknowledgement")
+            };
+            Reply = new(0, 1, 5, 0x100, 12, 12, [0, 0, 0, 0x21, ..payload]);
         }
         public void SetRamReply(int index)
         {

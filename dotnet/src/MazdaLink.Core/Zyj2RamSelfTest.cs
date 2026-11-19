@@ -41,6 +41,14 @@ public static class Zyj2RamSelfTestPolicy
     private static List<RamSelfTestStep> Build()
     {
         if (image.Length != 120 || RomStorage.Hash(image) != ImageSha256) throw new InvalidDataException("RAM self-test image integrity failed.");
+        return FixedRamScript.Build(image, [0x7A, 0xC6, 0x4D, 0x50]);
+    }
+}
+
+internal static class FixedRamScript
+{
+    internal static List<RamSelfTestStep> Build(byte[] image, byte[] replyPrefix)
+    {
         var result = new List<RamSelfTestStep>();
         void SetAddress(uint value)
         {
@@ -49,7 +57,7 @@ public static class Zyj2RamSelfTestPolicy
             // The resident sender leaves unused trailing bytes unchanged.
             result.Add(new(RamSelfTestOperation.Address, request, request.AsSpan(0, 6).ToArray()));
         }
-        SetAddress(Address);
+        SetAddress(Zyj2RamSelfTestPolicy.Address);
         for (int offset = 0; offset < image.Length; offset += 6)
         {
             int length = Math.Min(6, image.Length - offset);
@@ -60,15 +68,15 @@ public static class Zyj2RamSelfTestPolicy
         }
         for (int offset = 0; offset < image.Length; offset++)
         {
-            SetAddress(Address + (uint)offset);
+            SetAddress(Zyj2RamSelfTestPolicy.Address + (uint)offset);
             byte[] request = [0x7A, 0xB4, 0, 0, 0, 0, 0, 0];
-            BinaryPrimitives.WriteUInt32BigEndian(request.AsSpan(2), Address + (uint)offset + 1);
+            BinaryPrimitives.WriteUInt32BigEndian(request.AsSpan(2), Zyj2RamSelfTestPolicy.Address + (uint)offset + 1);
             // Native end-around-carry checksum of one byte is that byte exactly.
             // This avoids accepting the weak checksum of the whole executable.
             result.Add(new(RamSelfTestOperation.VerifyByte, request, [0x7A, 0xB1, image[offset]], offset));
         }
-        SetAddress(Address);
-        result.Add(new(RamSelfTestOperation.ExecuteFixedTest, [0x7A, 0xA0, 0, 0, 0, 0, 0, 0], [0x7A, 0xC6, 0x4D, 0x50]));
+        SetAddress(Zyj2RamSelfTestPolicy.Address);
+        result.Add(new(RamSelfTestOperation.ExecuteFixedTest, [0x7A, 0xA0, 0, 0, 0, 0, 0, 0], replyPrefix));
         result.Add(new(RamSelfTestOperation.IdentifyMonitor, Zyj2RecoveryPolicy.IdentityRequest, Zyj2RecoveryPolicy.ExpectedIdentity));
         return result;
     }
@@ -127,7 +135,7 @@ public sealed class Zyj2RamSelfTest
         record("monitor-return-confirmed-after-fixed-ram-self-test");
         return new(uploaded, verified, hardware.Value, fccs.Value, mat.Value, pins.Value);
     }
-    private static RecoveryFrame Receive(IFixedRamSelfTestChannel channel, RamSelfTestStep step, CancellationToken cancel)
+    internal static RecoveryFrame Receive(IBenchMonitorChannel channel, RamSelfTestStep step, CancellationToken cancel, int maximumFrames = 64)
     {
         var watch = Stopwatch.StartNew(); int count = 0;
         while (watch.ElapsedMilliseconds < 2000)
@@ -135,7 +143,7 @@ public sealed class Zyj2RamSelfTest
             cancel.ThrowIfCancellationRequested();
             var frame = channel.Read(25);
             if (frame is null) continue;
-            if (++count > 64) throw new TransportException("Too many RAM self-test frames. Stop and power-cycle the spare.");
+            if (++count > maximumFrames) throw new TransportException("Too many RAM self-test frames. Stop and power-cycle the spare.");
             if ((frame.Status & 0x0B) != 0) continue;
             if (!step.MatchesReply(frame)) throw new TransportException("RAM self-test reply or byte readback mismatch. Execution stopped; no command was retried.");
             return frame;
