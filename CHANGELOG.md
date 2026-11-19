@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.0-alpha.9
+
+- Add separately selected ZYJ2 spare protected flash-algorithm initialization (menu 11, `INIT ZYJ2`). Require the examined complete backup, live identity/stopped-engine checks, exact fixed-code readback and one execution through its own native capability. Menus 9 and 10 cannot select the controller-writing program.
+- Guard SH7058S class, low FWE/no FLER, normal mapping, zero RAM emulation/key/selections, live timing on both CAN controllers and PD8 GPIO/input/low before controller changes. Copy the chip's programming and erasing algorithms into separate fixed RAM ranges, check DPFR/FTDAR and call only their initialization entries with a timing-bound CPU parameter.
+- Omit the programming-enable key and erase/program entries. Do not change PD8, flash mapping or RAM emulation. Check protection and controller cleanup, restore VBR/SR, require monitor return and check normal restart independently. Service the existing watchdog between phases; no busy flash callback or watchdog disabling is implemented.
+- Include the owned 936-byte assembly, exact GNU rebuild and 56-case independent SH-2 model with protection/download/init/cleanup faults. Add native/transport/command isolation tests and accommodate bounded upload-echo bursts without clearing ECU errors. Record schema-7 local evidence and bind the separate unqualified scope/hash in schema-6 release metadata.
+- Alpha.8 spare evidence passed exact readback, execution, PD8 GPIO/input/low snapshot, monitor return and normal restart. The new controller initialization experiment remains physically unqualified. Erase, ROM programming, interrupted-write recovery and road-tuning readiness remain unestablished.
+
 ## 0.9.0-alpha.8
 
 - Extend the immutable RAM program to 120 bytes to read the stock loader's candidate programming-output preconditions: PD8 alternate-function selection, output direction, data value and physical input level. Mask only the reviewed bits, report them as bounded flags and leave every GPIO and flash-control setting unchanged.

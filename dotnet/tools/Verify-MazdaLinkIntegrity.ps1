@@ -5,7 +5,7 @@ $passed = @($run.TestRun.Results.UnitTestResult | Where-Object outcome -eq 'Pass
 foreach ($name in @('MazdaLink.Tests.TargetTests.RawReadsDoNotRequireAWhitelistedIdentityOrKnownRomLayout(identity: "ZYJ2EA000ZYV5050")','MazdaLink.Tests.TargetTests.KnownLookingRomFromUnknownCalibrationCannotUseTheZy87ChecksumPolicy','MazdaLink.Tests.TargetTests.RefusedReadStopsWithoutKeyRetryOrProtocolProbe','MazdaLink.Tests.TargetTests.EveryPrepareCorrectsAllRangesVerifiesDiskAndPreservesInputs','MazdaLink.Tests.TargetTests.ReadsBothPassesAt512AndExportsExactBytesWithNoOverwrite','MazdaLink.Tests.TargetTests.TransportRequiresValidIdentityBeforeSecurityEvenForDirectCalls','MazdaLink.Tests.TargetTests.MenuAndCommandsCannotOpenHardwareForFlashingOrOverrides')) {
     if ($passed -notcontains $name) { throw "Missing mandatory MazdaLink integrity/scope case: $name" }
 }
-if ([int]$run.TestRun.ResultSummary.Counters.total -lt 178) { throw 'Focused scope/integrity matrix is incomplete.' }
+if ([int]$run.TestRun.ResultSummary.Counters.total -lt 211) { throw 'Focused scope/integrity matrix is incomplete.' }
 foreach ($name in @('MazdaLink.Tests.BenchRecoveryTests.EntryStopsBeforeOneIdentificationAndNeverUploadsOrExecutes','MazdaLink.Tests.BenchRecoveryTests.CancellationStopsPeriodicTrafficBeforeAnyIdentificationRequest','MazdaLink.Tests.BenchRecoveryTests.WireGateAllowsOnlyItsTwoFixedNonProgrammingPayloads','MazdaLink.Tests.BenchRecoveryTests.SpoofingHeaderAndCalibrationDoesNotSatisfyTheBootCodeFingerprints','MazdaLink.Tests.NativeBenchTests.NativePacketsUseRawExtendedCanAndExactlyTwoFixedPayloads','MazdaLink.Tests.NativeBenchTests.FailedNativeWriteCannotBeRetried')) {
     if ($passed -notcontains $name) { throw "Missing mandatory bench-scope case: $name" }
 }
@@ -26,3 +26,11 @@ if (@($passed | Where-Object { $_ -like 'MazdaLink.Tests.RamSelfTestTests.FixedS
     throw 'Missing mandatory independent SH-2 execution or per-byte mismatch cases.'
 }
 Write-Output 'Raw-read integrity, no-flash gates, isolated monitor and fixed volatile RAM contracts passed. Hardware acceptance remains unqualified.'
+
+foreach ($name in @('MazdaLink.Tests.NativeBenchTests.ProtectedInitializationCannotBeAcquiredByIdentificationOrReadOnlyRamCapabilities','MazdaLink.Tests.NativeBenchTests.ProtectedInitializationNativeSequenceRequiresEveryByteAndCannotRestart','MazdaLink.Tests.NativeBenchTests.ProtectedInitializationCannotSkipReadbackOrAdvancePastAPendingReply','MazdaLink.Tests.NativeBenchTests.ProtectedInitializationNativeMismatchPermanentlyBlocksExecution','MazdaLink.Tests.ProtectedInitializationTests.InitializationResultRemainsObservableIfMonitorReturnFails','MazdaLink.Tests.ProtectedInitializationTests.FixedInitializationProgramAndScriptRemainImmutable','MazdaLink.Tests.ProtectedInitializationTests.InitializationUploadsOnlyTheFixedImageAndVerifiesEveryByteBeforeExecution','MazdaLink.Tests.ProtectedInitializationTests.MissingBackupsAndExternalCodeOverridesCannotOpenTheInitializationBackend')) {
+    if ($passed -notcontains $name) { throw "Missing mandatory protected initialization case: $name" }
+}
+foreach ($case in @(@('UploadEchoBurstIsDrainedWithoutClearingAnEcuUploadError',2),@('AnyInitializationImageByteMismatchPreventsExecution',3),@('InitializationCancellationBeforeExecuteNeverRunsTheControllerProgram',2),@('WrongInitializationMarkerOrMonitorReturnCannotPass',2),@('NonzeroInitializationStatusCannotQualifyAControllerTest',13),@('ZeroStatusCannotHideFailedInitializationResultBytes',3))) {
+    $pattern = 'MazdaLink.Tests.ProtectedInitializationTests.' + $case[0] + '(*)'
+    if (@($passed | Where-Object { $_ -like $pattern }).Count -ne $case[1]) { throw "Incomplete protected initialization matrix: $pattern" }
+}
