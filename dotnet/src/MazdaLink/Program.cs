@@ -54,7 +54,8 @@ try
     return new Terminal(Connect, Console.In, Console.Out, root,
         () => new NativeBenchMonitorChannel(SelectDriver()),
         () => new NativeRamSelfTestChannel(SelectDriver()),
-        () => new NativeProtectedInitializationChannel(SelectDriver())).Run(args, cancel.Token);
+        () => new NativeProtectedInitializationChannel(SelectDriver()),
+        plan => new NativeRecoveryBindingChannel(SelectDriver(), plan)).Run(args, cancel.Token);
 }
 catch (Exception error)
 {

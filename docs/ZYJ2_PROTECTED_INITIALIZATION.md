@@ -106,8 +106,9 @@ Reproduce the owned-code checks without hardware:
 python3 dotnet/tools/Verify-ProtectedInitialization.py
 ```
 
-The complete experiment remains physically unqualified until tested on the spare.
-Even a pass does not qualify write-enable control, stock restore, block readback,
+One alpha.9 spare log passed both algorithm downloads/initializations, protection
+and cleanup checks, monitor return and normal restart. This does not qualify
+broader hardware compatibility or write-enable control, stock restore, block readback,
 interrupted-write recovery, modified-ROM checksums or the good ECU. Those remain
 separate gates before vehicle tuning.
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.0-alpha.10
+
+- Add separately selected detached ZYJ2 spare read-only recovery boot binding (menu 12, `BIND ZYJ2`). Require its complete verified backup, but deliberately omit normal application identity/RPM preflight before entry. Other workflows retain their original target/engine-stopped gates. Never use this probe in a vehicle.
+- Enter the early monitor directly, compare all 28,928 preserved boot bytes at 0..70FF against an immutable backup snapshot, hash observed replies and require a final monitor reply. The fixed 57,857-step read-only plan cannot upload, execute, write controllers, select external ranges or acquire a RAM capability. Keep a three-minute host budget, bounded replies and no retry.
+- Record schema-8 binding evidence with intended profile, expected/observed hashes and per-stage results; retain a match if later monitor return or normal restart fails. Open normal diagnostics only after the final timed restart of the intact spare. A preserved firmware match is not a unique ECU identity or proof of interrupted-write recovery. Bind the separate unqualified read-only scope/range in schema-7 release metadata.
+- The alpha.9 spare evidence passed both protected algorithm downloads/initializations, protection/cleanup checks, monitor return and normal restart. The new binding path remains physically unqualified; write-enable control, erase/write/readback, interrupted-write recovery, modified-image validation and good-ECU qualification remain pending.
+
 ## 0.9.0-alpha.9
 
 - Add separately selected ZYJ2 spare protected flash-algorithm initialization (menu 11, `INIT ZYJ2`). Require the examined complete backup, live identity/stopped-engine checks, exact fixed-code readback and one execution through its own native capability. Menus 9 and 10 cannot select the controller-writing program.
