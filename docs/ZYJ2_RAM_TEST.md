@@ -32,22 +32,22 @@ the app exits and instructs a full adapter/ECU disconnection before restarting.
 ## Program and verification contract
 
 The application accepts no external kernel, address or executable. Its immutable
-64-byte SH-2 image is linked at RAM address `0xFFFF8000`; its source is
+120-byte SH-2 image is linked at RAM address `0xFFFF8000`; its source is
 [`zyj2-ram-selftest.S`](../dotnet/firmware/zyj2-ram-selftest.S).
-SHA-256: `5fbb400331919923cde4b96952c8e5ae65aa0768294776009d7796c1607d6742`.
+SHA-256: `34bd2a95b30d2a34f8ccc6ccc5e3486cac2d7ecc5f8c31720e7a0a2594c1cad0`.
 
 The native upload routine does not acknowledge successful RAM copies. The host
-therefore reads back all 64 bytes using fixed, single-byte native checksum
+therefore reads back all 120 bytes using fixed, single-byte native checksum
 queries. A single byte's checksum is its exact value, including zero and 0xFF;
 this avoids relying on an eight-bit whole-image checksum for executable code.
 Every required reply must match before the native backend can advance. Only
-after all 64 bytes match may one fixed execution request be sent.
+after all 120 bytes match may one fixed execution request be sent.
 
 The program calls the fingerprinted resident hardware-class routine at `0x0EE4`,
 which is already used by native RAM copying and clock setup. That routine saves
 SYSCR2, temporarily enables H-UDI status access, reads SDSR and restores SYSCR2.
 The owned program then reads FCCS at `0xFFFFE800` and FMATS at `0xFFFFE805`, stores
-three result bytes in its own RAM and sends `ML2` plus those observations through
+four result bytes in its own RAM and sends `MP` plus those observations through
 the examined ROM CAN sender. It returns through the existing stack trampoline to
 the monitor. The host requires the ordinary monitor identity again before normal
 restart. Class decoding reflects the resident routine, not an ECU label:
@@ -59,6 +59,23 @@ restart. Class decoding reflects the resident routine, not an ECU label:
 | 2 | SH7059 branch, SDSR high byte `0E`/`0F` | Nominal 1.5 MiB flash; the current 1 MiB capture is not a complete device backup. |
 | Other | Unknown resident class | No device-specific programming plan can be selected. |
 
+The new snapshot also reads these bytes, masking only bit 0 of each:
+
+| Byte address | Selected observation | Result flag |
+| --- | --- | --- |
+| `0xFFFFF743` | PDCRH low byte: PD8 alternate-function mode | Bit 0 |
+| `0xFFFFF740` | PDIOR high byte: PD8 output direction | Bit 1 |
+| `0xFFFFF746` | PDDR high byte: PD8 data | Bit 2 |
+| `0xFFFFF784` | PDPR high byte: PD8 actual pin input | Bit 3 |
+
+The remaining result flag bits must be zero. These byte accesses are supported
+by the SH7058S pin-function-controller and I/O register tables. The stock loader
+contains paired routines that set/clear PD8 before driver initialization and on
+exit. That static relationship suggests a programming-enable output; its actual
+board-level FWE connection is not established by this snapshot. No routine that
+sets/clears the output is called. No GPIO mode, direction or data is written.
+Do not use pin input or data readback as a substitute for FCCS FWE readback.
+
 It does not write FKEY, FCCS, FPCS, FECS, FMATS or FTDAR, download an on-chip flash
 algorithm, change the flash mapping, erase or program ROM, or issue an ECU reset.
 FWE is a read-only observation of the hardware write-enable input; zero reports
@@ -69,15 +86,15 @@ these observations qualify a flash algorithm. An unexpected or missing result
 does not establish recovery capability.
 
 GNU binutils rebuild the image in CI; an independent restricted instruction model
-checks its loads, three RAM stores, resident-call argument handling and return
+checks its loads, four RAM stores, resident-call argument handling and return
 targets. Synthetic transport tests
 cover missing replies, corrupted bytes, cancellation, isolation of the original
 identification capability and rejected external-code/address arguments. The
 alpha.6 log established exact readback, execution and monitor return for its
 previous 56-byte program. The built-in normal-restart check timed out; subsequent
-independent normal identification passed after a longer power cycle. This new
-64-byte class-query program and the complete revised restart sequence remain
-physically unqualified until separately demonstrated on the spare. Schema-5
+independent normal identification passed after a longer power cycle. The alpha.7 log subsequently passed the complete 64-byte class-query test and
+normal restart, reporting SH7058S class and FWE=0. This new 120-byte pin-snapshot
+program remains physically unqualified until separately demonstrated. Schema-6
 local evidence records those stages independently.
 
 To reproduce the owned program without hardware, install `binutils-sh-elf` and run:

@@ -32,16 +32,15 @@ public sealed class RamSelfTestStep
 public static class Zyj2RamSelfTestPolicy
 {
     public const uint Address = 0xFFFF8000;
-    public const string ImageSha256 = "5fbb400331919923cde4b96952c8e5ae65aa0768294776009d7796c1607d6742";
+    public const string ImageSha256 = "34bd2a95b30d2a34f8ccc6ccc5e3486cac2d7ecc5f8c31720e7a0a2594c1cad0";
     private static readonly byte[] image = Convert.FromHexString(
-        "9319430B0009D6088063D10860108064710560108065E4C0E5069309430B0009" +
-        "94079307432B0009FFFF803AFFFFE80004C2092400400EE400094D4C32000000");
+        "9331430B0009D6148062D11460108063710560108064E20091266010C901220B91236010C9014000220B911F6010C9014008220B911B6010C90140084000220B60238065E4C0E506930A430B000994089308432B00090009FFFF8070FFFFE80004C2092400400EE4F743F740F746F7844D50000000000000");
     private static readonly IReadOnlyList<RamSelfTestStep> steps = Build().AsReadOnly();
     public static byte[] Image => image.ToArray();
     public static IReadOnlyList<RamSelfTestStep> Steps => steps;
     private static List<RamSelfTestStep> Build()
     {
-        if (image.Length != 64 || RomStorage.Hash(image) != ImageSha256) throw new InvalidDataException("RAM self-test image integrity failed.");
+        if (image.Length != 120 || RomStorage.Hash(image) != ImageSha256) throw new InvalidDataException("RAM self-test image integrity failed.");
         var result = new List<RamSelfTestStep>();
         void SetAddress(uint value)
         {
@@ -69,13 +68,13 @@ public static class Zyj2RamSelfTestPolicy
             result.Add(new(RamSelfTestOperation.VerifyByte, request, [0x7A, 0xB1, image[offset]], offset));
         }
         SetAddress(Address);
-        result.Add(new(RamSelfTestOperation.ExecuteFixedTest, [0x7A, 0xA0, 0, 0, 0, 0, 0, 0], [0x7A, 0xC6, 0x4D, 0x4C, 0x32]));
+        result.Add(new(RamSelfTestOperation.ExecuteFixedTest, [0x7A, 0xA0, 0, 0, 0, 0, 0, 0], [0x7A, 0xC6, 0x4D, 0x50]));
         result.Add(new(RamSelfTestOperation.IdentifyMonitor, Zyj2RecoveryPolicy.IdentityRequest, Zyj2RecoveryPolicy.ExpectedIdentity));
         return result;
     }
 }
 
-public sealed record RamSelfTestResult(int UploadedBytes, int VerifiedBytes, byte HardwareClass, byte Fccs, byte MatSelection)
+public sealed record RamSelfTestResult(int UploadedBytes, int VerifiedBytes, byte HardwareClass, byte Fccs, byte MatSelection, byte ProgrammingPinFlags)
 {
     public string HardwareClassName => HardwareClass switch
     {
@@ -84,6 +83,10 @@ public sealed record RamSelfTestResult(int UploadedBytes, int VerifiedBytes, byt
         2 => "SH7059 class (SDSR high byte 0E/0F)",
         _ => "unknown resident hardware class"
     };
+    public bool Pd8AlternateFunctionSelected => (ProgrammingPinFlags & 1) != 0;
+    public bool Pd8OutputDirection => (ProgrammingPinFlags & 2) != 0;
+    public bool Pd8DataHigh => (ProgrammingPinFlags & 4) != 0;
+    public bool Pd8PinHigh => (ProgrammingPinFlags & 8) != 0;
     public bool FlashWriteEnableObserved => (Fccs & 0x80) != 0;
     public bool FlashErrorObserved => (Fccs & 0x10) != 0;
     public bool UserBootMatSelected => MatSelection == 0xAA;
@@ -94,7 +97,7 @@ public sealed class Zyj2RamSelfTest
 {
     public RamSelfTestResult Run(IFixedRamSelfTestChannel channel, Action<string> record, CancellationToken cancel = default)
     {
-        int uploaded = 0, verified = 0; byte? hardware = null, fccs = null, mat = null;
+        int uploaded = 0, verified = 0; byte? hardware = null, fccs = null, mat = null, pins = null;
         record("fixed-ram-self-test-started-no-flash");
         for (int index = 0; index < Zyj2RamSelfTestPolicy.Steps.Count; index++)
         {
@@ -115,14 +118,14 @@ public sealed class Zyj2RamSelfTest
             }
             if (step.Operation == RamSelfTestOperation.ExecuteFixedTest)
             {
-                hardware = frame.Data[5]; fccs = frame.Data[6]; mat = frame.Data[7];
+                hardware = frame.Data[4]; fccs = frame.Data[5]; mat = frame.Data[6]; pins = frame.Data[7];
                 record("fixed-ram-marker-received-status-registers-read-only");
             }
         }
-        if (uploaded != 64 || verified != 64 || hardware is null || fccs is null || mat is null)
+        if (uploaded != 120 || verified != 120 || hardware is null || fccs is null || mat is null || pins is null || pins > 15)
             throw new TransportException("RAM self-test evidence is incomplete. No flash operation was sent.");
         record("monitor-return-confirmed-after-fixed-ram-self-test");
-        return new(uploaded, verified, hardware.Value, fccs.Value, mat.Value);
+        return new(uploaded, verified, hardware.Value, fccs.Value, mat.Value, pins.Value);
     }
     private static RecoveryFrame Receive(IFixedRamSelfTestChannel channel, RamSelfTestStep step, CancellationToken cancel)
     {

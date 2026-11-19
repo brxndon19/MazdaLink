@@ -5,9 +5,14 @@ namespace MazdaLink.Tests;
 
 public sealed class RamSelfTestTests
 {
+    public static IEnumerable<object[]> ProgramCases =>
+        from state in new[] { new[] { 0, 0, 0 }, new[] { 0x80, 0, 1 }, new[] { 0x90, 0xAA, 2 }, new[] { 0, 0, 255 } }
+        from flags in Enumerable.Range(0, 16)
+        select new object[] { state[0], state[1], state[2], flags };
+
     [Theory]
-    [InlineData(0x00, 0x00, 0)] [InlineData(0x80, 0x00, 1)] [InlineData(0x90, 0xAA, 2)] [InlineData(0x00, 0x00, 255)]
-    public void FixedSh2ProgramOnlyWritesItsOwnRamResultAndReturnsToMonitor(int fccs, int mat, int hardwareClass)
+    [MemberData(nameof(ProgramCases))]
+    public void FixedSh2ProgramOnlyWritesItsOwnRamResultAndReturnsToMonitor(int fccs, int mat, int hardwareClass, int pinFlags)
     {
         // Small independent instruction interpreter: reject every instruction,
         // memory access or branch outside this program's explicit contract.
@@ -18,11 +23,15 @@ public sealed class RamSelfTestTests
         {
             if (address >= start && address < start + memory.Length) return memory[address - start];
             reads.Add(address);
-            return address switch { 0xFFFFE800 => (byte)fccs, 0xFFFFE805 => (byte)mat, _ => throw new Exception("Unexpected register read") };
+            return address switch { 0xFFFFE800 => (byte)fccs, 0xFFFFE805 => (byte)mat,
+                0xFFFFF743 => (byte)(0xFE | (pinFlags & 1)),
+                0xFFFFF740 => (byte)(0xFE | ((pinFlags >> 1) & 1)),
+                0xFFFFF746 => (byte)(0xFE | ((pinFlags >> 2) & 1)),
+                0xFFFFF784 => (byte)(0xFE | ((pinFlags >> 3) & 1)), _ => throw new Exception("Unexpected register read") };
         }
         ushort Word(uint a) => (ushort)((Read(a) << 8) | Read(a + 1));
         int instructions = 0; bool returned = false;
-        while (!returned && instructions++ < 32)
+        while (!returned && instructions++ < 64)
         {
             ushort op = Word(pc); int n = (op >> 8) & 15;
             if ((op & 0xF000) == 0xD000)
@@ -34,10 +43,15 @@ public sealed class RamSelfTestTests
             else if ((op & 0xF000) == 0xE000) registers[n] = unchecked((uint)(sbyte)(byte)op);
             else if ((op & 0xF000) == 0x7000) registers[n] = unchecked(registers[n] + (uint)(sbyte)(byte)op);
             else if (op == 0x6010) registers[0] = unchecked((uint)(sbyte)Read(registers[1]));
+            else if (op == 0xC901) registers[0] &= 1;
+            else if (op == 0x220B) registers[2] |= registers[0];
+            else if (op == 0x4000) registers[0] <<= 1;
+            else if (op == 0x4008) registers[0] <<= 2;
+            else if (op == 0x6023) registers[0] = registers[2];
             else if ((op & 0xFF00) == 0x8000)
             {
                 uint a = registers[(op >> 4) & 15] + (uint)(op & 15);
-                Assert.InRange(a, start + 61, start + 63);
+                Assert.InRange(a, start + 114, start + 117);
                 writes.Add(a); memory[a - start] = (byte)registers[0];
             }
             else if (op == 0x430B)
@@ -66,10 +80,10 @@ public sealed class RamSelfTestTests
             pc += 2;
         }
         Assert.True(returned);
-        Assert.Equal(new uint[] { 0xFFFFE800, 0xFFFFE805 }, reads);
-        Assert.Equal(new uint[] { start + 61, start + 62, start + 63 }, writes);
+        Assert.Equal(new uint[] { 0xFFFFE800, 0xFFFFE805, 0xFFFFF743, 0xFFFFF740, 0xFFFFF746, 0xFFFFF784 }, reads);
+        Assert.Equal(new uint[] { start + 114, start + 115, start + 116, start + 117 }, writes);
         Assert.Equal(new uint[] { 0x0EE4, 0x04C2, 0x0040 }, calls);
-        Assert.Equal(new byte[] { 0x4D, 0x4C, 0x32, (byte)hardwareClass, (byte)fccs, (byte)mat }, result);
+        Assert.Equal(new byte[] { 0x4D, 0x50, (byte)hardwareClass, (byte)fccs, (byte)mat, (byte)pinFlags }, result);
     }
 
     [Fact]
@@ -87,16 +101,28 @@ public sealed class RamSelfTestTests
         using var peer = new Peer();
         var result = new Zyj2RamSelfTest().Run(peer, _ => { });
         Assert.Equal(Zyj2RamSelfTestPolicy.Image, peer.Memory);
-        Assert.Equal(64, result.UploadedBytes); Assert.Equal(64, result.VerifiedBytes);
+        Assert.Equal(120, result.UploadedBytes); Assert.Equal(120, result.VerifiedBytes);
         Assert.Equal(1, result.HardwareClass);
-        Assert.Equal(Enumerable.Range(0, 64), peer.VerifiedOffsets);
+        Assert.Equal(10, result.ProgrammingPinFlags);
+        Assert.False(result.Pd8AlternateFunctionSelected); Assert.True(result.Pd8OutputDirection);
+        Assert.False(result.Pd8DataHigh); Assert.True(result.Pd8PinHigh);
+        Assert.Equal(Enumerable.Range(0, 120), peer.VerifiedOffsets);
         Assert.Single(peer.Executed); Assert.True(result.FlashWriteEnableObserved);
         Assert.False(result.FlashErrorObserved); Assert.False(result.UserBootMatSelected);
         Assert.Equal(RamSelfTestOperation.IdentifyMonitor, peer.Sent.Last());
     }
 
+    [Fact]
+    public void ReservedProgrammingPinFlagsCannotBecomeARecordedResult()
+    {
+        using var peer = new Peer { ReservedPinFlags = true };
+        var stages = new List<string>();
+        Assert.Throws<TransportException>(() => new Zyj2RamSelfTest().Run(peer, stages.Add));
+        Assert.DoesNotContain("monitor-return-confirmed-after-fixed-ram-self-test", stages);
+    }
+
     [Theory]
-    [InlineData(0)] [InlineData(31)] [InlineData(63)]
+    [InlineData(0)] [InlineData(31)] [InlineData(119)]
     public void AnyByteMismatchPreventsExecution(int offset)
     {
         using var peer = new Peer { CorruptByte = offset };
@@ -118,7 +144,7 @@ public sealed class RamSelfTestTests
         using var peer = new Peer(); using var cancel = new CancellationTokenSource();
         Assert.Throws<OperationCanceledException>(() => new Zyj2RamSelfTest().Run(peer, stage =>
         { if (stage == "every-fixed-ram-image-byte-verified") cancel.Cancel(); }, cancel.Token));
-        Assert.Equal(64, peer.VerifiedOffsets.Count); Assert.Empty(peer.Executed);
+        Assert.Equal(120, peer.VerifiedOffsets.Count); Assert.Empty(peer.Executed);
     }
 
     [Theory]
@@ -191,7 +217,8 @@ public sealed class RamSelfTestTests
 
     private sealed class Peer : IFixedRamSelfTestChannel
     {
-        public byte[] Memory { get; } = new byte[64];
+        public bool ReservedPinFlags { get; init; }
+        public byte[] Memory { get; } = new byte[120];
         public List<int> VerifiedOffsets { get; } = [];
         public List<int> Executed { get; } = [];
         public List<RamSelfTestOperation> Sent { get; } = [];
@@ -215,11 +242,11 @@ public sealed class RamSelfTestTests
             {
                 case RamSelfTestOperation.Address:
                     Assert.Equal(0x9C, p[1]); address = BinaryPrimitives.ReadUInt32BigEndian(p.AsSpan(2)); uploadAddress = address;
-                    Assert.InRange(address, 0xFFFF8000u, 0xFFFF803Fu);
+                    Assert.InRange(address, 0xFFFF8000u, 0xFFFF8077u);
                     p[6] = 0x58; p[7] = 0x41; Reply(p); break;
                 case RamSelfTestOperation.Upload:
                     int count = p[1] & 7; Assert.Equal(0xA8, p[1] & 0xF8);
-                    Assert.InRange(uploadAddress, 0xFFFF8000u, 0xFFFF803Fu);
+                    Assert.InRange(uploadAddress, 0xFFFF8000u, 0xFFFF8077u);
                     p.AsSpan(2, count).CopyTo(Memory.AsSpan((int)(uploadAddress - 0xFFFF8000))); uploadAddress += (uint)count;
                     if (UploadError && step.ImageOffset == 6) Reply([0x7A, 0xA1, 2, 0, 0, 0, 0, 0]);
                     break;
@@ -229,9 +256,9 @@ public sealed class RamSelfTestTests
                     byte value = Memory[offset]; if (offset == CorruptByte) value ^= 1;
                     Reply([0x7A, 0xB1, value, 9, 8, 7, 6, 5]); break;
                 case RamSelfTestOperation.ExecuteFixedTest:
-                    Assert.Equal(64, VerifiedOffsets.Count); Assert.Equal(0xFFFF8000u, address);
+                    Assert.Equal(120, VerifiedOffsets.Count); Assert.Equal(0xFFFF8000u, address);
                     Assert.Equal(Zyj2RamSelfTestPolicy.Image, Memory); Executed.Add(index);
-                    Reply([0x7A, 0xC6, BadMarker ? (byte)0 : (byte)0x4D, 0x4C, 0x32, 1, 0x80, 0]); break;
+                    Reply([0x7A, 0xC6, BadMarker ? (byte)0 : (byte)0x4D, 0x50, 1, 0x80, 0, ReservedPinFlags ? (byte)0x80 : (byte)0x0A]); break;
                 case RamSelfTestOperation.IdentifyMonitor:
                     byte[] id = Zyj2RecoveryPolicy.ExpectedIdentity; if (BadMonitorReturn) id[7] ^= 1;
                     Reply(id); break;
