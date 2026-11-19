@@ -28,12 +28,15 @@
 - MazdaLink has no enabled flash/recovery implementation. A flash command must refuse
   before driver open; do not infer a Mazda 2 writer from generic UDS or Gen 1 code.
 - The separately selected ZYJ2 fixed RAM self-test has its own backend capability
-  and `RAM ZYJ2` confirmation. Permit only the immutable built-in 56-byte program
+  and `RAM ZYJ2` confirmation. Permit only the immutable built-in 64-byte program
   at 0xFFFF8000, its bounded upload and exact per-byte readback script, one execution,
   then monitor identification and normal restart. Never accept external code,
   addresses, repeated execution, skipped replies or a weak whole-image checksum
-  in place of exact byte verification. The program reads FCCS/FMATS and writes
-  only its own RAM result and the existing CAN path. No flash-controller write,
+  in place of exact byte verification. The program uses the fingerprinted resident
+  hardware-class query (which temporarily enables H-UDI status access and restores
+  SYSCR2), reads FCCS/FMATS and writes its own RAM result and the existing CAN path.
+  Do not infer a single SH7058/SH7058S/SH7059 erase map from the shared boot code.
+  No flash-controller or FWE-setting write,
   on-chip algorithm download, erase or ROM programming is included. Physical RAM
   execution acceptance remains unqualified until separately demonstrated.
 - Use the observed longer-off bench sequence: normal preflight, operator-confirmed
@@ -41,6 +44,10 @@
   then open the adapter with ECU off and reconnect during the bounded entry window.
   The timer and adapter voltage do not measure internal ECU power or prove a
   minimum cold-start delay. Preserve the identification-only backend's two-payload gate.
+- Normal restart uses a separately confirmed ECU-only 60-second off wait, POWER ON
+  confirmation and 10-second startup wait before one normal diagnostic check.
+  No entry traffic or RAM execution runs during this restart sequence. A timeout
+  does not negate earlier RAM evidence or qualify recovery; record the stages separately.
 - Preserve original GPL credits. Legacy sources/definitions and their core integrity
   regression matrix remain archived in place, but are not application dependencies.
 

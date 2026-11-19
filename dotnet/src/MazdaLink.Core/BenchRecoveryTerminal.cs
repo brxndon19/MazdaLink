@@ -13,8 +13,8 @@ public sealed class BenchRecoveryTerminal(Func<IReadTransport> connect, Func<IBe
         Zyj2RecoveryPolicy.RequireBackup(backup);
         output.WriteLine((runRamSelfTest ? "ZYJ2 SPARE ECU — FIXED VOLATILE RAM SELF-TEST\n" : "ZYJ2 SPARE ECU — BENCH MONITOR IDENTIFICATION ONLY\n") +
             "Use the detached ZYJ2 spare on your bench harness. Keep the good ECU disconnected.\n" +
-            (runRamSelfTest ? "This uploads only MazdaLink's fixed 56-byte RAM test, reads back every byte, executes it, reads flash-controller status and returns to the monitor.\n" +
-                "Only volatile RAM and CAN output are written. No flash-controller register is written; no flash kernel, erase or ROM programming is implemented.\n" :
+            (runRamSelfTest ? "This uploads only MazdaLink's fixed 64-byte RAM test, reads back every byte, queries the resident hardware class, reads flash-controller status and returns to the monitor.\n" +
+                "The resident class query temporarily enables H-UDI status access and restores SYSCR2, as in native RAM copying. No flash-control or FWE-setting write, flash kernel, erase or ROM programming is implemented.\n" :
                 "This checks cold-start monitor entry and normal restart. No upload, memory write, execute, erase, ROM programming or ECU reset is sent by this identification-only workflow.\n") +
             "This does not test interrupted-flash recovery. RAM execution and ECU flashing remain unqualified.\n" +
             "Keep Mongoose USB and its OBD 12 V supply powered. Switch only the ECU positive supply feeds; keep grounds and CAN connected.\n" +
@@ -32,7 +32,7 @@ public sealed class BenchRecoveryTerminal(Func<IReadTransport> connect, Func<IBe
         void Record(string stage)
         {
             if (++sequence > 32) throw new IOException("Bench evidence limit reached.");
-            byte[] line = JsonSerializer.SerializeToUtf8Bytes(new { schema = 4, version, sequence, utc = DateTime.UtcNow, stage,
+            byte[] line = JsonSerializer.SerializeToUtf8Bytes(new { schema = 5, version, sequence, utc = DateTime.UtcNow, stage,
                 calibration = Zyj2RecoveryPolicy.SoftwareId, backupSha256 = RomStorage.Hash(backup.Data),
                 flashOperationsImplemented = false, interruptedFlashRecoveryTested = false,
                 fixedRamSelfTest = runRamSelfTest, ramResult,
@@ -72,6 +72,7 @@ public sealed class BenchRecoveryTerminal(Func<IReadTransport> connect, Func<IBe
                     ramResult = new Zyj2RamSelfTest().Run((IFixedRamSelfTestChannel)channel, Record, cancel);
                     Record("fixed-ram-self-test-result-recorded-no-flash");
                     output.WriteLine($"RAM SELF-TEST RETURNED TO MONITOR. {ramResult.VerifiedBytes} bytes verified before execution.\n" +
+                        $"Resident hardware class: {ramResult.HardwareClass} — {ramResult.HardwareClassName}. Erase geometry must match the confirmed device.\n" +
                         $"Read-only status: FWE={(ramResult.FlashWriteEnableObserved ? 1 : 0)}, FLER={(ramResult.FlashErrorObserved ? 1 : 0)}, MAT=0x{ramResult.MatSelection:X2}. These observations do not authorize flashing.");
                 }
             }
@@ -80,11 +81,8 @@ public sealed class BenchRecoveryTerminal(Func<IReadTransport> connect, Func<IBe
                 channel.Dispose();
                 if (channel.CleanupWarning is not null) throw new BenchCleanupException(channel.CleanupWarning + " Disconnect both USB and ECU battery power before reconnecting.");
             }
-            output.WriteLine("MONITOR IDENTIFIED. No flash operation was sent.\n" +
-                "Now disconnect ECU battery power for at least five seconds and reconnect it.\n" +
-                "Leave it powered on. Press Enter when that second power cycle is complete:");
-            if (input.ReadLine() is null) throw new InvalidDataException("Normal restart was not checked. Monitor identification alone is not a recovery pass.");
-            cancel.ThrowIfCancellationRequested();
+            output.WriteLine("MONITOR IDENTIFIED. No flash operation was sent.");
+            BenchColdStart.PrepareNormalRestart(input, output, Record, cancel, coldWait);
             ConfirmNormal();
             Record("normal-restart-confirmed");
             if (runRamSelfTest) Record("fixed-ram-self-test-and-normal-restart-complete-not-flash-qualified");
@@ -96,7 +94,7 @@ public sealed class BenchRecoveryTerminal(Func<IReadTransport> connect, Func<IBe
         {
             string reason = error.GetType().Name + ": " + error.Message;
             try { Record("incomplete-or-failed-no-recovery-qualification: " + reason[..Math.Min(reason.Length, 256)]); } catch (IOException) { }
-            output.WriteLine("Bench check incomplete. Stop entry traffic, disconnect/reconnect the spare's battery power, and leave it on before normal diagnostics.\nEvidence: " + folder);
+            output.WriteLine("Bench check incomplete. At the menu, disconnect only both ECU positive feeds for 60 seconds, reconnect and wait 10 seconds before option 1. Keep Mongoose powered; do not repeat entry or RAM execution automatically.\nEvidence: " + folder);
             if (error is BenchCleanupException) output.WriteLine("DRIVER CLEANUP UNCERTAIN: disconnect both USB and ECU battery power. Restart MazdaLink after reconnecting. The application will stop.");
             throw;
         }

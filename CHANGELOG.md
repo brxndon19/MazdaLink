@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.0-alpha.7
+
+- Replace the short manual normal-restart prompt with confirmed ECU-only power removal, a monotonic 60-second off wait, confirmed reconnection and a 10-second startup wait before one normal diagnostic check. Record each stage separately; send no monitor-entry traffic during restart.
+- Extend the fixed RAM test to 64 bytes and query the fingerprinted resident hardware-class routine before reading FCCS/FMATS. Verify every byte before one execution and record the class in schema-5 local evidence. The resident query temporarily enables H-UDI status access and restores SYSCR2, as in native RAM copying; no flash-control or FWE-setting write is available.
+- Distinguish SH7058/SH7058S/SH7059 programming constraints using primary device documentation. Shared boot code and status-register addresses do not establish the same silicon, algorithm or erase plan. Require exact device qualification and a supported hardware write-enable path before a future writer.
+- The operator's alpha.6 spare evidence established the previous 56-byte program's upload, exact readback, execution and monitor return. Its built-in restart timed out; normal identification was restored independently after a longer power cycle. The new hardware-class probe and revised complete workflow remain physically unqualified. Erase, ROM programming and interrupted-write recovery remain unavailable.
+
 ## 0.9.0-alpha.6
 
 - Add a separately selected ZYJ2 spare fixed volatile RAM self-test (menu 10). Require the complete examined backup, live calibration/RPM checks, explicit `RAM ZYJ2` confirmation and a valid native monitor reply before the RAM capability can send its immutable script.
