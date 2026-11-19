@@ -8,7 +8,7 @@ export function verifyPackage(folder, tag, commit) {
   if (!/^v\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?$/.test(tag) || !/^[a-f0-9]{40}$/.test(commit)) throw Error('Invalid tag or commit');
   if (manifest.schemaVersion !== 5 || manifest.tag !== tag || `v${manifest.version}` !== tag || manifest.sourceCommit !== commit || manifest.architecture !== 'win-x86' || manifest.ecuProgrammingEnabled !== false || manifest.programmingFamily !== 'None' || manifest.readIdentityPolicy !== 'reported-calibration' || manifest.checksumSoftwareId !== 'ZY87EC000ZYV5050') throw Error('Release identity mismatch');
   if (manifest.benchRecoveryCheck !== 'ZYJ2EA000ZYV5050-identification-only' || manifest.realEcuAcceptance !== 'unqualified') throw Error('Bench scope mismatch');
-  if (manifest.ramSelfTest !== 'ZYJ2EA000ZYV5050-fixed-volatile-only' || manifest.ramSelfTestHardwareAcceptance !== 'unqualified' || manifest.ramSelfTestImageSha256 !== '5fbb400331919923cde4b96952c8e5ae65aa0768294776009d7796c1607d6742') throw Error('RAM self-test scope mismatch');
+  if (manifest.ramSelfTest !== 'ZYJ2EA000ZYV5050-fixed-volatile-only' || manifest.ramSelfTestHardwareAcceptance !== 'unqualified' || manifest.ramSelfTestImageSha256 !== '34bd2a95b30d2a34f8ccc6ccc5e3486cac2d7ecc5f8c31720e7a0a2594c1cad0') throw Error('RAM self-test scope mismatch');
   const expected = ['MazdaLink.exe', `MazdaLink-${tag}-source.zip`];
   if (Object.keys(manifest.files).sort().join() !== [...expected].sort().join()) throw Error('Unexpected package inventory');
   const digest = name => createHash('sha256').update(readFileSync(join(folder, name))).digest('hex');

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.0-alpha.8
+
+- Extend the immutable RAM program to 120 bytes to read the stock loader's candidate programming-output preconditions: PD8 alternate-function selection, output direction, data value and physical input level. Mask only the reviewed bits, report them as bounded flags and leave every GPIO and flash-control setting unchanged.
+- Verify every program byte before one execution; distinguish the new `MP` response from earlier tests. Preserve monitor return, timed ECU-only restart, target/backup gates and the identification-only backend. Add independent instruction-model coverage for all 16 pin-bit combinations across four hardware/status states.
+- The supplied alpha.7 spare log passed all 64-byte readback, execution, monitor-return and normal-restart stages and reported SH7058S class, FWE=0, FLER=0 and MAT=0. The new pin snapshot is physically unqualified. It does not establish the board-level FWE connection or qualify toggling that output. Erase, ROM programming and interrupted-write recovery remain unavailable.
+
 ## 0.9.0-alpha.7
 
 - Replace the short manual normal-restart prompt with confirmed ECU-only power removal, a monotonic 60-second off wait, confirmed reconnection and a 10-second startup wait before one normal diagnostic check. Record each stage separately; send no monitor-entry traffic during restart.

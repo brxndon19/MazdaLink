@@ -23,7 +23,7 @@ with tempfile.TemporaryDirectory(prefix="MazdaLink-ram-build-") as folder:
     subprocess.run(["sh-elf-objcopy", "-O", "binary", str(elf), str(binary)], check=True)
     actual = binary.read_bytes()
 assert actual == embedded, "Assembled RAM program differs from embedded image"
-assert len(actual) == 64
+assert len(actual) == 120
 digest = hashlib.sha256(actual).hexdigest()
-assert digest == "5fbb400331919923cde4b96952c8e5ae65aa0768294776009d7796c1607d6742"
-print("PASS: own 64-byte SH-2 RAM test rebuilt exactly; sha256:" + digest)
+assert digest == "34bd2a95b30d2a34f8ccc6ccc5e3486cac2d7ecc5f8c31720e7a0a2594c1cad0"
+print("PASS: own 120-byte SH-2 RAM test rebuilt exactly; sha256:" + digest)

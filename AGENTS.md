@@ -28,17 +28,22 @@
 - MazdaLink has no enabled flash/recovery implementation. A flash command must refuse
   before driver open; do not infer a Mazda 2 writer from generic UDS or Gen 1 code.
 - The separately selected ZYJ2 fixed RAM self-test has its own backend capability
-  and `RAM ZYJ2` confirmation. Permit only the immutable built-in 64-byte program
+  and `RAM ZYJ2` confirmation. Permit only the immutable built-in 120-byte program
   at 0xFFFF8000, its bounded upload and exact per-byte readback script, one execution,
   then monitor identification and normal restart. Never accept external code,
   addresses, repeated execution, skipped replies or a weak whole-image checksum
   in place of exact byte verification. The program uses the fingerprinted resident
   hardware-class query (which temporarily enables H-UDI status access and restores
-  SYSCR2), reads FCCS/FMATS and writes its own RAM result and the existing CAN path.
+  SYSCR2), reads FCCS/FMATS and PD8 mode/direction/data/pin bits and writes its own RAM result and the existing CAN path.
   Do not infer a single SH7058/SH7058S/SH7059 erase map from the shared boot code.
   No flash-controller or FWE-setting write,
   on-chip algorithm download, erase or ROM programming is included. Physical RAM
   execution acceptance remains unqualified until separately demonstrated.
+  The 64-byte alpha.7 class/status probe and normal restart passed on one spare;
+  the 120-byte read-only PD8 snapshot remains a separate unqualified revision.
+  Do not change GPIO configuration or infer its board-level FWE connection from
+  a snapshot. Require a separately reviewed control-and-restore test before any
+  hardware write-enable change.
 - Use the observed longer-off bench sequence: normal preflight, operator-confirmed
   ECU-only power removal, a monotonic 60-second host wait outside entry traffic,
   then open the adapter with ECU off and reconnect during the bounded entry window.

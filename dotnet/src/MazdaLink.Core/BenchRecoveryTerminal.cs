@@ -13,7 +13,7 @@ public sealed class BenchRecoveryTerminal(Func<IReadTransport> connect, Func<IBe
         Zyj2RecoveryPolicy.RequireBackup(backup);
         output.WriteLine((runRamSelfTest ? "ZYJ2 SPARE ECU — FIXED VOLATILE RAM SELF-TEST\n" : "ZYJ2 SPARE ECU — BENCH MONITOR IDENTIFICATION ONLY\n") +
             "Use the detached ZYJ2 spare on your bench harness. Keep the good ECU disconnected.\n" +
-            (runRamSelfTest ? "This uploads only MazdaLink's fixed 64-byte RAM test, reads back every byte, queries the resident hardware class, reads flash-controller status and returns to the monitor.\n" +
+            (runRamSelfTest ? "This uploads only MazdaLink's fixed 120-byte RAM test, reads back every byte, queries the resident hardware class, reads flash-controller and programming-pin status and returns to the monitor.\n" +
                 "The resident class query temporarily enables H-UDI status access and restores SYSCR2, as in native RAM copying. No flash-control or FWE-setting write, flash kernel, erase or ROM programming is implemented.\n" :
                 "This checks cold-start monitor entry and normal restart. No upload, memory write, execute, erase, ROM programming or ECU reset is sent by this identification-only workflow.\n") +
             "This does not test interrupted-flash recovery. RAM execution and ECU flashing remain unqualified.\n" +
@@ -32,7 +32,7 @@ public sealed class BenchRecoveryTerminal(Func<IReadTransport> connect, Func<IBe
         void Record(string stage)
         {
             if (++sequence > 32) throw new IOException("Bench evidence limit reached.");
-            byte[] line = JsonSerializer.SerializeToUtf8Bytes(new { schema = 5, version, sequence, utc = DateTime.UtcNow, stage,
+            byte[] line = JsonSerializer.SerializeToUtf8Bytes(new { schema = 6, version, sequence, utc = DateTime.UtcNow, stage,
                 calibration = Zyj2RecoveryPolicy.SoftwareId, backupSha256 = RomStorage.Hash(backup.Data),
                 flashOperationsImplemented = false, interruptedFlashRecoveryTested = false,
                 fixedRamSelfTest = runRamSelfTest, ramResult,
@@ -73,7 +73,8 @@ public sealed class BenchRecoveryTerminal(Func<IReadTransport> connect, Func<IBe
                     Record("fixed-ram-self-test-result-recorded-no-flash");
                     output.WriteLine($"RAM SELF-TEST RETURNED TO MONITOR. {ramResult.VerifiedBytes} bytes verified before execution.\n" +
                         $"Resident hardware class: {ramResult.HardwareClass} — {ramResult.HardwareClassName}. Erase geometry must match the confirmed device.\n" +
-                        $"Read-only status: FWE={(ramResult.FlashWriteEnableObserved ? 1 : 0)}, FLER={(ramResult.FlashErrorObserved ? 1 : 0)}, MAT=0x{ramResult.MatSelection:X2}. These observations do not authorize flashing.");
+                        $"Read-only status: FWE={(ramResult.FlashWriteEnableObserved ? 1 : 0)}, FLER={(ramResult.FlashErrorObserved ? 1 : 0)}, MAT=0x{ramResult.MatSelection:X2}. These observations do not authorize flashing.\n" +
+                        $"PD8 snapshot: alternate-function={(ramResult.Pd8AlternateFunctionSelected ? 1 : 0)}, output-direction={(ramResult.Pd8OutputDirection ? 1 : 0)}, data-high={(ramResult.Pd8DataHigh ? 1 : 0)}, pin-high={(ramResult.Pd8PinHigh ? 1 : 0)}. No pin setting was changed.");
                 }
             }
             finally
