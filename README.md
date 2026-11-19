@@ -52,7 +52,13 @@ The program calls the fingerprinted resident hardware-class query, then reads fl
 
 Menu **11**, or `MazdaLink.exe protected-flash-init "path\to\original.rom"`, selects a separate **INIT ZYJ2** capability. It verifies every byte of its fixed 936-byte program before execution, checks SH7058S class, controller protection, mapping, live CAN timing and PD8 preconditions, then loads the chip's own two flash algorithms into RAM and calls only their initialization entries. It performs controller selection/SCO writes, keeps FWE low, changes no PD8 setting and omits both the programming key and erase/program entries. It checks cleanup, monitor return and timed normal restart separately. The existing watchdog is serviced between phases; this is not an erase/program kernel.
 
-The alpha.8 snapshot and restart passed on the spare. This new controller experiment remains physically unqualified and does not enable flashing or interrupted-write recovery. Keep its schema-7 `events.jsonl` under `Documents\MazdaLink\protected-initialization-tests`. See [the exact initialization contract and limits](docs/ZYJ2_PROTECTED_INITIALIZATION.md).
+The alpha.9 spare log passed both protected algorithm downloads/initializations, protection/cleanup checks, monitor return and normal restart. This does not enable flashing or qualify broader hardware compatibility or interrupted-write recovery. Keep its schema-7 `events.jsonl` under `Documents\MazdaLink\protected-initialization-tests`. See [the exact initialization contract and limits](docs/ZYJ2_PROTECTED_INITIALIZATION.md).
+
+## ZYJ2 detached spare: read-only recovery boot binding
+
+Menu **12**, or `MazdaLink.exe recovery-binding-check "path\to\original.rom"`, checks direct monitor entry and a byte-exact match of the preserved boot region against the spare's complete verified backup. **BIND ZYJ2** confirms the detached setup: this probe deliberately omits ordinary application identity/RPM preflight, so **never use it in a vehicle**. It reads only `0x000000–0x0070FF`; during binding it does not read the live calibration ID, upload/execute RAM code or write flash-controller registers. Other commands retain their normal preflight gates.
+
+A full match is a firmware-region binding, not a unique ECU serial identity. Normal diagnostics are checked separately after the final timed power cycle of the intact spare. The new probe remains physically unqualified and does not restore an ECU or qualify interrupted-write recovery. Keep its schema-8 `events.jsonl` under `Documents\MazdaLink\recovery-binding-tests`. See [the exact read-only binding contract and limits](docs/ZYJ2_RECOVERY_BINDING.md).
 
 ## Source and validation
 

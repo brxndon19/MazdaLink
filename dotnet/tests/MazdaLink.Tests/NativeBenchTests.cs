@@ -273,6 +273,50 @@ public sealed class NativeBenchTests
         }
     }
 
+    [Fact]
+    public void BindingCapabilityIsIsolatedFromEveryRamCapability()
+    {
+        foreach (var flags in new[] { (false,false), (true,false), (false,true) })
+        {
+            using var other = new Driver(flags.Item1,flags.Item2); other.IdentifyMonitor();
+            Assert.Throws<TransportException>(()=>other.SendBindingStep(0));
+        }
+        using var ram = new Driver(binding:RecoveryBindingTests.SyntheticPlan());ram.IdentifyMonitor();
+        Assert.Throws<TransportException>(()=>ram.SendRamStep(0));
+        using var init = new Driver(binding:RecoveryBindingTests.SyntheticPlan());init.IdentifyMonitor();
+        Assert.Throws<TransportException>(()=>init.SendInitStep(0));
+        Assert.False(typeof(IFixedRamSelfTestChannel).IsAssignableFrom(typeof(NativeRecoveryBindingChannel)));
+        Assert.False(typeof(IProtectedInitializationChannel).IsAssignableFrom(typeof(NativeRecoveryBindingChannel)));
+    }
+    [Fact]
+    public void NativeBindingRequiresAllPreservedRepliesBeforeItsFinalIdentityAndCannotRestart()
+    {
+        var plan=RecoveryBindingTests.SyntheticPlan(); using var driver=new Driver(binding:plan); driver.IdentifyMonitor();
+        for(int i=0;i<plan.Count;i++){driver.SendBindingStep(i);driver.SetBindingReply(i);driver.Channel.Read(25);}
+        Assert.Equal(new RecoveryBindingTransportDiagnostics(57857,28928,false,false),driver.BindingDiagnostics);
+        Assert.Equal(2,driver.Channel.Diagnostics.IdentityRequests);
+        Assert.Throws<TransportException>(()=>driver.SendBindingStep(0));
+    }
+    [Fact]
+    public void NativeBindingCannotSkipStepsOrAdvancePastAnUnansweredRequest()
+    {
+        using var skipped=new Driver(binding:RecoveryBindingTests.SyntheticPlan());skipped.IdentifyMonitor();
+        Assert.Throws<TransportException>(()=>skipped.SendBindingStep(57856));
+        using var pending=new Driver(binding:RecoveryBindingTests.SyntheticPlan());pending.IdentifyMonitor();pending.SendBindingStep(0);
+        Assert.Throws<TransportException>(()=>pending.SendBindingStep(1));
+        using var noMonitor=new Driver(binding:RecoveryBindingTests.SyntheticPlan());
+        Assert.Throws<TransportException>(()=>noMonitor.SendBindingStep(0));
+    }
+    [Fact]
+    public void NativeBindingByteMismatchPermanentlyBlocksFurtherReads()
+    {
+        using var driver=new Driver(binding:RecoveryBindingTests.SyntheticPlan());driver.IdentifyMonitor();
+        driver.SendBindingStep(0);driver.SetBindingReply(0);driver.Channel.Read(25);
+        driver.SendBindingStep(1);driver.SetBindingReply(1);driver.Reply.Data[6]^=1;driver.Channel.Read(25);
+        Assert.True(driver.BindingDiagnostics.Failed);
+        Assert.Throws<TransportException>(()=>driver.SendBindingStep(2));
+    }
+
     public sealed record Reply(uint Status, uint Count, uint Protocol, uint RxStatus, uint Size, uint ExtraIndex, byte[] Data)
     {
         public static Reply Identity()
@@ -302,11 +346,12 @@ public sealed class NativeBenchTests
         public int Supply { get; init; } = 12500;
         public bool LeaveSupplyOutputUntouched { get; init; }
         public bool EmptyInputBuffer { get; private set; }
-        public Driver(bool allowRamSelfTest = false, bool allowProtectedInitialization = false)
+        public Driver(bool allowRamSelfTest = false, bool allowProtectedInitialization = false, RecoveryBindingPlan? binding = null)
         {
             Channel = (NativeBenchMonitorChannel)RuntimeHelpers.GetUninitializedObject(Type);
             Set("allowRamSelfTest", allowRamSelfTest);
             Set("allowProtectedInitialization", allowProtectedInitialization);
+            Set("recoveryBinding", binding);
             Set("opened", true); Set("connected", true); Set("filtered", true);
             BindMessage("write", nameof(Write)); BindMessage("startPeriodic", nameof(Start));
             var stop = Type.GetField("stopPeriodic", Hidden)!;
@@ -343,6 +388,26 @@ public sealed class NativeBenchTests
             try { Type.GetMethod("SendProtectedInitializationStep", Hidden)!.Invoke(Channel, [index]); }
             catch (TargetInvocationException error) when (error.InnerException is not null)
             { System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error.InnerException).Throw(); }
+        }
+        public RecoveryBindingTransportDiagnostics BindingDiagnostics => (RecoveryBindingTransportDiagnostics)Type.GetProperty("BindingDiagnostics", Hidden)!.GetValue(Channel)!;
+        public void SendBindingStep(int index)
+        {
+            try { Type.GetMethod("SendRecoveryBindingStep", Hidden)!.Invoke(Channel, [index]); }
+            catch (TargetInvocationException error) when (error.InnerException is not null)
+            { System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error.InnerException).Throw(); }
+        }
+        public void SetBindingReply(int index)
+        {
+            var plan = (RecoveryBindingPlan)Type.GetField("recoveryBinding", Hidden)!.GetValue(Channel)!;
+            var step = plan[index];
+            byte[] p = step.Operation switch
+            {
+                RamSelfTestOperation.Address => step.Payload,
+                RamSelfTestOperation.VerifyByte => [0x7A,0xB1,(byte)((index/2)*31^0xA5),0,0,0,0,0],
+                RamSelfTestOperation.IdentifyMonitor => Zyj2RecoveryPolicy.ExpectedIdentity,
+                _ => throw new Exception("Binding cannot upload or execute")
+            };
+            Reply = new(0,1,5,0x100,12,12,[0,0,0,0x21,..p]);
         }
         public void SetInitReply(int index)
         {

@@ -57,9 +57,23 @@
   monitor return and normal restart separately. Native watchdog service between
   phases does not authorize disabling watchdogs or calling ROM during flash busy.
   Keep this capability inaccessible to the identification and read-only RAM paths.
-  The controller-init experiment is physically unqualified; it does not qualify
-  a writer or interrupted-write recovery. Preserve its independent assembly/model
+  One alpha.9 spare log passed protected algorithm download/initialization,
+  protection/cleanup checks, monitor return and normal restart. This does not
+  qualify a writer, broader hardware compatibility or interrupted-write recovery. Preserve its independent assembly/model
   CI check, transport integrity gates and release metadata hash/scope binding.
+- The separate read-only recovery binding capability requires `BIND ZYJ2` on a
+  physically detached spare and its verified backup. It intentionally performs no
+  normal application identity/RPM preflight before entry. Do not weaken the other
+  workflows' preflight gates or expose an automatic fallback. Read only the fixed
+  preserved ROM range0..70FF, comparing every byte and hashing observed replies;
+  allow only pointer selection, one-byte checksum reads and final monitor identity.
+  Never allow uploads, execution, controller/GPIO writes, external ranges, command
+  retry or conversion to a RAM capability. Its matched firmware region is not a
+  unique ECU identity. Record binding, final monitor response and post-cycle normal
+  diagnostics independently; a match does not qualify interrupted-write recovery.
+  Actual recovery with an erased calibration ID and write-enable control remain
+  separate preconditions before any destructive stock write. Preserve the fixed
+  three-minute budget, per-reply bounds, capability tests and release scope binding.
 - Use the observed longer-off bench sequence: normal preflight, operator-confirmed
   ECU-only power removal, a monotonic 60-second host wait outside entry traffic,
   then open the adapter with ECU off and reconnect during the bounded entry window.

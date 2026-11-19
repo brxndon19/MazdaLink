@@ -60,9 +60,11 @@ public sealed class NativeBenchMonitorChannel : IBenchMonitorChannel
     private string? adapterName, firmwareVersion, driverVersion, apiVersion;
     private uint? loopbackStatus;
     private readonly bool allowRamSelfTest, allowProtectedInitialization;
+    private readonly RecoveryBindingPlan? recoveryBinding;
     private bool initialMonitorIdentified, ramFaulted;
     private int nextRamStep, verifiedRamBytes;
     private RamSelfTestStep? awaitingRamStep;
+    internal RecoveryBindingTransportDiagnostics BindingDiagnostics => new(nextRamStep, verifiedRamBytes, awaitingRamStep is not null, ramFaulted);
     internal RamSelfTestTransportDiagnostics RamDiagnostics => new(nextRamStep, verifiedRamBytes, awaitingRamStep is not null, ramFaulted);
     private BenchConfigurationReading? loopbackReadback;
     private BenchSupplyReading? beforeEntrySupply, afterEntrySupply;
@@ -84,9 +86,14 @@ public sealed class NativeBenchMonitorChannel : IBenchMonitorChannel
     public NativeBenchMonitorChannel(J2534Driver driver) : this(driver, false) { }
     internal NativeBenchMonitorChannel(J2534Driver driver, bool allowRamSelfTest) : this(driver, allowRamSelfTest, false) { }
     internal NativeBenchMonitorChannel(J2534Driver driver, bool allowRamSelfTest, bool allowProtectedInitialization)
+        : this(driver, allowRamSelfTest, allowProtectedInitialization, null) { }
+    internal NativeBenchMonitorChannel(J2534Driver driver, RecoveryBindingPlan recoveryBinding)
+        : this(driver, false, false, recoveryBinding) { }
+    private NativeBenchMonitorChannel(J2534Driver driver, bool allowRamSelfTest, bool allowProtectedInitialization, RecoveryBindingPlan? recoveryBinding)
     {
-        if (allowRamSelfTest && allowProtectedInitialization) throw new ArgumentException("Choose one fixed RAM capability.");
+        if ((allowRamSelfTest ? 1 : 0) + (allowProtectedInitialization ? 1 : 0) + (recoveryBinding is null ? 0 : 1) > 1) throw new ArgumentException("Choose one fixed RAM capability.");
         this.allowProtectedInitialization = allowProtectedInitialization;
+        this.recoveryBinding = recoveryBinding;
         this.allowRamSelfTest = allowRamSelfTest;
         var registered = J2534Drivers.Discover(driver.Kind).FirstOrDefault(d =>
             d.LibraryPath.Equals(Path.GetFullPath(driver.LibraryPath), StringComparison.OrdinalIgnoreCase) && d.RawCanSupported);
@@ -297,14 +304,21 @@ public sealed class NativeBenchMonitorChannel : IBenchMonitorChannel
     // The identification backend's public interface has no upload/execute method.
     internal void SendFixedRamSelfTestStep(int index)
     {
-        if (!allowRamSelfTest || allowProtectedInitialization) { ramFaulted = true; throw new TransportException("Read-only RAM capability is unavailable."); }
+        if (!allowRamSelfTest || allowProtectedInitialization || recoveryBinding is not null) { ramFaulted = true; throw new TransportException("Read-only RAM capability is unavailable."); }
         SendFixedStep(index, Zyj2RamSelfTestPolicy.Steps, Zyj2RamSelfTestPolicy.Image.Length);
     }
     internal void SendProtectedInitializationStep(int index)
     {
-        if (!allowProtectedInitialization || allowRamSelfTest) { ramFaulted = true; throw new TransportException("Protected initialization capability is unavailable."); }
+        if (!allowProtectedInitialization || allowRamSelfTest || recoveryBinding is not null) { ramFaulted = true; throw new TransportException("Protected initialization capability is unavailable."); }
         SendFixedStep(index, Zyj2ProtectedInitializationPolicy.Steps, Zyj2ProtectedInitializationPolicy.Image.Length);
     }
+    internal void SendRecoveryBindingStep(int index)
+    {
+        if (recoveryBinding is null || allowRamSelfTest || allowProtectedInitialization)
+        { ramFaulted = true; throw new TransportException("Read-only preserved-boot binding capability is unavailable."); }
+        SendFixedStep(index, recoveryBinding, 0);
+    }
+    internal void FailRecoveryBinding() => ramFaulted = true;
     private void SendFixedStep(int index, IReadOnlyList<RamSelfTestStep> steps, int imageLength)
     {
         RequireReady();
@@ -312,6 +326,8 @@ public sealed class NativeBenchMonitorChannel : IBenchMonitorChannel
             awaitingRamStep is not null || index != nextRamStep || index < 0 || index >= steps.Count)
         { ramFaulted = true; throw new TransportException("Fixed RAM self-test step blocked by capability, monitor or sequence gate."); }
         var step = steps[index];
+        if (recoveryBinding is not null && step.Operation is not (RamSelfTestOperation.Address or RamSelfTestOperation.VerifyByte or RamSelfTestOperation.IdentifyMonitor))
+        { ramFaulted = true; throw new TransportException("Preserved-boot binding cannot upload, execute or select another operation."); }
         if (step.Operation == RamSelfTestOperation.ExecuteFixedTest && verifiedRamBytes != imageLength)
         { ramFaulted = true; throw new TransportException("Every fixed RAM image byte must be read back before execution."); }
         var packet = Packet(Zyj2RecoveryPolicy.RequestId, step.Payload); uint count = 1;
