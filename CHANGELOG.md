@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.0-alpha.11
+
+- Add menu 13: separately confirmed detached-intact-ZYJ2 write-enable control and restoration experiment, gated by normal identity/RPM, cold entry, exact live boot binding and byte-verified fixed RAM execution.
+- Limit GPIO writes to the reviewed cold latch/direction sequence. Observe FWE and restoration; stop before another monitor query on uncertain restoration. No flash-controller write, algorithm download, erase or ROM programming is implemented.
+- Bind the 752-byte image and experimental scope to release metadata; retain independent assembly/fault modeling, transport capability checks and bounded local evidence. Hardware qualification remains pending.
+
 ## 0.9.0-alpha.10
 
 - Add separately selected detached ZYJ2 spare read-only recovery boot binding (menu 12, `BIND ZYJ2`). Require its complete verified backup, but deliberately omit normal application identity/RPM preflight before entry. Other workflows retain their original target/engine-stopped gates. Never use this probe in a vehicle.

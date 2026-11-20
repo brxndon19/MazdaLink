@@ -317,6 +317,54 @@ public sealed class NativeBenchTests
         Assert.Throws<TransportException>(()=>driver.SendBindingStep(2));
     }
 
+    [Fact]
+    public void WriteEnableControlCannotBeAcquiredByAnyExistingCapability()
+    {
+        foreach(var flags in new[]{(false,false),(true,false),(false,true)})
+        { using var d=new Driver(flags.Item1,flags.Item2);d.IdentifyMonitor();Assert.Throws<TransportException>(()=>d.SendControlStep(0)); }
+        using var binding=new Driver(binding:RecoveryBindingTests.SyntheticPlan());binding.IdentifyMonitor();
+        Assert.Throws<TransportException>(()=>binding.SendControlStep(0));
+        foreach(string method in new[]{"SendRamStep","SendInitStep","SendBindingStep"})
+        {
+            using var d=new Driver(control:new(RecoveryBindingTests.SyntheticPlan()));d.IdentifyMonitor();
+            var e=Assert.Throws<TargetInvocationException>(()=>typeof(Driver).GetMethod(method)!.Invoke(d,[0]));
+            Assert.IsType<TransportException>(e.InnerException);
+        }
+        Assert.False(typeof(IWriteEnableControlChannel).IsAssignableFrom(typeof(NativeRecoveryBindingChannel)));
+        Assert.False(typeof(IWriteEnableControlChannel).IsAssignableFrom(typeof(NativeRamSelfTestChannel)));
+        Assert.False(typeof(IWriteEnableControlChannel).IsAssignableFrom(typeof(NativeProtectedInitializationChannel)));
+    }
+    [Fact]
+    public void NativeControlRequiresFullBootBindingAndEveryImageByteBeforeOneExecution()
+    {
+        var plan=new WriteEnableControlPlan(RecoveryBindingTests.SyntheticPlan());using var d=new Driver(control:plan);d.IdentifyMonitor();
+        for(int i=0;i<plan.Count;i++)
+        {d.SendControlStep(i);if(plan[i].ExpectsReply){d.SetControlReply(plan,i);d.Channel.Read(25);}}
+        Assert.Equal(59491,plan.Count);
+        Assert.Equal(new RamSelfTestTransportDiagnostics(plan.Count,29680,false,false),d.RamDiagnostics);
+        Assert.Equal(3,d.Channel.Diagnostics.IdentityRequests);
+        Assert.Throws<TransportException>(()=>d.SendControlStep(0));
+    }
+    [Fact]
+    public void NativeControlCannotSkipBindingImageRepliesOrInitialMonitor()
+    {
+        var plan=new WriteEnableControlPlan(RecoveryBindingTests.SyntheticPlan());
+        foreach(int skip in new[]{1,plan.Binding.Count,plan.Count-2})
+        {using var d=new Driver(control:plan);d.IdentifyMonitor();Assert.Throws<TransportException>(()=>d.SendControlStep(skip));}
+        using var pending=new Driver(control:plan);pending.IdentifyMonitor();pending.SendControlStep(0);
+        Assert.Throws<TransportException>(()=>pending.SendControlStep(1));
+        using var noMonitor=new Driver(control:plan);Assert.Throws<TransportException>(()=>noMonitor.SendControlStep(0));
+    }
+    [Theory]
+    [InlineData(1)] [InlineData(57857+127+1)]
+    public void NativeControlBindingOrImageMismatchPermanentlyBlocksExecution(int bad)
+    {
+        var plan=new WriteEnableControlPlan(RecoveryBindingTests.SyntheticPlan());using var d=new Driver(control:plan);d.IdentifyMonitor();
+        for(int i=0;i<=bad;i++)
+        {d.SendControlStep(i);if(!plan[i].ExpectsReply)continue;d.SetControlReply(plan,i);if(i==bad)d.Reply.Data[6]^=1;d.Channel.Read(25);}
+        Assert.True(d.RamDiagnostics.Failed);Assert.Throws<TransportException>(()=>d.SendControlStep(bad+1));
+    }
+
     public sealed record Reply(uint Status, uint Count, uint Protocol, uint RxStatus, uint Size, uint ExtraIndex, byte[] Data)
     {
         public static Reply Identity()
@@ -346,12 +394,13 @@ public sealed class NativeBenchTests
         public int Supply { get; init; } = 12500;
         public bool LeaveSupplyOutputUntouched { get; init; }
         public bool EmptyInputBuffer { get; private set; }
-        public Driver(bool allowRamSelfTest = false, bool allowProtectedInitialization = false, RecoveryBindingPlan? binding = null)
+        public Driver(bool allowRamSelfTest = false, bool allowProtectedInitialization = false, RecoveryBindingPlan? binding = null, WriteEnableControlPlan? control = null)
         {
             Channel = (NativeBenchMonitorChannel)RuntimeHelpers.GetUninitializedObject(Type);
             Set("allowRamSelfTest", allowRamSelfTest);
             Set("allowProtectedInitialization", allowProtectedInitialization);
             Set("recoveryBinding", binding);
+            Set("writeEnableControl", control);
             Set("opened", true); Set("connected", true); Set("filtered", true);
             BindMessage("write", nameof(Write)); BindMessage("startPeriodic", nameof(Start));
             var stop = Type.GetField("stopPeriodic", Hidden)!;
@@ -395,6 +444,24 @@ public sealed class NativeBenchTests
             try { Type.GetMethod("SendRecoveryBindingStep", Hidden)!.Invoke(Channel, [index]); }
             catch (TargetInvocationException error) when (error.InnerException is not null)
             { System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error.InnerException).Throw(); }
+        }
+        public void SendControlStep(int index)
+        {
+            try { Type.GetMethod("SendWriteEnableControlStep", Hidden)!.Invoke(Channel,[index]); }
+            catch(TargetInvocationException e) when(e.InnerException is not null)
+            {System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(e.InnerException).Throw();}
+        }
+        public void SetControlReply(WriteEnableControlPlan plan,int index)
+        {
+            var step=plan[index];byte[] p=step.Operation switch
+            {
+                RamSelfTestOperation.Address=>step.Payload,
+                RamSelfTestOperation.VerifyByte=>[0x7A,0xB1,index<plan.Binding.Count?(byte)(step.ImageOffset*31^0xA5):Zyj2WriteEnableControlPolicy.Image[step.ImageOffset],0,0,0,0,0],
+                RamSelfTestOperation.ExecuteFixedTest=>[0x7A,0xC6,0x4D,0x57,0,0x80,0,31],
+                RamSelfTestOperation.IdentifyMonitor=>Zyj2RecoveryPolicy.ExpectedIdentity,
+                _=>throw new Exception("No upload reply")
+            };
+            Reply=new(0,1,5,0x100,12,12,[0,0,0,0x21,..p]);
         }
         public void SetBindingReply(int index)
         {

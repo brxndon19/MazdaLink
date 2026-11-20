@@ -74,6 +74,22 @@
   Actual recovery with an erased calibration ID and write-enable control remain
   separate preconditions before any destructive stock write. Preserve the fixed
   three-minute budget, per-reply bounds, capability tests and release scope binding.
+- The separate fixed write-enable control experiment requires `ENABLE ZYJ2`,
+  intact normal identity/RPM preflight, cold entry and a fresh exact live binding
+  before its immutable 752-byte program is uploaded and byte-verified once.
+  Existing read-only and initialization capabilities cannot acquire it. Check the
+  hardware class, intact ID, counter/complement, controller protection, timing and
+  full port-D cold mux/direction before any GPIO write. The examined cold route
+  owns PDDR=3EFF; never substitute input pin reads for stored latch values.
+  Permit only PDDR high 3F/3E and PDIOR high 01/00, with interrupts masked, no ROM
+  call while enabled, fixed settling count, and checked restoration. Never write
+  mux or flash-control registers, download algorithms, call erase/program entries
+  or accept external addresses/code. Uncertain restoration retains its result and
+  stops before further monitor traffic; remove ECU positive power, no retry.
+  Preserve the independent assembly/fault model and release image/scope binding.
+  A passing GPIO/FWE pulse is not a writer or interrupted-write recovery test.
+  The alpha.10 read-only binding, monitor return and normal restart passed on one
+  spare; that does not prove reset electrically or qualify this GPIO experiment.
 - Use the observed longer-off bench sequence: normal preflight, operator-confirmed
   ECU-only power removal, a monotonic 60-second host wait outside entry traffic,
   then open the adapter with ECU off and reconnect during the bounded entry window.

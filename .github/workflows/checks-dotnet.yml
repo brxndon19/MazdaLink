@@ -30,6 +30,7 @@ jobs:
         run: |
           python3 dotnet/tools/Verify-RamSelfTestProgram.py
           python3 dotnet/tools/Verify-ProtectedInitialization.py
+          python3 dotnet/tools/Verify-WriteEnableControl.py
   windows:
     runs-on: windows-latest
     timeout-minutes: 60

@@ -61,6 +61,7 @@ public sealed class NativeBenchMonitorChannel : IBenchMonitorChannel
     private uint? loopbackStatus;
     private readonly bool allowRamSelfTest, allowProtectedInitialization;
     private readonly RecoveryBindingPlan? recoveryBinding;
+    private readonly WriteEnableControlPlan? writeEnableControl;
     private bool initialMonitorIdentified, ramFaulted;
     private int nextRamStep, verifiedRamBytes;
     private RamSelfTestStep? awaitingRamStep;
@@ -86,14 +87,17 @@ public sealed class NativeBenchMonitorChannel : IBenchMonitorChannel
     public NativeBenchMonitorChannel(J2534Driver driver) : this(driver, false) { }
     internal NativeBenchMonitorChannel(J2534Driver driver, bool allowRamSelfTest) : this(driver, allowRamSelfTest, false) { }
     internal NativeBenchMonitorChannel(J2534Driver driver, bool allowRamSelfTest, bool allowProtectedInitialization)
-        : this(driver, allowRamSelfTest, allowProtectedInitialization, null) { }
+        : this(driver, allowRamSelfTest, allowProtectedInitialization, null, null) { }
     internal NativeBenchMonitorChannel(J2534Driver driver, RecoveryBindingPlan recoveryBinding)
-        : this(driver, false, false, recoveryBinding) { }
-    private NativeBenchMonitorChannel(J2534Driver driver, bool allowRamSelfTest, bool allowProtectedInitialization, RecoveryBindingPlan? recoveryBinding)
+        : this(driver, false, false, recoveryBinding, null) { }
+    internal NativeBenchMonitorChannel(J2534Driver driver, WriteEnableControlPlan plan)
+        : this(driver, false, false, null, plan) { }
+    private NativeBenchMonitorChannel(J2534Driver driver, bool allowRamSelfTest, bool allowProtectedInitialization, RecoveryBindingPlan? recoveryBinding, WriteEnableControlPlan? writeEnableControl)
     {
-        if ((allowRamSelfTest ? 1 : 0) + (allowProtectedInitialization ? 1 : 0) + (recoveryBinding is null ? 0 : 1) > 1) throw new ArgumentException("Choose one fixed RAM capability.");
+        if ((allowRamSelfTest ? 1 : 0) + (allowProtectedInitialization ? 1 : 0) + (recoveryBinding is null ? 0 : 1) + (writeEnableControl is null ? 0 : 1) > 1) throw new ArgumentException("Choose one fixed RAM capability.");
         this.allowProtectedInitialization = allowProtectedInitialization;
         this.recoveryBinding = recoveryBinding;
+        this.writeEnableControl = writeEnableControl;
         this.allowRamSelfTest = allowRamSelfTest;
         var registered = J2534Drivers.Discover(driver.Kind).FirstOrDefault(d =>
             d.LibraryPath.Equals(Path.GetFullPath(driver.LibraryPath), StringComparison.OrdinalIgnoreCase) && d.RawCanSupported);
@@ -304,19 +308,25 @@ public sealed class NativeBenchMonitorChannel : IBenchMonitorChannel
     // The identification backend's public interface has no upload/execute method.
     internal void SendFixedRamSelfTestStep(int index)
     {
-        if (!allowRamSelfTest || allowProtectedInitialization || recoveryBinding is not null) { ramFaulted = true; throw new TransportException("Read-only RAM capability is unavailable."); }
+        if (!allowRamSelfTest || allowProtectedInitialization || recoveryBinding is not null || writeEnableControl is not null) { ramFaulted = true; throw new TransportException("Read-only RAM capability is unavailable."); }
         SendFixedStep(index, Zyj2RamSelfTestPolicy.Steps, Zyj2RamSelfTestPolicy.Image.Length);
     }
     internal void SendProtectedInitializationStep(int index)
     {
-        if (!allowProtectedInitialization || allowRamSelfTest || recoveryBinding is not null) { ramFaulted = true; throw new TransportException("Protected initialization capability is unavailable."); }
+        if (!allowProtectedInitialization || allowRamSelfTest || recoveryBinding is not null || writeEnableControl is not null) { ramFaulted = true; throw new TransportException("Protected initialization capability is unavailable."); }
         SendFixedStep(index, Zyj2ProtectedInitializationPolicy.Steps, Zyj2ProtectedInitializationPolicy.Image.Length);
     }
     internal void SendRecoveryBindingStep(int index)
     {
-        if (recoveryBinding is null || allowRamSelfTest || allowProtectedInitialization)
+        if (recoveryBinding is null || allowRamSelfTest || allowProtectedInitialization || writeEnableControl is not null)
         { ramFaulted = true; throw new TransportException("Read-only preserved-boot binding capability is unavailable."); }
         SendFixedStep(index, recoveryBinding, 0);
+    }
+    internal void SendWriteEnableControlStep(int index)
+    {
+        if (writeEnableControl is null || recoveryBinding is not null || allowRamSelfTest || allowProtectedInitialization)
+        { ramFaulted = true; throw new TransportException("Write-enable control capability is unavailable."); }
+        SendFixedStep(index, writeEnableControl, RecoveryBindingPlan.PreservedBytes + Zyj2WriteEnableControlPolicy.Image.Length);
     }
     internal void FailRecoveryBinding() => ramFaulted = true;
     private void SendFixedStep(int index, IReadOnlyList<RamSelfTestStep> steps, int imageLength)

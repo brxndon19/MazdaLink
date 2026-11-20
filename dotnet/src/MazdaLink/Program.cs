@@ -55,7 +55,8 @@ try
         () => new NativeBenchMonitorChannel(SelectDriver()),
         () => new NativeRamSelfTestChannel(SelectDriver()),
         () => new NativeProtectedInitializationChannel(SelectDriver()),
-        plan => new NativeRecoveryBindingChannel(SelectDriver(), plan)).Run(args, cancel.Token);
+        plan => new NativeRecoveryBindingChannel(SelectDriver(), plan),
+        plan => new NativeWriteEnableControlChannel(SelectDriver(), plan)).Run(args, cancel.Token);
 }
 catch (Exception error)
 {
