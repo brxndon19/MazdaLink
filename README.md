@@ -75,3 +75,15 @@ dotnet publish src/MazdaLink -c Release --no-restore -o publish-mazdalink
 Release checks retain the full existing core regression and all-profile ROM-save integrity gates, add dedicated compatibility/transport/menu/backup/checksum tests, and test the exact standalone EXE before packaging. Synthetic tests are separate from hardware qualification. Releases contain only `MazdaLink.exe`, exact source, manifest and SHA-256 sums. Published assets are never replaced.
 
 GPL-3.0-or-later. Selected low-level J2534, checksum and security routines are adapted from SpeedLink; original credits remain in [ATTRIBUTIONS.md](ATTRIBUTIONS.md) and [LICENSE](LICENSE). `MazdaLink.exe license` displays the embedded notices and licence. ROM binaries, vendor drivers and private research are not distributed.
+
+### Detached ZYJ2 spare: write-enable control experiment
+
+Alpha.10's exact boot binding, monitor return and normal restart passed on the
+single detached spare. Menu **13**, `write-enable-check <original.rom>`, now adds
+a separate **ENABLE ZYJ2** experiment. It requires normal identity/RPM preflight,
+the full cold-entry power sequence and a fresh live boot match before uploading
+and verifying one fixed 752-byte GPIO test. It observes PD8/FWE once and checks
+restoration, monitor return and normal restart independently. No flash-controller
+register, algorithm download, erase or ROM programming is included. This new
+control path remains physically unqualified. Read [the control contract and cold
+latch review](docs/ZYJ2_WRITE_ENABLE_CONTROL.md) before using it on the spare.
