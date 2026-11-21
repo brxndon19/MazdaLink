@@ -1,0 +1,90 @@
+name: Verify alpha12 public downloads
+on:
+  push:
+    branches: ['verify/alpha12-public-download']
+permissions:
+  contents: read
+jobs:
+  public-downloads:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Check package verifier
+        run: node --test .github/scripts/*.test.mjs
+      - name: Verify the published alpha12 bytes without download credentials
+        env:
+          VERIFY_TOKEN: '${{ github.token }}'
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import {createHash} from 'node:crypto';
+          import {mkdtempSync,writeFileSync,appendFileSync} from 'node:fs';
+          import {tmpdir} from 'node:os';
+          import {join} from 'node:path';
+          import {verifyPackage} from './.github/scripts/release.mjs';
+          const tag='v0.9.0-alpha.12', commit='c763b8833961ff73cfad5e58d495806754c3c7d8';
+          const prefix='https://github.com/brxndon19/MazdaLink/releases/download/'+tag+'/';
+          let available=false;
+          for(let attempt=0;attempt<90;attempt++){
+            const response=await fetch(prefix+'MazdaLink.exe',{method:'HEAD',redirect:'follow',signal:AbortSignal.timeout(30000)});
+            if(response.ok){available=true;break;}
+            assert.equal(response.status,404,'Unexpected public download status');
+            console.log('Waiting for the gated release to become public; check '+(attempt+1));
+            await new Promise(resolve=>setTimeout(resolve,20000));
+          }
+          assert(available,'Public release did not appear within the bounded wait');
+          const response=await fetch('https://api.github.com/repos/brxndon19/MazdaLink/releases/tags/'+tag,{
+            headers:{Authorization:'Bearer '+process.env.VERIFY_TOKEN,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'},
+            signal:AbortSignal.timeout(30000)
+          });
+          assert(response.ok,'Release metadata request failed');
+          const release=await response.json();
+          assert.equal(release.tag_name,tag);
+          assert.equal(release.target_commitish,commit);
+          assert.equal(release.draft,false);
+          const names=['MazdaLink.exe','MazdaLink-'+tag+'-source.zip','release.json','SHA256SUMS.txt'];
+          assert.deepEqual(release.assets.map(a=>a.name).sort(),[...names].sort());
+          const folder=mkdtempSync(join(tmpdir(),'MazdaLink-public-'));
+          const rows=[];
+          for(const asset of release.assets){
+            assert.equal(asset.browser_download_url,prefix+asset.name);
+            // Deliberately no Authorization header on public downloads or their redirects.
+            const download=await fetch(asset.browser_download_url,{redirect:'follow',signal:AbortSignal.timeout(120000)});
+            assert(download.ok,'Public download failed: '+asset.name);
+            const data=Buffer.from(await download.arrayBuffer());
+            const hash=createHash('sha256').update(data).digest('hex');
+            assert.equal(data.length,asset.size);
+            assert.equal(asset.digest,'sha256:'+hash);
+            writeFileSync(join(folder,asset.name),data,{flag:'wx'});
+            const row=asset.name+' '+data.length+' sha256:'+hash;
+            console.log(row);
+            rows.push(row);
+          }
+          const manifest=verifyPackage(folder,tag,commit);
+          assert.equal(manifest.schemaVersion,9);
+          assert.equal(manifest.ramSelfTest,'ZYJ2EA000ZYV5050-fixed-volatile-only');
+          assert.equal(manifest.ramSelfTestHardwareAcceptance,'unqualified');
+          assert.equal(manifest.ramSelfTestImageSha256,'34bd2a95b30d2a34f8ccc6ccc5e3486cac2d7ecc5f8c31720e7a0a2594c1cad0');
+          assert.equal(manifest.benchRecoveryCheck,'ZYJ2EA000ZYV5050-identification-only');
+          assert.equal(manifest.protectedFlashInitialization,'ZYJ2EA000ZYV5050-fixed-protected-only');
+          assert.equal(manifest.protectedInitializationHardwareAcceptance,'unqualified');
+          assert.equal(manifest.protectedInitializationImageSha256,'85ccb46064aa483d64f53b5666017b57b2624ea015fcae0299ef5f336587925b');
+          assert.equal(manifest.recoveryBindingCheck,'ZYJ2EA000ZYV5050-preserved-boot-read-only');
+          assert.equal(manifest.recoveryBindingHardwareAcceptance,'unqualified');
+          assert.equal(manifest.recoveryBindingPreservedBytes,28928);
+          assert.equal(manifest.writeEnableControl,'ZYJ2EA000ZYV5050-fixed-gpio-only');
+          assert.equal(manifest.writeEnableControlHardwareAcceptance,'unqualified');
+          assert.equal(manifest.writeEnableControlImageSha256,'5d6a904f85c225e12f29d171fcc1c1a88fc1bd27ac55ee5a35083b73909326c9');
+          assert.equal(manifest.recoveryRehearsal,'ZYJ2EA000ZYV5050-fixed-initialization-ram-service');
+          assert.equal(manifest.recoveryRehearsalHardwareAcceptance,'unqualified');
+          assert.equal(manifest.recoveryRehearsalImageSha256,'3d6d56b24d9e2629418beda03b40cc436d168cd47bf33754c759a7c6a00f1623');
+          assert.equal(manifest.originalRestorePlan,'ZYJ2EA000ZYV5050-original-EB14-offline-only');
+          assert.equal(manifest.ecuProgrammingEnabled,false);
+          assert.equal(manifest.realEcuAcceptance,'unqualified');
+          console.log('PASS: all four public unauthenticated downloads match server digests, manifest, source commit and SHA256SUMS.');
+          appendFileSync(process.env.GITHUB_STEP_SUMMARY,'Verified public downloads for '+tag+' from '+commit+'\n\n'+rows.join('\n\n')+'\n');
+          
+          NODE
