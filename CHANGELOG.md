@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.0-alpha.12
+
+- Add a separate application-independent recovery rehearsal: fresh boot binding, immutable 1404-byte RAM image, both MCU algorithm initializations with a RAM callback, direct timer/PB15 service rehearsal and independent cleanup/restart evidence. Keep FWE low; no erase/program entry or programming key is present.
+- Document and bound explicit PB high-byte input-latch normalization and shadow ownership. Stop further callback output changes on a latched timer/pin failure; preserve unsuccessful results without retry.
+- Add an offline unchanged-original EB14 restore recipe with aligned 128-byte units, preserved-region/readback guards and interruption models requiring fresh binding and whole-block re-erase after ambiguity. No native erase/program transaction backend is enabled.
+
 ## 0.9.0-alpha.11
 
 - Add menu 13: separately confirmed detached-intact-ZYJ2 write-enable control and restoration experiment, gated by normal identity/RPM, cold entry, exact live boot binding and byte-verified fixed RAM execution.

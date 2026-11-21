@@ -87,3 +87,19 @@ restoration, monitor return and normal restart independently. No flash-controlle
 register, algorithm download, erase or ROM programming is included. This new
 control path remains physically unqualified. Read [the control contract and cold
 latch review](docs/ZYJ2_WRITE_ENABLE_CONTROL.md) before using it on the spare.
+
+### Recovery preparation and offline original restore recipe
+
+Menu **14** / `recovery-rehearsal <original.rom>` adds a separately confirmed
+**REHEARSE ZYJ2** experiment for the detached spare. It binds preserved firmware
+without normal application diagnostics, initializes both MCU algorithms with a
+RAM callback, and directly rehearses existing timer/PB15 service from RAM while
+FWE stays low. It explicitly normalizes unreadable non-output PB high-byte latches;
+the final power cycle remains required. No erase/program entry is present and
+actual flash-busy callback behavior remains unqualified.
+
+Menu **15** / `original-restore-plan <original.rom>` is offline only: an unchanged-
+backup EB14 recipe using 1,024 aligned 128-byte units and whole-block recovery
+rules after an ambiguous operation. It opens no hardware and accepts no edits.
+See [the recovery rehearsal and restore contract](docs/ZYJ2_RECOVERY_REHEARSAL.md).
+The native erase/program/readback backend is still unavailable.

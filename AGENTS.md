@@ -90,6 +90,33 @@
   A passing GPIO/FWE pulse is not a writer or interrupted-write recovery test.
   The alpha.10 read-only binding, monitor return and normal restart passed on one
   spare; that does not prove reset electrically or qualify this GPIO experiment.
+- The alpha.11 fixed control test passed on one detached spare: observed FWE
+  high/low, latch/direction/pin checks, monitor return and normal restart. This is
+  not broader compatibility, flash-operation or interrupted-recovery qualification.
+- The separate recovery rehearsal requires `REHEARSE ZYJ2`, detached-spare
+  confirmation, cold entry and exact live boot binding before one byte-verified
+  immutable 1404-byte program. It intentionally omits normal app/RPM preflight
+  and live application-ID reads; preserve all other workflows' gates. Require
+  class1, preserved ZYC3/counter guards, low FWE and known protection/timing,
+  timer mode and PB15 output state. Initialize only the two fixed MCU algorithms
+  with its fixed RAM callback; no FKEY5A or operation entry is permitted.
+  The callback must be a RAM leaf preserving R8..R15/GBR/stack, with no user-MAT
+  fetch, flash-controller write or recursive algorithm call. Service only an
+  observed overflow with keyed TCSR A53D; never change timer/reset mode or TCNT.
+  Explicitly normalize the PB high-byte non-output latches once, then use a RAM
+  shadow and toggle only PB15; preserve other physical outputs and never claim
+  unknown input latches were restored. Do not force an extra phase-restoring edge.
+  A latched timer/pin error blocks further output changes; any failed kernel
+  result stops host traffic before a later monitor request. No PD8/mux/direction
+  write is allowed. Retain bounded evidence, independent model and release scope.
+  Direct callback rehearsal is not observed silicon callback/flash-busy behavior.
+- The unchanged-original EB14 restore plan is offline only, with no native
+  transaction capability. Require exact original bytes, full preserved-region
+  equality, fixed EB14 bounds and aligned 128-byte units. No modified-image or
+  generic address override is allowed. After ambiguous erase/program completion,
+  never resend a unit: fresh bind and complete block erase precede a new one-pass
+  program generation. Preserve the independent interruption/readback model;
+  software recovery simulations do not qualify actual erased-application entry.
 - Use the observed longer-off bench sequence: normal preflight, operator-confirmed
   ECU-only power removal, a monotonic 60-second host wait outside entry traffic,
   then open the adapter with ECU off and reconnect during the bounded entry window.
