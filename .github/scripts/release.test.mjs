@@ -12,7 +12,7 @@ function fixture() {
   const names = ['MazdaLink.exe', `MazdaLink-${tag}-source.zip`];
   for (const name of names) writeFileSync(join(folder, name), 'synthetic packaging test');
   const files = Object.fromEntries(names.map(name => [name, digest(name)]));
-  writeFileSync(join(folder, 'release.json'), JSON.stringify({ schemaVersion: 8, version: tag.slice(1), tag, sourceCommit: sha, files, architecture: 'win-x86', ecuProgrammingEnabled: false, programmingFamily: 'None', readIdentityPolicy: 'reported-calibration', checksumSoftwareId: 'ZY87EC000ZYV5050', benchRecoveryCheck: 'ZYJ2EA000ZYV5050-identification-only', realEcuAcceptance: 'unqualified', ramSelfTest: 'ZYJ2EA000ZYV5050-fixed-volatile-only', ramSelfTestHardwareAcceptance: 'unqualified', ramSelfTestImageSha256:'34bd2a95b30d2a34f8ccc6ccc5e3486cac2d7ecc5f8c31720e7a0a2594c1cad0', protectedFlashInitialization:'ZYJ2EA000ZYV5050-fixed-protected-only', protectedInitializationHardwareAcceptance:'unqualified', protectedInitializationImageSha256:'85ccb46064aa483d64f53b5666017b57b2624ea015fcae0299ef5f336587925b', recoveryBindingCheck:'ZYJ2EA000ZYV5050-preserved-boot-read-only', recoveryBindingHardwareAcceptance:'unqualified', recoveryBindingPreservedBytes:28928, writeEnableControl:'ZYJ2EA000ZYV5050-fixed-gpio-only', writeEnableControlHardwareAcceptance:'unqualified', writeEnableControlImageSha256:'5d6a904f85c225e12f29d171fcc1c1a88fc1bd27ac55ee5a35083b73909326c9' }));
+  writeFileSync(join(folder, 'release.json'), JSON.stringify({ schemaVersion: 9, version: tag.slice(1), tag, sourceCommit: sha, files, architecture: 'win-x86', ecuProgrammingEnabled: false, programmingFamily: 'None', readIdentityPolicy: 'reported-calibration', checksumSoftwareId: 'ZY87EC000ZYV5050', benchRecoveryCheck: 'ZYJ2EA000ZYV5050-identification-only', realEcuAcceptance: 'unqualified', ramSelfTest: 'ZYJ2EA000ZYV5050-fixed-volatile-only', ramSelfTestHardwareAcceptance: 'unqualified', ramSelfTestImageSha256:'34bd2a95b30d2a34f8ccc6ccc5e3486cac2d7ecc5f8c31720e7a0a2594c1cad0', protectedFlashInitialization:'ZYJ2EA000ZYV5050-fixed-protected-only', protectedInitializationHardwareAcceptance:'unqualified', protectedInitializationImageSha256:'85ccb46064aa483d64f53b5666017b57b2624ea015fcae0299ef5f336587925b', recoveryBindingCheck:'ZYJ2EA000ZYV5050-preserved-boot-read-only', recoveryBindingHardwareAcceptance:'unqualified', recoveryBindingPreservedBytes:28928, writeEnableControl:'ZYJ2EA000ZYV5050-fixed-gpio-only', writeEnableControlHardwareAcceptance:'unqualified', writeEnableControlImageSha256:'5d6a904f85c225e12f29d171fcc1c1a88fc1bd27ac55ee5a35083b73909326c9', recoveryRehearsal:'ZYJ2EA000ZYV5050-fixed-initialization-ram-service', recoveryRehearsalHardwareAcceptance:'unqualified', recoveryRehearsalImageSha256:'3d6d56b24d9e2629418beda03b40cc436d168cd47bf33754c759a7c6a00f1623', originalRestorePlan:'ZYJ2EA000ZYV5050-original-EB14-offline-only' }));
   writeFileSync(join(folder, 'SHA256SUMS.txt'), [...names, 'release.json'].map(name => `${digest(name)}  ${name}`).join('\n') + '\n');
   return folder;
 }
@@ -112,5 +112,15 @@ for (const change of [{writeEnableControl:'generic-gpio'}, {writeEnableControlHa
       writeFileSync(join(folder,'release.json'),JSON.stringify(manifest));
       assert.throws(()=>verifyPackage(folder,tag,sha),/Write-enable control scope/);
     } finally {rmSync(folder,{recursive:true});}
+  });
+}
+
+for (const change of [{recoveryRehearsal:'generic-kernel'}, {recoveryRehearsalHardwareAcceptance:'qualified'}, {recoveryRehearsalImageSha256:'0'.repeat(64)}, {originalRestorePlan:'arbitrary-image-writer'}]) {
+  test(`rejects recovery rehearsal override ${JSON.stringify(change)}`,()=>{
+    const folder=fixture();try{
+      const m={...JSON.parse(readFileSync(join(folder,'release.json'),'utf8')),...change};
+      writeFileSync(join(folder,'release.json'),JSON.stringify(m));
+      assert.throws(()=>verifyPackage(folder,tag,sha),/Recovery rehearsal scope/);
+    }finally{rmSync(folder,{recursive:true});}
   });
 }

@@ -31,6 +31,7 @@ jobs:
           python3 dotnet/tools/Verify-RamSelfTestProgram.py
           python3 dotnet/tools/Verify-ProtectedInitialization.py
           python3 dotnet/tools/Verify-WriteEnableControl.py
+          python3 dotnet/tools/Verify-RecoveryRehearsal.py
   windows:
     runs-on: windows-latest
     timeout-minutes: 60

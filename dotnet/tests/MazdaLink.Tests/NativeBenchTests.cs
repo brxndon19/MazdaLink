@@ -365,6 +365,57 @@ public sealed class NativeBenchTests
         Assert.True(d.RamDiagnostics.Failed);Assert.Throws<TransportException>(()=>d.SendControlStep(bad+1));
     }
 
+    [Fact]
+    public void RehearsalCannotBeAcquiredByAnyExistingCapability()
+    {
+        foreach(var flags in new[]{(false,false),(true,false),(false,true)})
+        { using var d=new Driver(flags.Item1,flags.Item2);d.IdentifyMonitor();Assert.Throws<TransportException>(()=>d.SendRehearsalStep(0)); }
+        using var control=new Driver(control:new(RecoveryBindingTests.SyntheticPlan()));control.IdentifyMonitor();
+        Assert.Throws<TransportException>(()=>control.SendRehearsalStep(0));
+        using var binding=new Driver(binding:RecoveryBindingTests.SyntheticPlan());binding.IdentifyMonitor();
+        Assert.Throws<TransportException>(()=>binding.SendRehearsalStep(0));
+        foreach(string method in new[]{"SendRamStep","SendInitStep","SendBindingStep","SendControlStep"})
+        {
+            using var d=new Driver(rehearsal:new(RecoveryBindingTests.SyntheticPlan()));d.IdentifyMonitor();
+            var e=Assert.Throws<TargetInvocationException>(()=>typeof(Driver).GetMethod(method)!.Invoke(d,[0]));
+            Assert.IsType<TransportException>(e.InnerException);
+        }
+        Assert.False(typeof(IRecoveryRehearsalChannel).IsAssignableFrom(typeof(NativeRecoveryBindingChannel)));
+        Assert.False(typeof(IRecoveryRehearsalChannel).IsAssignableFrom(typeof(NativeRamSelfTestChannel)));
+        Assert.False(typeof(IRecoveryRehearsalChannel).IsAssignableFrom(typeof(NativeProtectedInitializationChannel)));
+        Assert.False(typeof(IRecoveryRehearsalChannel).IsAssignableFrom(typeof(NativeWriteEnableControlChannel)));
+    }
+    [Fact]
+    public void NativeRehearsalRequiresFullBootBindingAndEveryImageByteBeforeOneExecution()
+    {
+        var plan=new RecoveryRehearsalPlan(RecoveryBindingTests.SyntheticPlan());using var d=new Driver(rehearsal:plan);d.IdentifyMonitor();
+        for(int i=0;i<plan.Count;i++)
+        {d.SendRehearsalStep(i);if(plan[i].ExpectsReply){d.SetRehearsalReply(plan,i);d.Channel.Read(25);}}
+        Assert.Equal(60903,plan.Count);
+        Assert.Equal(new RamSelfTestTransportDiagnostics(plan.Count,30332,false,false),d.RamDiagnostics);
+        Assert.Equal(3,d.Channel.Diagnostics.IdentityRequests);
+        Assert.Throws<TransportException>(()=>d.SendRehearsalStep(0));
+    }
+    [Fact]
+    public void NativeRehearsalCannotSkipBindingImageRepliesOrInitialMonitor()
+    {
+        var plan=new RecoveryRehearsalPlan(RecoveryBindingTests.SyntheticPlan());
+        foreach(int skip in new[]{1,plan.Binding.Count,plan.Count-2})
+        {using var d=new Driver(rehearsal:plan);d.IdentifyMonitor();Assert.Throws<TransportException>(()=>d.SendRehearsalStep(skip));}
+        using var pending=new Driver(rehearsal:plan);pending.IdentifyMonitor();pending.SendRehearsalStep(0);
+        Assert.Throws<TransportException>(()=>pending.SendRehearsalStep(1));
+        using var noMonitor=new Driver(rehearsal:plan);Assert.Throws<TransportException>(()=>noMonitor.SendRehearsalStep(0));
+    }
+    [Theory]
+    [InlineData(1)] [InlineData(57857+235+1)]
+    public void NativeRehearsalBindingOrImageMismatchPermanentlyBlocksExecution(int bad)
+    {
+        var plan=new RecoveryRehearsalPlan(RecoveryBindingTests.SyntheticPlan());using var d=new Driver(rehearsal:plan);d.IdentifyMonitor();
+        for(int i=0;i<=bad;i++)
+        {d.SendRehearsalStep(i);if(!plan[i].ExpectsReply)continue;d.SetRehearsalReply(plan,i);if(i==bad)d.Reply.Data[6]^=1;d.Channel.Read(25);}
+        Assert.True(d.RamDiagnostics.Failed);Assert.Throws<TransportException>(()=>d.SendRehearsalStep(bad+1));
+    }
+
     public sealed record Reply(uint Status, uint Count, uint Protocol, uint RxStatus, uint Size, uint ExtraIndex, byte[] Data)
     {
         public static Reply Identity()
@@ -394,13 +445,14 @@ public sealed class NativeBenchTests
         public int Supply { get; init; } = 12500;
         public bool LeaveSupplyOutputUntouched { get; init; }
         public bool EmptyInputBuffer { get; private set; }
-        public Driver(bool allowRamSelfTest = false, bool allowProtectedInitialization = false, RecoveryBindingPlan? binding = null, WriteEnableControlPlan? control = null)
+        public Driver(bool allowRamSelfTest = false, bool allowProtectedInitialization = false, RecoveryBindingPlan? binding = null, WriteEnableControlPlan? control = null, RecoveryRehearsalPlan? rehearsal = null)
         {
             Channel = (NativeBenchMonitorChannel)RuntimeHelpers.GetUninitializedObject(Type);
             Set("allowRamSelfTest", allowRamSelfTest);
             Set("allowProtectedInitialization", allowProtectedInitialization);
             Set("recoveryBinding", binding);
             Set("writeEnableControl", control);
+            Set("recoveryRehearsal", rehearsal);
             Set("opened", true); Set("connected", true); Set("filtered", true);
             BindMessage("write", nameof(Write)); BindMessage("startPeriodic", nameof(Start));
             var stop = Type.GetField("stopPeriodic", Hidden)!;
@@ -458,6 +510,24 @@ public sealed class NativeBenchTests
                 RamSelfTestOperation.Address=>step.Payload,
                 RamSelfTestOperation.VerifyByte=>[0x7A,0xB1,index<plan.Binding.Count?(byte)(step.ImageOffset*31^0xA5):Zyj2WriteEnableControlPolicy.Image[step.ImageOffset],0,0,0,0,0],
                 RamSelfTestOperation.ExecuteFixedTest=>[0x7A,0xC6,0x4D,0x57,0,0x80,0,31],
+                RamSelfTestOperation.IdentifyMonitor=>Zyj2RecoveryPolicy.ExpectedIdentity,
+                _=>throw new Exception("No upload reply")
+            };
+            Reply=new(0,1,5,0x100,12,12,[0,0,0,0x21,..p]);
+        }
+        public void SendRehearsalStep(int index)
+        {
+            try { Type.GetMethod("SendRecoveryRehearsalStep", Hidden)!.Invoke(Channel,[index]); }
+            catch(TargetInvocationException e) when(e.InnerException is not null)
+            {System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(e.InnerException).Throw();}
+        }
+        public void SetRehearsalReply(RecoveryRehearsalPlan plan,int index)
+        {
+            var step=plan[index];byte[] p=step.Operation switch
+            {
+                RamSelfTestOperation.Address=>step.Payload,
+                RamSelfTestOperation.VerifyByte=>[0x7A,0xB1,index<plan.Binding.Count?(byte)(step.ImageOffset*31^0xA5):Zyj2RecoveryRehearsalPolicy.Image[step.ImageOffset],0,0,0,0,0],
+                RamSelfTestOperation.ExecuteFixedTest=>[0x7A,0xC6,0x4D,0x52,0,0,32,31],
                 RamSelfTestOperation.IdentifyMonitor=>Zyj2RecoveryPolicy.ExpectedIdentity,
                 _=>throw new Exception("No upload reply")
             };

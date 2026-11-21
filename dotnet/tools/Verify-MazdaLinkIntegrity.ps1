@@ -5,7 +5,7 @@ $passed = @($run.TestRun.Results.UnitTestResult | Where-Object outcome -eq 'Pass
 foreach ($name in @('MazdaLink.Tests.TargetTests.RawReadsDoNotRequireAWhitelistedIdentityOrKnownRomLayout(identity: "ZYJ2EA000ZYV5050")','MazdaLink.Tests.TargetTests.KnownLookingRomFromUnknownCalibrationCannotUseTheZy87ChecksumPolicy','MazdaLink.Tests.TargetTests.RefusedReadStopsWithoutKeyRetryOrProtocolProbe','MazdaLink.Tests.TargetTests.EveryPrepareCorrectsAllRangesVerifiesDiskAndPreservesInputs','MazdaLink.Tests.TargetTests.ReadsBothPassesAt512AndExportsExactBytesWithNoOverwrite','MazdaLink.Tests.TargetTests.TransportRequiresValidIdentityBeforeSecurityEvenForDirectCalls','MazdaLink.Tests.TargetTests.MenuAndCommandsCannotOpenHardwareForFlashingOrOverrides')) {
     if ($passed -notcontains $name) { throw "Missing mandatory MazdaLink integrity/scope case: $name" }
 }
-if ([int]$run.TestRun.ResultSummary.Counters.total -lt 259) { throw 'Focused scope/integrity matrix is incomplete.' }
+if ([int]$run.TestRun.ResultSummary.Counters.total -lt 283) { throw 'Focused scope/integrity matrix is incomplete.' }
 foreach ($name in @('MazdaLink.Tests.BenchRecoveryTests.EntryStopsBeforeOneIdentificationAndNeverUploadsOrExecutes','MazdaLink.Tests.BenchRecoveryTests.CancellationStopsPeriodicTrafficBeforeAnyIdentificationRequest','MazdaLink.Tests.BenchRecoveryTests.WireGateAllowsOnlyItsTwoFixedNonProgrammingPayloads','MazdaLink.Tests.BenchRecoveryTests.SpoofingHeaderAndCalibrationDoesNotSatisfyTheBootCodeFingerprints','MazdaLink.Tests.NativeBenchTests.NativePacketsUseRawExtendedCanAndExactlyTwoFixedPayloads','MazdaLink.Tests.NativeBenchTests.FailedNativeWriteCannotBeRetried')) {
     if ($passed -notcontains $name) { throw "Missing mandatory bench-scope case: $name" }
 }
@@ -48,4 +48,17 @@ foreach ($name in @('WriteEnableControlCannotBeAcquiredByAnyExistingCapability',
 }
 foreach ($case in @(@('MazdaLink.Tests.WriteEnableControlTests.AnyControlByteMismatchPreventsExecution(*)',3),@('MazdaLink.Tests.WriteEnableControlTests.StatusOrIncompleteObservationsCannotQualifyControl(*)',14),@('MazdaLink.Tests.NativeBenchTests.NativeControlBindingOrImageMismatchPermanentlyBlocksExecution(*)',2))) {
     if (@($passed | Where-Object { $_ -like $case[0] }).Count -ne $case[1]) { throw "Incomplete control fault matrix: $($case[0])" }
+}
+
+foreach ($name in @('RehearsalPlanBindsPreservedBootBeforeOnlyItsImmutableFixedImage','RehearsalRunnerVerifiesEveryByteAndRecordsResultBeforeMonitorReturn','CancelledRehearsalCannotAdvanceToExecution','RehearsalResultRemainsObservableIfFinalMonitorFails','FailedRehearsalRetainsResultAndStopsBeforeAnyMonitorQuery','WrongRehearsalResultMarkerCannotBecomeEvidence','FailedStatusOrIncompleteServiceEvidenceCannotQualifyRehearsal','MissingBackupsAndExternalOverridesCannotOpenRehearsalHardware')) {
+    if ($passed -notcontains ('MazdaLink.Tests.RecoveryRehearsalTests.'+$name)) { throw "Missing recovery rehearsal case: $name" }
+}
+foreach ($name in @('RehearsalCannotBeAcquiredByAnyExistingCapability','NativeRehearsalRequiresFullBootBindingAndEveryImageByteBeforeOneExecution','NativeRehearsalCannotSkipBindingImageRepliesOrInitialMonitor')) {
+    if ($passed -notcontains ('MazdaLink.Tests.NativeBenchTests.'+$name)) { throw "Missing native recovery rehearsal case: $name" }
+}
+foreach ($case in @(@('MazdaLink.Tests.RecoveryRehearsalTests.AnyRehearsalByteMismatchPreventsExecution(*)',3),@('MazdaLink.Tests.NativeBenchTests.NativeRehearsalBindingOrImageMismatchPermanentlyBlocksExecution(*)',2))) {
+    if (@($passed | Where-Object { $_ -like $case[0] }).Count -ne $case[1]) { throw "Incomplete recovery rehearsal matrix: $($case[0])" }
+}
+foreach ($name in @('PublicRestorePlannerRejectsUnknownOrUnverifiedTargetImages','OriginalRecipeCoversExactlyEb14InImmutableAlignedUnits','ErasedAndCompleteReadbackChecksCannotIgnorePreservedRegions','EveryAmbiguousUnitBoundaryRequiresFreshBindingAndWholeBlockErase','PartialEraseWithMissingApplicationCanBindAndReconstructOnlyTheSelectedBlock','WrongBootBindingStopsBeforeAnyErase','UnitReadbackFailureBlocksAllLaterProgrammingUntilAFreshErase','OfflinePlannerAndRehearsalOverridesNeverOpenHardware')) {
+    if ($passed -notcontains ('MazdaLink.Tests.OriginalBlockRestoreTests.'+$name)) { throw "Missing offline restore contract case: $name" }
 }

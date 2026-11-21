@@ -3,7 +3,8 @@ namespace MazdaLink.Core;
 public sealed class Terminal(Func<IReadTransport> connect, TextReader input, TextWriter output, string dataRoot,
     Func<IBenchMonitorChannel>? benchMonitor = null, Func<IFixedRamSelfTestChannel>? ramSelfTest = null, Func<IProtectedInitializationChannel>? protectedInitialization = null,
     Func<RecoveryBindingPlan, IRecoveryBindingChannel>? recoveryBinding = null,
-    Func<RecoveryBindingPlan, IWriteEnableControlChannel>? writeEnableControl = null)
+    Func<RecoveryBindingPlan, IWriteEnableControlChannel>? writeEnableControl = null,
+    Func<RecoveryBindingPlan, IRecoveryRehearsalChannel>? recoveryRehearsal = null)
 {
     public const string Help = """
 MazdaLink — Mazda 2 DE / ZY-VE
@@ -40,6 +41,12 @@ Commands:
                               Detached intact ZYJ2 spare: fixed GPIO/FWE pulse and restoration.
                               Normal preflight and exact live boot binding required; ENABLE ZYJ2.
                               No flash-controller write, algorithm download, erase or programming.
+  recovery-rehearsal <original.rom>
+                              Detached ZYJ2 spare: application-independent boot binding, fixed
+                              algorithm initialization and direct RAM watchdog callback rehearsal.
+                              REHEARSE ZYJ2 required. No write-enable change, erase or programming.
+  original-restore-plan <original.rom>
+                              Offline unchanged-backup EB14 recipe only; no hardware or flashing.
   flash                       Unavailable: Mazda 2 write/recovery protocol is unverified.
   status                      Show read policy, checksum support, storage and programming status.
   license                     Show licence and attribution information.
@@ -64,7 +71,7 @@ Bench logs include adapter status and measured timing, without frame payloads.
         output.WriteLine($"Raw reads: no fixed calibration whitelist. Checksum preparation: {TargetPolicy.SoftwareId} only.\nStorage: {Path.GetFullPath(dataRoot)}\nFlashing: unavailable — write/recovery procedure is unverified.");
         while (!cancel.IsCancellationRequested)
         {
-            output.WriteLine("\n1  Identify ECU\n2  Read ECU and save backup\n3  Export backup as .rom\n4  Prepare an externally edited ROM\n5  Validate modified ROM\n6  Flash ROM back — unavailable\n7  Help\n8  Licence / credits\n9  ZYJ2 spare: bench monitor identification check\n10 ZYJ2 spare: fixed volatile RAM self-test — experimental\n11 ZYJ2 spare: protected flash-algorithm initialization — experimental\n12 ZYJ2 detached spare: read-only recovery boot binding — experimental\n13 ZYJ2 detached spare: write-enable control and restoration — experimental\n0  Exit");
+            output.WriteLine("\n1  Identify ECU\n2  Read ECU and save backup\n3  Export backup as .rom\n4  Prepare an externally edited ROM\n5  Validate modified ROM\n6  Flash ROM back — unavailable\n7  Help\n8  Licence / credits\n9  ZYJ2 spare: bench monitor identification check\n10 ZYJ2 spare: fixed volatile RAM self-test — experimental\n11 ZYJ2 spare: protected flash-algorithm initialization — experimental\n12 ZYJ2 detached spare: read-only recovery boot binding — experimental\n13 ZYJ2 detached spare: write-enable control and restoration — experimental\n14 ZYJ2 detached spare: recovery kernel rehearsal — experimental\n15 Original-backup restore plan — offline only\n0  Exit");
             output.Write("> ");
             string? choice = input.ReadLine()?.Trim();
             if (choice is null or "0") return 0;
@@ -84,6 +91,8 @@ Bench logs include adapter status and measured timing, without frame payloads.
                 case "11": command = ["protected-flash-init", Ask("ZYJ2 backup original.rom")]; break;
                 case "12": command = ["recovery-binding-check", Ask("ZYJ2 spare backup original.rom")]; break;
                 case "13": command = ["write-enable-check", Ask("ZYJ2 spare backup original.rom")]; break;
+                case "14": command = ["recovery-rehearsal", Ask("ZYJ2 spare backup original.rom")]; break;
+                case "15": command = ["original-restore-plan", Ask("ZYJ2 spare backup original.rom")]; break;
                 default: output.WriteLine("Choose a listed number."); continue;
             }
             Execute(command, cancel); // Each hardware action creates/disposes a fresh connection; never retries.
@@ -125,6 +134,19 @@ Bench logs include adapter status and measured timing, without frame payloads.
                 if (protectedInitialization is null) throw new TransportException("The separate protected initialization backend is unavailable. No adapter was opened.");
                 new BenchRecoveryTerminal(connect, () => protectedInitialization(), input, output, dataRoot,
                     runProtectedInitialization: true).Run(args[1], cancel);
+                return 0;
+            }
+            if(args.Length==2 && args[0]=="original-restore-plan")
+            {
+                var backup=RomStorage.LoadVerifiedBackup(args[1]);
+                output.WriteLine(System.Text.Json.JsonSerializer.Serialize(OriginalBlockRestorePlan.Create(backup,backup.Data).Report(),
+                    new System.Text.Json.JsonSerializerOptions { WriteIndented=true }));
+                return 0;
+            }
+            if(args.Length==2 && args[0]=="recovery-rehearsal")
+            {
+                if(recoveryRehearsal is null) throw new TransportException("The separate recovery rehearsal backend is unavailable. No adapter was opened.");
+                new RecoveryRehearsalTerminal(connect,recoveryRehearsal,input,output,dataRoot).Run(args[1],cancel);
                 return 0;
             }
             if (args.Length == 2 && args[0] == "write-enable-check")
