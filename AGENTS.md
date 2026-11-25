@@ -123,6 +123,8 @@
   operation is present. Require ordered command-bound CRC32 streams, exact full
   original equality before eight original-only RAM staging units, final monitor
   and independent normal restart. Preserve bounded metadata without payloads.
+  Reset callback ownership before each preflight; rejected preflights must not
+  service an unowned PB shadow, including with an already pending overflow.
   No capability conversion, external code/address, skipped replies or retries.
 - The new destructive C variant and original-only durable host backend remain
   offline model candidates. Never embed/select that binary or implement a native

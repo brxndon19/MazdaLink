@@ -27,7 +27,7 @@ typedef unsigned int u32;
 #define END 0x7fU
 struct state {
  u32 magic, cookie, sequence, next_unit, generation, erased, tainted, initialized, busy, faults;
- u8 shadow, services, service_error, reserved;
+ u8 shadow, services, service_error, service_owned;
  u32 fpfr;
 };
 #define S ((volatile struct state *)0xffffa0c0U)
@@ -49,6 +49,7 @@ static u32 protected(void) {
 static u32 selections_zero(void) { return B(F+1)==0 && B(F+2)==0 && B(F+6)==0; }
 static u32 preflight(void) {
  u32 c;
+ S->service_owned=0;S->service_error=0;
  if(((u32 (*)(void))0xee4U)()!=1)return 1;
  if(!protected() || !selections_zero())return 2;
  if(L(0x6200U)!=0x5a594333U)return 3;
@@ -63,7 +64,7 @@ static u32 preflight(void) {
  if((c^B(0xfffff782U))&128)return 6;
  /* Explicit per-entry ownership: unknown non-output high-byte latches are
   * normalized. Other configured outputs and non-output physical pins stay put. */
- S->shadow=c;S->service_error=0;B(0xfffff738U)=c;
+ S->shadow=c;B(0xfffff738U)=c;S->service_owned=1;
  transaction_service();
  return S->service_error?6:0;
 }

@@ -1,4 +1,4 @@
-# ZYJ2 native transactions — alpha.13
+# ZYJ2 native transactions — alpha.14
 
 Menu **16**, `native-transaction-check <original.rom>`, requires **TRANSACTION ZYJ2** and a physically detached ZYJ2EA000ZYV5050 spare with its own complete verified backup. Keep the good ECU disconnected. No normal application identity/RPM preflight runs before cold entry. This is experimental; never run it in a vehicle.
 
@@ -7,13 +7,13 @@ Keep Mongoose USB, OBD 12 V, grounds and CAN connected. Switch only both ECU pos
 The independent native capability permits only this immutable script:
 
 1. Compare every preserved boot byte at 0..70FF with the verified backup.
-2. Upload the fixed 2028-byte read/staging kernel at FFFF8000 and read back every byte. Upload and verify the zeroed 48-byte state once. Individual upload echoes only drain adapter traffic; they do not prove ECU acceptance.
+2. Upload the fixed 2036-byte read/staging kernel at FFFF8000 and read back every byte. Upload and verify the zeroed 48-byte state once. Individual upload echoes only drain adapter traffic; they do not prove ECU acceptance.
 3. Initialize both silicon algorithms with the fixed RAM timer/PB15 service callback. FWE stays low. No PD configuration, programming key or erase/program operation exists in the embedded build.
 4. Execute sequenced, cookie-bound commands to stream all 2048 ROM blocks of 512 bytes. Enforce ordered data and metadata frames, command identity, CRC32 and full-width FPFR/status checks. Compare the complete capture exactly with the existing original before staging.
 5. Upload, byte-verify and echo eight original 128-byte EB14 units: 0, 1, 127, 255, 511, 767, 1022 and 1023. These writes affect volatile RAM only. No modified file is accepted.
 6. Finish and identify the monitor, then independently check normal diagnostics after the prompted 60-second POWER OFF and 10-second POWER ON restart.
 
-The fixed kernel uses the established callback's per-entry PB high-byte latch normalization and RAM shadow. It preserves other physical output phases, but cannot restore unreadable prior input-latch history. A latched timer/pin fault stops further callback output changes. It does not disable watchdogs.
+The fixed kernel uses the established callback's per-entry PB high-byte latch normalization and RAM shadow. It preserves other physical output phases, but cannot restore unreadable prior input-latch history. A latched timer/pin fault stops further callback output changes. A per-entry ownership guard prevents any callback output write when preflight fails before normalization, even if a timer overflow is pending. It does not disable watchdogs.
 
 There is a 15-minute total script budget, bounded receives and per-command deadlines. No failed or ambiguous request is resent. If it stops, follow the displayed ECU-only power-cycle instructions before option 1. Driver cleanup uncertainty ends the application.
 
@@ -21,7 +21,7 @@ Local `Documents/MazdaLink/native-transaction-checks/<run>` holds bounded schema
 
 ## Implemented offline writer work
 
-The same owned C source has a **separate offline flash candidate**. It is compiled and executed only in a synthetic SH-2 model; its bytes are not embedded in the application and no hardware channel selects it. The read/staging binary's SHA-256 is `3ef235e86c0d603f697615e3810580fc9028a2fcb6d83cdba03dfcf89d965ee8`.
+The same owned C source has a **separate offline flash candidate**. It is compiled and executed only in a synthetic SH-2 model; its bytes are not embedded in the application and no hardware channel selects it. The read/staging binary's SHA-256 is `1bc447e0e18e168767b16d7c7b1d7204b3e9d95cbcc3b8206b1d553dc8073c3f`.
 
 The candidate fixes erase to SH7058S EB14 (C0000..DFFFF), with 1024 ordered 128-byte program units. It verifies staging CRCs, protection, DMA-off and RAM vectors before enable; masks interrupts; routes NMI to a RAM failure latch; runs the documented silicon entry and RAM callback; checks full FPFR, cleanup and readback. An uncertain operation taints its erase generation. A fatal synchronous exception stays in RAM servicing the watchdog until operator power removal; it does not pretend to abort a flash pulse safely.
 

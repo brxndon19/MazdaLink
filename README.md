@@ -44,7 +44,7 @@ Since alpha.4 the entry deadline uses monotonic elapsed time, rather than accumu
 
 ## ZYJ2 detached spare: native full-ROM read and RAM staging
 
-Alpha.13 adds menu **16**, `native-transaction-check <original.rom>`, with **TRANSACTION ZYJ2** confirmation. After exact boot/code verification it streams the complete ROM with ordered CRC32 replies, compares every byte to your original and stages/echoes eight original 128-byte units in RAM. FWE stays low; the embedded kernel contains no erase/program operation. Complete the separate normal restart and retain the new `events.jsonl`. See [the test sequence and writer progress](docs/ZYJ2_NATIVE_TRANSACTIONS.md).
+Alpha.14 adds menu **16**, `native-transaction-check <original.rom>`, with **TRANSACTION ZYJ2** confirmation. After exact boot/code verification it streams the complete ROM with ordered CRC32 replies, compares every byte to your original and stages/echoes eight original 128-byte units in RAM. FWE stays low; the embedded kernel contains no erase/program operation. Complete the separate normal restart and retain the new `events.jsonl`. See [the test sequence and writer progress](docs/ZYJ2_NATIVE_TRANSACTIONS.md).
 
 A separate erase/program kernel candidate and durable original-only host transaction engine now run in offline models. They are not enabled on hardware. Actual interrupted-write recovery, original restoration and ZYJ2 modified-image checksum support still need qualification before tuning or flashing the good ECU.
 

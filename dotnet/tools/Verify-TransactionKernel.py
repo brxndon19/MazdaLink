@@ -232,6 +232,21 @@ def main():
    assert m.command(op,seq,index,cookie=cookie)[0]!=0 and not m.operations;cases+=1
   m=Machine(*builds[int(full)],full);assert m.command(0,1)[0]==0
   assert m.command(0x12,2,0,b'X'*128,crc_override=1)[0]==16 and not m.operations;cases+=1
+ # Rejected preflights must not service an unowned PB shadow, even with OVF set.
+ m=Machine(*builds[0]);m.fault={'class':2};m.cycles=300000;m.mem[STATE+43]=1
+ assert m.command(0,1)[0]!=0 and not any(a==0xfffff738 for a,_,_ in m.writes);cases+=1
+ for address,value in [(F,16),(F+4,0x5a),(F+5,0xaa),(F+1,1),(F+2,1),(F+6,2),(0xffffec26,1),(0xffffd004,0),(0xffffd007,2),(0xffffd804,0),(0xffffd807,2),(0xfffff740,1),(0xfffff742,1),(0xfffff744,1),(0xfffff730,0),(0xfffff732,0xc0),(0xffffec10,0x3c)]:
+  m=Machine(*builds[0]);m.io[address]=value;m.cycles=300000;before=m.pb
+  assert m.command(0,1)[0]!=0 and not m.copies and not m.operations and m.pb==before
+  assert not any(a==0xfffff738 for a,_,_ in m.writes);cases+=1
+ for address,value in ((0xffffbfad,0),(0xffffbfa8,1)):
+  m=Machine(*builds[0]);m.mem[address]=value;m.cycles=300000
+  assert m.command(0,1)[0]!=0 and not m.copies and not any(a==0xfffff738 for a,_,_ in m.writes);cases+=1
+ for kind in ('dma','vector'):
+  m=Machine(*builds[1],True);assert m.command(0,1)[0]==0
+  if kind=='dma':m.io[0xffffecb1]=1
+  else:m.mem[0xffff6000]^=1
+  assert m.command(0x21,2,14)[0]==12 and not m.operations and m.read(F)==0;cases+=1
  for fault in ({'operation_result':0x100},{'readback':True},{'nmi':True}):
   m=Machine(*builds[1],True);assert m.command(0,1)[0]==0;assert m.command(0x21,2,14)[0]==0
   m.fault=fault;reply=m.command(0x22,3,0,m.original[0xc0000:0xc0080]);assert reply[0]!=0 and reply[2]&4

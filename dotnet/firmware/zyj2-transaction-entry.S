@@ -62,6 +62,9 @@ transaction_trap:
 .global transaction_service
 transaction_service:
  mov.l .Lstate,r1
+ mov.b @(3,r1),r0
+ cmp/eq #1,r0
+ bf .Lreturn
  mov.b @(2,r1),r0
  tst r0,r0
  bf .Lreturn
