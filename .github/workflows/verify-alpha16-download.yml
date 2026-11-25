@@ -1,0 +1,70 @@
+name: Verify alpha16 public download
+on:
+  push:
+    branches: [verify/alpha16-public-download]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  download:
+    runs-on: windows-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          ref: 03afa7894edbe17df0b5931b4faf53987290f288
+      - name: Wait for public release and verify downloaded package
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $tag='v0.9.0-alpha.16'
+          $commit='03afa7894edbe17df0b5931b4faf53987290f288'
+          $release=$null
+          for($i=0;$i -lt 90;$i++){
+            try{
+              $candidate=Invoke-RestMethod "https://api.github.com/repos/brxndon19/MazdaLink/releases/tags/$tag"
+              if(!$candidate.draft -and $candidate.assets.Count -eq 4){$release=$candidate;break}
+            }catch{}
+            Start-Sleep -Seconds 20
+          }
+          if($null -eq $release){throw 'Public release wait expired.'}
+          New-Item -ItemType Directory public-package | Out-Null
+          foreach($asset in $release.assets){
+            if($asset.name -notin @('MazdaLink.exe',"MazdaLink-$tag-source.zip",'release.json','SHA256SUMS.txt')){throw 'Unexpected asset.'}
+            $path=Join-Path public-package $asset.name
+            Invoke-WebRequest $asset.browser_download_url -OutFile $path
+            $hash=(Get-FileHash $path -Algorithm SHA256).Hash.ToLowerInvariant()
+            if($asset.digest -ne "sha256:$hash" -or (Get-Item $path).Length -ne $asset.size){throw 'Public digest/size mismatch.'}
+          }
+          node --input-type=module -e 'import {verifyPackage} from "./.github/scripts/release.mjs";verifyPackage("public-package","v0.9.0-alpha.16","03afa7894edbe17df0b5931b4faf53987290f288");'
+          if($LASTEXITCODE -ne 0){throw 'Public package verification failed.'}
+          ./dotnet/tools/Verify-SourceArchive.ps1 -Archive "public-package/MazdaLink-$tag-source.zip" -Repository . -Commit $commit -Prefix 'MazdaLink/'
+          $exe=[IO.Path]::GetFullPath('public-package/MazdaLink.exe')
+          function Check([string[]]$ArgList,[string]$InputText,[int]$Expected,[string]$Pattern){
+            $start=[Diagnostics.ProcessStartInfo]::new($exe)
+            $start.UseShellExecute=$false
+            $start.RedirectStandardInput=$true;$start.RedirectStandardOutput=$true;$start.RedirectStandardError=$true
+            foreach($a in $ArgList){$start.ArgumentList.Add($a)}
+            $p=[Diagnostics.Process]::Start($start)
+            $p.StandardInput.Write($InputText);$p.StandardInput.Close()
+            $stdout=$p.StandardOutput.ReadToEndAsync();$stderr=$p.StandardError.ReadToEndAsync()
+            if(!$p.WaitForExit(30000)){$p.Kill();throw 'Public executable timed out.'}
+            $text=$stdout.GetAwaiter().GetResult();$errors=$stderr.GetAwaiter().GetResult()
+            if($p.ExitCode -ne $Expected -or $errors.Length -gt 0 -or $text -notmatch $Pattern){throw 'Public executable contract failed.'}
+          }
+          Check @('status') '' 0 'Flashing: unavailable'
+          Check @('help') '' 0 'BOUNDARY RECOVERY ZYJ2'
+          Check @() "7`n0`n" 0 'controlled unit-zero boundary / cold recovery'
+          Check @('flash','missing.rom') '' 1 'No adapter was opened'
+          Check @('controlled-recovery-check','missing/original.rom','missing/alpha15') '' 1 'STOPPED'
+          Check @('controlled-recovery-resume','missing/original.rom','missing/alpha15','missing/boundary') '' 1 'STOPPED'
+          Check @('controlled-recovery-check','original.rom','run','unit-override') '' 1 'Unknown command'
+          @{passed=$true;tag=$tag;sourceCommit=$commit;serverHashesMatched=$true;exactSourceMatched=$true;publicExecutableExercised=$true;hardwareAccessed=$false;originalOnlyQualificationEnabled=$true;modifiedFlashingEnabled=$false;activeFlashPowerCutImplemented=$false} | ConvertTo-Json | Set-Content public-download-report.json -Encoding utf8NoBOM
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: alpha16-public-download-evidence
+          path: public-download-report.json
+          if-no-files-found: error
+          retention-days: 14
