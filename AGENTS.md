@@ -146,6 +146,23 @@
   Actual original-restoration and interrupted-write recovery remain unqualified
   until separately observed. Do not intentionally interrupt the first test or
   expose modified flashing. Keep raw private evidence and ROMs outside Git.
+- The supplied alpha.15 hardware evidence passed uninterrupted original EB14
+  restoration on one spare, including callback/timer observations, 1024 units,
+  both exact full reads, monitor and normal restart. Do not generalize that pass.
+- Controlled recovery requires the complete passed alpha.15 run folder and both
+  original-matching captures plus the full validated journal. Prepare only unit 0;
+  verify the exact complete partial image with the calibration ID erased, checked
+  cleanup and monitor return before closing the channel and persisting a receipt.
+  The preparation journal ends in controlled-stop, never complete. Prompt for
+  operator power cycling only at that completed-operation boundary.
+- Paired/recovery-only controlled continuation always opens a fresh cold channel,
+  binds/installs/verifies state anew, and checks the exact planned partial image
+  and every preserved byte before whole-block erase. Never resume a unit index.
+  Recovery-only entry requires a valid receipt, partial capture and eight-record
+  preparation journal; copy those artifacts to its new run folder. Require dual
+  original reads, monitor and separate normal restart. Reject late replies after
+  session failure. No active-operation power cut or reset is implemented; this
+  test cannot qualify unknown completions or physical loss during a flash pulse.
 - Use the observed longer-off bench sequence: normal preflight, operator-confirmed
   ECU-only power removal, a monotonic 60-second host wait outside entry traffic,
   then open the adapter with ECU off and reconnect during the bounded entry window.

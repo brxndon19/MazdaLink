@@ -38,6 +38,7 @@ public sealed class RestoreQualificationGate
     }
     public void Observe(RecoveryFrame frame)
     {
+        if(failed)throw new TransportException("This restore session has already failed. Late replies cannot advance its journal.");
         if(pending is null)return;
         try
         {
@@ -52,6 +53,7 @@ public sealed class RestoreQualificationGate
                 if(entry.Phase==RestorePhase.EraseReadback && entry.Command.Index==2047)journal.Commit("erase-verified");
                 if(entry.Phase==RestorePhase.UnitReadback){units++;journal.Commit("unit-verified",entry.Command.Index);}
                 if(entry.Phase==RestorePhase.FinalReadback1 && entry.Command.Index==2047)journal.Commit("full-readback-1");
+                if(entry.Phase==RestorePhase.PartialReadback && entry.Command.Index==2047)journal.Commit("partial-readback");
             }
             else
             {
@@ -59,7 +61,7 @@ public sealed class RestoreQualificationGate
                 if(!pending.Matches(frame))throw new TransportException("Original restore reply or byte readback mismatch.");
                 if(pending.BootByte)boot++;if(pending.KernelByte)kernel++;if(pending.StateByte)state++;
                 if(pending.CommandByte)commandBytes++;if(pending.StagingByte)stagingBytes++;
-                if(next==plan.Count){if(units!=1024||completed!=plan.Commands.Count)throw new TransportException("Restore evidence incomplete.");journal.Commit("complete");}
+                if(next==plan.Count){if(units!=plan.ExpectedUnits||completed!=plan.Commands.Count)throw new TransportException("Restore evidence incomplete.");journal.Commit(plan.ControlledStage==ControlledRecoveryStage.Prepare?"controlled-stop":"complete");}
             }
             pending=null;
         }
@@ -69,7 +71,8 @@ public sealed class RestoreQualificationGate
     {
         bool before=entry.Phase is RestorePhase.Initialize or RestorePhase.BeforeErase;
         uint flags=before?1u:99u;
-        uint next=entry.Phase is RestorePhase.Program or RestorePhase.UnitReadback?(uint)entry.Command.Index+1:
+        uint next=entry.Phase is RestorePhase.PartialReadback or RestorePhase.FinishPartial?1u:
+            entry.Phase is RestorePhase.Program or RestorePhase.UnitReadback?(uint)entry.Command.Index+1:
             entry.Phase is RestorePhase.FinalReadback1 or RestorePhase.FinalReadback2 or RestorePhase.Finish?1024u:0u;
         if(reply.Status!=0||reply.FlashResult!=0||reply.Fccs!=0||reply.Flags!=flags||reply.NextUnit!=next)
             throw new TransportException($"Original restore rejected: status={reply.Status}, full FPFR={reply.FlashResult:X8}, flags={reply.Flags:X8}, next={reply.NextUnit}. Stop; no request was resent.");

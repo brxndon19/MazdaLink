@@ -16,7 +16,7 @@ public sealed class RestoreQualificationTests
     internal static RecoveryFrame[] Reply(RestoreCommand entry,byte[] data)
     {
         var frames=TransactionTests.Reply(entry.Command,data);bool before=entry.Phase is RestorePhase.Initialize or RestorePhase.BeforeErase;
-        uint flags=before?1u:99u;uint next=entry.Phase is RestorePhase.Program or RestorePhase.UnitReadback?(uint)entry.Command.Index+1:entry.Phase is RestorePhase.FinalReadback1 or RestorePhase.FinalReadback2 or RestorePhase.Finish?1024u:0u;
+        uint flags=before?1u:99u;uint next=entry.Phase is RestorePhase.PartialReadback or RestorePhase.FinishPartial?1u:entry.Phase is RestorePhase.Program or RestorePhase.UnitReadback?(uint)entry.Command.Index+1:entry.Phase is RestorePhase.FinalReadback1 or RestorePhase.FinalReadback2 or RestorePhase.Finish?1024u:0u;
         var metadata=frames.Where(f=>f.Data[1]==0xF6).ToArray();BinaryPrimitives.WriteUInt32BigEndian(metadata[5].Data.AsSpan(4),flags);BinaryPrimitives.WriteUInt32BigEndian(metadata[6].Data.AsSpan(4),next);return frames;
     }
     [Fact] public void FixedPlanCannotAcceptModifiedDataAddressesOrRepeatedErase()
