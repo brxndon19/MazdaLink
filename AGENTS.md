@@ -25,8 +25,9 @@
   only bounded receive polling is permitted there. Bench evidence must contain
   bounded metadata/counters, never raw frame payloads. TX echoes do not prove
   ECU acceptance, and adapter supply snapshots do not prove ECU power cycling.
-- MazdaLink has no enabled flash/recovery implementation. A flash command must refuse
-  before driver open; do not infer a Mazda 2 writer from generic UDS or Gen 1 code.
+- Generic/modified `flash` must refuse before driver open. The separately selected
+  original-only detached-spare qualification below is the sole destructive exception;
+  do not infer a Mazda 2 writer from generic UDS or Gen 1 code.
 - The separately selected ZYJ2 fixed RAM self-test has its own backend capability
   and `RAM ZYJ2` confirmation. Permit only the immutable built-in 120-byte program
   at 0xFFFF8000, its bounded upload and exact per-byte readback script, one execution,
@@ -71,8 +72,9 @@
   retry or conversion to a RAM capability. Its matched firmware region is not a
   unique ECU identity. Record binding, final monitor response and post-cycle normal
   diagnostics independently; a match does not qualify interrupted-write recovery.
-  Actual recovery with an erased calibration ID and write-enable control remain
-  separate preconditions before any destructive stock write. Preserve the fixed
+  Actual recovery with an erased calibration ID remains unqualified. The separate
+  explicitly requested original-only qualification path may establish the first
+  erase/restoration result; never treat it as recovery qualification. Preserve the fixed
   three-minute budget, per-reply bounds, capability tests and release scope binding.
 - The separate fixed write-enable control experiment requires `ENABLE ZYJ2`,
   intact normal identity/RPM preflight, cold entry and a fresh exact live binding
@@ -126,12 +128,24 @@
   Reset callback ownership before each preflight; rejected preflights must not
   service an unowned PB shadow, including with an already pending overflow.
   No capability conversion, external code/address, skipped replies or retries.
-- The new destructive C variant and original-only durable host backend remain
-  offline model candidates. Never embed/select that binary or implement a native
-  destructive device contract until separate hardware qualification. Preserve
-  RAM vectors/callback, full FPFR, tainted-generation/one-pass programming rules,
-  flushed intent before destructive requests and complete re-erase after ambiguity.
-  Software models do not establish actual flash-busy or interrupted-write recovery.
+- The user-requested original-only qualification is a separate capability with
+  RESTORE ORIGINAL ZYJ2 / RECOVER ORIGINAL ZYJ2 confirmations, a complete original
+  backup and consistent completed alpha.14 read/staging evidence. The first test
+  requires intact normal identity/RPM preflight; recovery deliberately omits it.
+  Fresh boot binding and full preserved-region equality are mandatory. Only
+  recovery may ignore prior EB14 contents. Never accept edited data, arbitrary
+  code/addresses, resume indices or promotion from another capability.
+- Restrict that qualification kernel to EB14 and the 1024 original 128-byte units.
+  Install/check RAM vectors before FWE enable; preserve full FPFR and RAM-only
+  callback ABI/stack. Require silicon-operation callback/timer-service observations,
+  checked cleanup, complete blank/preserved readback, exact independent unit
+  readbacks, two exact final full reads, monitor and separate normal restart.
+  Flush durable intent before each destructive execute request; any uncertain
+  completion permanently stops that session. Recovery always re-erases the whole
+  block after fresh binding. Do not write EB15 or change checksum policy.
+  Actual original-restoration and interrupted-write recovery remain unqualified
+  until separately observed. Do not intentionally interrupt the first test or
+  expose modified flashing. Keep raw private evidence and ROMs outside Git.
 - Use the observed longer-off bench sequence: normal preflight, operator-confirmed
   ECU-only power removal, a monotonic 60-second host wait outside entry traffic,
   then open the adapter with ECU off and reconnect during the bounded entry window.

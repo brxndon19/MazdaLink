@@ -5,7 +5,8 @@ public sealed class Terminal(Func<IReadTransport> connect, TextReader input, Tex
     Func<RecoveryBindingPlan, IRecoveryBindingChannel>? recoveryBinding = null,
     Func<RecoveryBindingPlan, IWriteEnableControlChannel>? writeEnableControl = null,
     Func<RecoveryBindingPlan, IRecoveryRehearsalChannel>? recoveryRehearsal = null,
-    Func<TransactionTrialPlan,ITransactionTrialChannel>? transactionTrial = null)
+    Func<TransactionTrialPlan,ITransactionTrialChannel>? transactionTrial = null,
+    Func<RestoreQualificationPlan,RestoreJournal,IOriginalRestoreChannel>? originalRestore = null)
 {
     public const string Help = """
 MazdaLink — Mazda 2 DE / ZY-VE
@@ -51,6 +52,13 @@ Commands:
   native-transaction-check <original.rom>
                               Detached ZYJ2 spare: full-ROM CRC32 stream and original-unit RAM staging.
                               TRANSACTION ZYJ2 required. No erase or programming capability.
+  original-restore-check <original.rom> <alpha14-events.jsonl>
+                              Detached ZYJ2 spare: experimental ORIGINAL-only EB14 erase/write test.
+                              RESTORE ORIGINAL ZYJ2 required. First-test normal preflight required.
+  original-restore-recover <original.rom> <alpha14-events.jsonl>
+                              Experimental original-only recovery attempt: fresh cold binding and
+                              full EB14 re-erase. No app/RPM preflight; RECOVER ORIGINAL ZYJ2 required.
+                              Recovery is unqualified. No intentional interruption test yet.
   flash                       Unavailable: Mazda 2 write/recovery protocol is unverified.
   status                      Show read policy, checksum support, storage and programming status.
   license                     Show licence and attribution information.
@@ -59,7 +67,8 @@ Commands:
 Use read with ignition ON and engine OFF. Keep the entire backup folder.
 Modified ROMs must be edited externally. A checksum pass does not establish tuning safety.
 Raw reading uses one bounded read-only protocol; matching backups do not prove checksum or flashing compatibility.
-No protocol override, flash erase, ROM write, or ECU reset is available.
+Generic flashing, external code/address overrides and ECU reset remain unavailable.
+The separate original-only qualification workflow can erase and program EB14 on the detached spare.
 The ZYJ2 bench check sends only fixed monitor-entry and identification messages.
 The separate RAM self-test accepts no external kernel, address or executable.
 It does not qualify recovery after interrupted flashing or enable a flash kernel.
@@ -75,7 +84,7 @@ Bench logs include adapter status and measured timing, without frame payloads.
         output.WriteLine($"Raw reads: no fixed calibration whitelist. Checksum preparation: {TargetPolicy.SoftwareId} only.\nStorage: {Path.GetFullPath(dataRoot)}\nFlashing: unavailable — write/recovery procedure is unverified.");
         while (!cancel.IsCancellationRequested)
         {
-            output.WriteLine("\n1  Identify ECU\n2  Read ECU and save backup\n3  Export backup as .rom\n4  Prepare an externally edited ROM\n5  Validate modified ROM\n6  Flash ROM back — unavailable\n7  Help\n8  Licence / credits\n9  ZYJ2 spare: bench monitor identification check\n10 ZYJ2 spare: fixed volatile RAM self-test — experimental\n11 ZYJ2 spare: protected flash-algorithm initialization — experimental\n12 ZYJ2 detached spare: read-only recovery boot binding — experimental\n13 ZYJ2 detached spare: write-enable control and restoration — experimental\n14 ZYJ2 detached spare: recovery kernel rehearsal — experimental\n15 Original-backup restore plan — offline only\n16 ZYJ2 detached spare: native full-ROM read and RAM staging — experimental\n0  Exit");
+            output.WriteLine("\n1  Identify ECU\n2  Read ECU and save backup\n3  Export backup as .rom\n4  Prepare an externally edited ROM\n5  Validate modified ROM\n6  Flash ROM back — unavailable\n7  Help\n8  Licence / credits\n9  ZYJ2 spare: bench monitor identification check\n10 ZYJ2 spare: fixed volatile RAM self-test — experimental\n11 ZYJ2 spare: protected flash-algorithm initialization — experimental\n12 ZYJ2 detached spare: read-only recovery boot binding — experimental\n13 ZYJ2 detached spare: write-enable control and restoration — experimental\n14 ZYJ2 detached spare: recovery kernel rehearsal — experimental\n15 Original-backup restore plan — offline only\n16 ZYJ2 detached spare: native full-ROM read and RAM staging — experimental\n17 ZYJ2 detached spare: ERASE / RESTORE ORIGINAL EB14 — unqualified\n18 ZYJ2 detached spare: original recovery attempt — unqualified\n0  Exit");
             output.Write("> ");
             string? choice = input.ReadLine()?.Trim();
             if (choice is null or "0") return 0;
@@ -98,6 +107,8 @@ Bench logs include adapter status and measured timing, without frame payloads.
                 case "14": command = ["recovery-rehearsal", Ask("ZYJ2 spare backup original.rom")]; break;
                 case "15": command = ["original-restore-plan", Ask("ZYJ2 spare backup original.rom")]; break;
                 case "16": command = ["native-transaction-check",Ask("ZYJ2 spare backup original.rom")]; break;
+                case "17": command=["original-restore-check",Ask("ZYJ2 spare backup original.rom"),Ask("Completed alpha.14 native-transaction events.jsonl")]; break;
+                case "18": command=["original-restore-recover",Ask("ZYJ2 spare backup original.rom"),Ask("Completed alpha.14 native-transaction events.jsonl")]; break;
                 default: output.WriteLine("Choose a listed number."); continue;
             }
             Execute(command, cancel); // Each hardware action creates/disposes a fresh connection; never retries.
@@ -118,7 +129,7 @@ Bench logs include adapter status and measured timing, without frame payloads.
             }
             if (args.Length == 1 && args[0] == "status")
             {
-                output.WriteLine($"MazdaLink\nRead identity policy: reported calibration; no whitelist\nChecksum preparation: {TargetPolicy.SoftwareId} only\nROM: 1 MiB\nRead block: 512 bytes\nProcess: {IntPtr.Size * 8}-bit\nRuntime: {Environment.Version}\nFlashing: unavailable\nProtected initialization: ZYJ2 SH7058S spare only; experimental, no erase or programming\nRecovery boot binding: detached ZYJ2 spare only; read-only and experimental\nOther-vehicle workflows: absent\nStorage: {Path.GetFullPath(dataRoot)}"); return 0;
+                output.WriteLine($"MazdaLink\nRead identity policy: reported calibration; no whitelist\nChecksum preparation: {TargetPolicy.SoftwareId} only\nROM: 1 MiB\nRead block: 512 bytes\nProcess: {IntPtr.Size * 8}-bit\nRuntime: {Environment.Version}\nFlashing: unavailable for modified ROMs\nOriginal EB14 restoration: detached-spare qualification only; recovery unproved\nProtected initialization: ZYJ2 SH7058S spare only; experimental, no erase or programming\nRecovery boot binding: detached ZYJ2 spare only; read-only and experimental\nOther-vehicle workflows: absent\nStorage: {Path.GetFullPath(dataRoot)}"); return 0;
             }
             if (args.Length > 0 && args[0] == "flash")
                 throw new InvalidDataException("Flashing is unavailable. This ECU's erase/write/recovery procedure has not been verified. No adapter was opened and no ECU command was sent.");
@@ -140,6 +151,11 @@ Bench logs include adapter status and measured timing, without frame payloads.
                 new BenchRecoveryTerminal(connect, () => protectedInitialization(), input, output, dataRoot,
                     runProtectedInitialization: true).Run(args[1], cancel);
                 return 0;
+            }
+            if(args.Length==3 && args[0] is "original-restore-check" or "original-restore-recover")
+            {
+                if(originalRestore is null)throw new TransportException("Separate original-only restore backend unavailable. No adapter was opened.");
+                new RestoreQualificationTerminal(connect,originalRestore,input,output,dataRoot).Run(args[1],args[2],args[0]=="original-restore-recover",cancel);return 0;
             }
             if(args.Length==2 && args[0]=="native-transaction-check")
             {

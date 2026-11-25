@@ -58,7 +58,7 @@ public sealed class TransactionTrialPlan:IReadOnlyList<TransactionWireStep>
     internal byte[] Original=>original.ToArray();
     internal static TransactionWireStep Address(uint address,TransactionCommand? cmd=null)
     {byte[] p=[0x7A,0x9C,0,0,0,0,0,0];BinaryPrimitives.WriteUInt32BigEndian(p.AsSpan(2),address);return new(p,p[..6],command:cmd);}
-    private static void AppendBlob(List<TransactionWireStep> list,uint address,byte[] blob,string category,TransactionCommand? cmd)
+    internal static void AppendBlob(List<TransactionWireStep> list,uint address,byte[] blob,string category,TransactionCommand? cmd)
     {
         list.Add(Address(address,cmd));
         for(int i=0;i<blob.Length;i+=6)

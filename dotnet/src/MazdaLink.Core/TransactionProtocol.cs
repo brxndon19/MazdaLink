@@ -2,7 +2,7 @@ using System.Buffers.Binary;
 
 namespace MazdaLink.Core;
 
-public enum TransactionOpcode:byte { Initialize=0, ReadBlock=0x11, StageEcho=0x12, Erase=0x21, Program=0x22, Finish=0x7F }
+public enum TransactionOpcode:byte { Initialize=0, ReadBlock=0x11, StageEcho=0x12, VerifyOriginalUnit=0x13, Erase=0x21, Program=0x22, Finish=0x7F }
 public static class TransactionCrc32
 {
     public static uint Calculate(ReadOnlySpan<byte> data)
@@ -20,11 +20,11 @@ public sealed class TransactionCommand
     public uint Cookie { get; }
     public ushort Index { get; }
     public byte[]? Staging => staging?.ToArray();
-    public int DataLength => Opcode==TransactionOpcode.ReadBlock?512:Opcode==TransactionOpcode.StageEcho?128:0;
+    public int DataLength => Opcode==TransactionOpcode.ReadBlock?512:Opcode is TransactionOpcode.StageEcho or TransactionOpcode.VerifyOriginalUnit?128:0;
     internal TransactionCommand(TransactionOpcode opcode,ushort sequence,uint cookie,ushort index=0,byte[]? staging=null)
     {
         if(sequence==0||cookie==0)throw new ArgumentException("A nonzero command identity is required.");
-        if(opcode==TransactionOpcode.ReadBlock && index>=2048 || opcode==TransactionOpcode.StageEcho && (index>=1024||staging?.Length!=128))throw new ArgumentOutOfRangeException(nameof(index));
+        if(opcode==TransactionOpcode.ReadBlock && index>=2048 || opcode is TransactionOpcode.StageEcho or TransactionOpcode.Program && (index>=1024||staging?.Length!=128) || opcode==TransactionOpcode.VerifyOriginalUnit && (index>=1024||staging is not null) || opcode==TransactionOpcode.Erase && (index!=14||staging is not null))throw new ArgumentOutOfRangeException(nameof(index));
         Opcode=opcode;Sequence=sequence;Cookie=cookie;Index=index;this.staging=staging?.ToArray();
     }
     public byte[] Descriptor()

@@ -478,6 +478,32 @@ public sealed class NativeBenchTests
         typeof(NativeBenchMonitorChannel).GetField("initialMonitorIdentified",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(failed.Channel,true);
         Assert.Throws<TransportException>(()=>failed.SendTrialStep(0));Assert.Throws<TransportException>(()=>failed.SendTrialStep(0));
     }
+    [Fact]
+    public void NativeOriginalRestoreGateRequiresAllReadbacksIntentAndOnePassProgramming()
+    {
+        var plan=RestoreQualificationTests.Plan();using var journal=new RestoreQualificationTests.MemoryJournal();
+        var gate=new RestoreQualificationGate(plan,journal);using var driver=new Driver(restore:gate);driver.IdentifyMonitor();
+        using var peerJournal=new RestoreQualificationTests.MemoryJournal();using var peer=new RestoreQualificationTests.Peer(plan,peerJournal);
+        for(int i=0;i<plan.Count;i++)
+        {
+            driver.SendRestoreStep(i);peer.SendRestoreStep(i);
+            while(peer.PendingFrames>0){var frame=peer.Read(25)!;driver.SetTrialReply(frame);driver.Channel.Read(25);}
+        }
+        Assert.Equal(1024,gate.Diagnostics.OriginalUnitsVerified);Assert.Equal(plan.Commands.Count,gate.Diagnostics.CommandsCompleted);
+        Assert.Equal(("complete",-1),journal.Entries.Last());Assert.Throws<TransportException>(()=>driver.SendRestoreStep(0));
+    }
+    [Fact]
+    public void NativeRestoreCannotBeAcquiredSkippedOrPromotedToOtherCapabilities()
+    {
+        using var old=new Driver();old.IdentifyMonitor();Assert.Throws<TransportException>(()=>old.SendRestoreStep(0));
+        var plan=RestoreQualificationTests.Plan();using var journal=new RestoreQualificationTests.MemoryJournal();
+        using var skipped=new Driver(restore:new(plan,journal));skipped.IdentifyMonitor();Assert.Throws<TransportException>(()=>skipped.SendRestoreStep(plan.InstallationEnd));
+        foreach(string name in new[]{"ram","init","binding","control","rehearsal","trial"})
+        {
+            using var j=new RestoreQualificationTests.MemoryJournal();using var d=new Driver(restore:new(plan,j));d.IdentifyMonitor();
+            Assert.Throws<TransportException>(()=>{switch(name){case "ram":d.SendRamStep(0);break;case "init":d.SendInitStep(0);break;case "binding":d.SendBindingStep(0);break;case "control":d.SendControlStep(0);break;case "rehearsal":d.SendRehearsalStep(0);break;default:d.SendTrialStep(0);break;}});
+        }
+    }
     private sealed class Driver : IDisposable
     {
         private const BindingFlags Hidden = BindingFlags.NonPublic | BindingFlags.Instance;
@@ -498,7 +524,7 @@ public sealed class NativeBenchTests
         public int Supply { get; init; } = 12500;
         public bool LeaveSupplyOutputUntouched { get; init; }
         public bool EmptyInputBuffer { get; private set; }
-        public Driver(bool allowRamSelfTest = false, bool allowProtectedInitialization = false, RecoveryBindingPlan? binding = null, WriteEnableControlPlan? control = null, RecoveryRehearsalPlan? rehearsal = null, TransactionTrialPlan? trial=null)
+        public Driver(bool allowRamSelfTest = false, bool allowProtectedInitialization = false, RecoveryBindingPlan? binding = null, WriteEnableControlPlan? control = null, RecoveryRehearsalPlan? rehearsal = null, TransactionTrialPlan? trial=null, RestoreQualificationGate? restore=null)
         {
             Channel = (NativeBenchMonitorChannel)RuntimeHelpers.GetUninitializedObject(Type);
             Set("allowRamSelfTest", allowRamSelfTest);
@@ -507,6 +533,7 @@ public sealed class NativeBenchTests
             Set("writeEnableControl", control);
             Set("recoveryRehearsal", rehearsal);
             Set("transactionGate",trial is null?null:new TransactionTrialGate(trial));
+            Set("restoreGate",restore);
             Set("opened", true); Set("connected", true); Set("filtered", true);
             BindMessage("write", nameof(Write)); BindMessage("startPeriodic", nameof(Start));
             var stop = Type.GetField("stopPeriodic", Hidden)!;
@@ -568,6 +595,11 @@ public sealed class NativeBenchTests
                 _=>throw new Exception("No upload reply")
             };
             Reply=new(0,1,5,0x100,12,12,[0,0,0,0x21,..p]);
+        }
+        public void SendRestoreStep(int index)
+        {
+            try{Type.GetMethod("SendOriginalRestoreStep",Hidden)!.Invoke(Channel,[index,CancellationToken.None]);}
+            catch(TargetInvocationException e) when(e.InnerException is not null){System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(e.InnerException).Throw();}
         }
         public void SendTrialStep(int index)
         {

@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later
  * Fixed ZYJ2 / SH7058S transaction kernel. No application-ID dependency.
- * ENABLE_FLASH=0 is the only variant embedded in the application. The flash
- * candidate is built/tested separately and cannot be selected through its UI.
+ * ENABLE_FLASH=0 remains the read/staging image. ENABLE_FLASH=1 is selected
+ * only by the separate original-only detached-spare qualification capability.
  * No libc, external payload code, arbitrary flash destination or block selector.
  */
 typedef unsigned char u8;
@@ -34,6 +34,14 @@ struct state {
 extern void transaction_service(void);
 extern void transaction_trap(void);
 extern void transaction_nmi(void);
+#if ENABLE_FLASH
+extern void transaction_flash_service(void);
+#define CALLBACK transaction_flash_service
+#define BUSY_CALLS L(0xffffa110U)
+#define BUSY_SERVICES L(0xffffa114U)
+#else
+#define CALLBACK transaction_service
+#endif
 static u32 get32(const volatile u8 *p) { return ((u32)p[0]<<24)|((u32)p[1]<<16)|((u32)p[2]<<8)|p[3]; }
 static u32 get16(const volatile u8 *p) { return ((u32)p[0]<<8)|p[1]; }
 static void put32(volatile u8 *p,u32 v) { p[0]=v>>24;p[1]=v>>16;p[2]=v>>8;p[3]=v; }
@@ -95,7 +103,7 @@ static u32 initialize(void) {
   __asm__ volatile("nop\n\tnop\n\tnop\n\tnop\n\tnop\n\tnop\n\tnop\n\tnop":::"memory");
   B(F+4)=0;
   if(*base || B(F+6)!=(i?4:2) || !protected())return 7+i;
-  r=((u32 (*)(u32,u32))(base+32))(8000,(u32)transaction_service);
+  r=((u32 (*)(u32,u32))(base+32))(8000,(u32)CALLBACK);
   S->fpfr=r;
   if(r || !protected() || S->service_error)return 9+i;
   transaction_service();
@@ -128,9 +136,11 @@ static u32 operation(u32 op,u32 index,u32 expected_crc) {
     (op==PROGRAM && (!S->erased || index>=1024 || index!=S->next_unit)))return 15;
  if(op==PROGRAM && crc32(BUFFER,128)!=expected_crc)return 16;
  S->tainted=1; /* Before FWE or any chip operation: ambiguous completion poisons this generation. */
+ __asm__ volatile("ldc %0,vbr"::"r"(VECTORS):"memory");
+ if(op==ERASE) { BUSY_CALLS=0;BUSY_SERVICES=0; }
  error=enable();
  if(error) { disable();return error; }
- __asm__ volatile("ldc %0,vbr"::"r"(VECTORS):"memory");
+ if(S->faults || S->service_error) { disable();return 17; }
  S->busy=1;B(F+4)=0x5a;
  if(op==ERASE)r=((u32 (*)(u32))0xffff2010U)(14);
  else r=((u32 (*)(u32,u32))0xffff1010U)((u32)BUFFER,0xc0000U+unit_offset(index));
@@ -139,6 +149,7 @@ static u32 operation(u32 op,u32 index,u32 expected_crc) {
  if(r || error || S->faults || S->service_error)return error?error:17;
  if(op==ERASE) {
   for(i=0;i<0x20000U;i++) { if(B(0xc0000U+i)!=255)return 18;if(!(i&127))transaction_service(); }
+  if(!BUSY_CALLS || !BUSY_SERVICES)return 25;
   S->erased=1;S->generation++;S->next_unit=0;
  } else {
   for(i=0;i<128;i++)if(B(0xc0000U+unit_offset(index)+i)!=BUFFER[i])return 19;
@@ -158,7 +169,11 @@ void transaction_main(void) {
  if(!status && op==0) {
   if(S->magic || seq!=1 || index || wanted)status=22;
   else { S->cookie=cookie;S->sequence=0;S->next_unit=0;S->generation=0;S->erased=0;S->tainted=0;
-   S->initialized=0;S->busy=0;S->faults=0;status=initialize();if(!status)S->magic=MAGIC; }
+   S->initialized=0;S->busy=0;S->faults=0;
+#if ENABLE_FLASH
+   BUSY_CALLS=0;BUSY_SERVICES=0;
+#endif
+   status=initialize();if(!status)S->magic=MAGIC; }
  } else if(!status && (S->magic!=MAGIC || S->cookie!=cookie || seq!=S->sequence+1 || S->sequence==65535))status=23;
  if(!status && op!=0) {
   if(op==READ && index<2048 && !wanted) { data=(const volatile u8 *)(index*512U);length=512; }
@@ -166,6 +181,7 @@ void transaction_main(void) {
    data=BUFFER;length=128;if(crc32(data,length)!=wanted) {status=16;length=0;}
   } else if(op==END && !index && !wanted) { if(!cleanup())status=11;else S->magic=0; }
 #if ENABLE_FLASH
+  else if(op==0x13U && index<1024 && !wanted) { data=(const volatile u8 *)(0xc0000U+unit_offset(index));length=128; }
   else if(op==ERASE && index==14 && !wanted)status=operation(op,0,0);
   else if(op==PROGRAM && index<1024)status=operation(op,index,wanted);
 #endif
@@ -179,6 +195,10 @@ void transaction_main(void) {
  put32(RESULT,MAGIC);put32(RESULT+4,cookie);put16(RESULT+8,seq);RESULT[10]=op;RESULT[11]=status;
  put32(RESULT+12,S->fpfr);put32(RESULT+16,data_crc);
  put32(RESULT+20,(S->initialized?1:0)|(S->erased?2:0)|(S->tainted?4:0)|(S->faults?8:0)|(S->service_error?16:0));
+ #if ENABLE_FLASH
+ if(S->initialized && BUSY_CALLS)RESULT[23]|=32;
+ if(S->initialized && BUSY_SERVICES)RESULT[23]|=64;
+#endif
  put32(RESULT+24,S->next_unit);put32(RESULT+28,(index<<16)|B(F));
  stream(0xf0,RESULT,32);
  if(S->service_error || S->faults) {status=20;S->tainted=1;}

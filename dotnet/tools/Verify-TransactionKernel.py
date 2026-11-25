@@ -30,6 +30,7 @@ class Machine:
   if a==F:return self.io[F]|(128 if self.io[0xfffff740]&1 and self.pd&1 else 0)
   if a==0xfffff746:return (self.pd&1) if self.io[0xfffff740]&1 else 0
   if a==0xfffff784:return (self.pd&1) if self.io[0xfffff740]&1 else 0
+  if a==0xfffff782 and self.busy and self.fault.get('pin_stuck'):return self.pb^128
   if a in (0xfffff738,0xfffff782):return self.pb
   if a==0xffffec10:return self.io[a]|(128 if self.cycles>=self.overflow else 0)
   if a in self.mem:return self.mem[a]
@@ -43,7 +44,7 @@ class Machine:
    for i in range(size):self.write(a+i,v>>(8*(size-1-i)))
    return
   v&=255;self.writes.append((a,v,1))
-  if 0xffff6000<=a<0xffff6400 or 0xffffa000<=a<0xffffa106 or 0xffffbda0<=a<0xffffbfa0 or a in (0xffff1000,0xffff2000):self.mem[a]=v;return
+  if 0xffff6000<=a<0xffff6400 or 0xffffa000<=a<0xffffa118 or 0xffffbda0<=a<0xffffbfa0 or a in (0xffff1000,0xffff2000):self.mem[a]=v;return
   if a==0xfffff738:self.pb=v;return
   if a==0xfffff746:assert self.full and v in (0x3e,0x3f);self.pd=v;return
   if a==0xfffff740:assert self.full and v in (0,1);self.io[a]=v;return
@@ -67,16 +68,18 @@ class Machine:
    self.cycles+=20000
    for i in range(8):self.r[i]=0xdead1000+i
   elif target in (0xffff1020,0xffff2020):
-   assert target-32 in self.copies and self.r[4]==8000 and self.r[5]==self.symbols['transaction_service']
+   assert target-32 in self.copies and self.r[4]==8000 and self.r[5]==self.symbols['transaction_flash_service' if self.full else 'transaction_service']
    assert self.read(F)==0 and self.io[F+4]==0
    self.r[0]=self.fault.get('init_result',0)
   elif target in (0xffff1010,0xffff2010):
    assert self.full and self.read(F)==128 and self.io[F+4]==0x5a and self.sr&0xf0==0xf0 and self.vbr==0xffff6000
    for i in range(256):assert self.read(self.vbr+i*4,4)==self.symbols['transaction_nmi' if i==11 else 'transaction_trap']
    saved=self.r.copy();oldpr=self.pr;returnpc=self.pc;self.busy=True
+   assert self.r[15]-128-24>=0xffffbda0,'Insufficient chip/callback/exception stack reserve'
+   if self.fault.get('timer_changes'):self.io[0xffffec10]=0x3c
    # Run the real RAM callback while user/boot MAT reads are forbidden.
-   self.cycles+=300000;self.pc=self.symbols['transaction_service'];self.pr=0xfffffff0
-   self.run(0xfffffff0,10000)
+   self.cycles+=300000;self.pc=self.symbols['transaction_flash_service'];self.pr=0xfffffff0
+   if not self.fault.get('no_callback'):self.run(0xfffffff0,10000)
    assert self.r[8:]==saved[8:];self.callbacks+=1;self.r=saved;self.pr=oldpr;self.pc=returnpc
    if self.fault.get('nmi'):
     saved_sr=self.sr;self.r[15]-=4;self.write(self.r[15],self.sr,4);self.r[15]-=4;self.write(self.r[15],0xfffffff0,4)
@@ -85,6 +88,7 @@ class Machine:
    self.busy=False
    if target==0xffff2010:
     assert self.r[4]==14;self.rom[0xc0000:0xe0000]=b'\xff'*0x20000;self.operations.append(('erase',14))
+    if self.fault.get('erase_corrupt'):self.rom[0xdffff]=0
    else:
     assert self.r[4]==0xffffa000;address=self.r[5];assert 0xc0000<=address<=0xdff80 and address%128==0
     assert ('program',address) not in self.operations[self.operations.index(('erase',14))+1:],'Duplicate programming in erase generation'
@@ -204,6 +208,9 @@ def main():
  builds=builder.build_all();text=(builder.ROOT/'src/MazdaLink.Core/NativeTransactionPolicy.cs').read_text()
  embedded=bytes.fromhex(re.search(r'Convert.FromHexString\("([0-9A-F]+)"\)',text)[1])
  assert embedded==builds[0][0] and hashlib.sha256(embedded).hexdigest() in text
+ text=(builder.ROOT/'src/MazdaLink.Core/OriginalRestoreKernel.cs').read_text()
+ embedded_full=bytes.fromhex(re.search(r'Convert.FromHexString\(\"([0-9A-F]+)\"\)',text)[1])
+ assert embedded_full==builds[1][0] and hashlib.sha256(embedded_full).hexdigest() in text
  cases=0
  for full in (False,True):
   image,symbols=builds[int(full)];m=Machine(image,symbols,full)
@@ -214,11 +221,16 @@ def main():
   for unit in (0,1023):
    data=m.original[0xc0000+unit*128:0xc0080+unit*128];reply=m.command(0x12,seq,unit,data);assert reply[0]==0 and reply[4]==data;seq+=1;cases+=1
   if full:
-   assert m.command(0x21,seq,14)[:4]==(0,0,3,0);seq+=1;cases+=1
+   assert m.command(0x21,seq,14)[:4]==(0,0,99,0);seq+=1;cases+=1
+   assert m.command(0x11,seq,1536)[4]==b'\xff'*512;seq+=1;cases+=1
    for unit in (0,1):
     data=m.original[0xc0000+unit*128:0xc0080+unit*128]
-    assert m.command(0x22,seq,unit,data)[:4]==(0,0,3,unit+1);seq+=1;cases+=1
+    assert m.command(0x22,seq,unit,data)[:4]==(0,0,99,unit+1);seq+=1;cases+=1
+   reply=m.command(0x13,seq,0);assert reply[0]==0 and reply[4]==m.original[0xc0000:0xc0080];seq+=1;cases+=1
    assert m.callbacks==3 and m.rom[:0xc0000]==m.original[:0xc0000] and m.rom[0xe0000:]==m.original[0xe0000:]
+   m.write(STATE+12,1023,4);data=m.original[0xdff80:0xe0000]
+   assert m.command(0x22,seq,1023,data)[:4]==(0,0,99,1024);seq+=1;cases+=1
+   assert m.operations[-1]==('program',0xdff80)
    operations=len(m.operations);assert m.command(0x22,seq,0,m.original[0xc0000:0xc0080])[0]==15;cases+=1
    assert m.command(0x22,seq,2,m.original[0xc0100:0xc0180])[0]!=0 and len(m.operations)==operations;cases+=1
   else:
@@ -247,9 +259,16 @@ def main():
   if kind=='dma':m.io[0xffffecb1]=1
   else:m.mem[0xffff6000]^=1
   assert m.command(0x21,2,14)[0]==12 and not m.operations and m.read(F)==0;cases+=1
- for fault in ({'operation_result':0x100},{'readback':True},{'nmi':True}):
+ m=Machine(*builds[1],True);assert m.command(0,1)[0]==0;m.fault={'no_callback':True}
+ assert m.command(0x21,2,14)[0]==25 and m.read(F)==0 and m.io[F+4]==0;cases+=1
+ for fault in ({'operation_result':0x100},{'readback':True},{'nmi':True},{'pin_stuck':True},{'timer_changes':True}):
   m=Machine(*builds[1],True);assert m.command(0,1)[0]==0;assert m.command(0x21,2,14)[0]==0
   m.fault=fault;reply=m.command(0x22,3,0,m.original[0xc0000:0xc0080]);assert reply[0]!=0 and reply[2]&4
   assert m.read(F)==0 and m.io[F+4]==0 and m.io[0xfffff740]==0;cases+=1
+ m=Machine(*builds[1],True);assert m.command(0,1)[0]==0;m.fault={'erase_corrupt':True}
+ assert m.command(0x21,2,14)[0]==18 and m.read(F)==0;cases+=1
+ m=Machine(*builds[1],True);assert m.command(0,1)[0]==0;m.write(STATE+32,1,4);m.mem[STATE+41]=255;m.cycles+=300000
+ saved=m.r[8:].copy();m.pc=m.symbols['transaction_flash_service'];m.pr=0xfffffff0;m.run(0xfffffff0,10000)
+ assert m.r[8:]==saved and m.read(STATE+41)==0 and m.read(0xffffa110,4)==m.read(0xffffa114,4)==1;cases+=1
  print(f'PASS: {cases} synthetic SH-2 transaction cases; both exact binaries, ordered CRC32 streams, fixed EB14 operations, RAM-only busy callback, full FPFR, taint and cleanup. Offline silicon ABI model; no hardware qualification.')
 if __name__=='__main__':main()

@@ -19,6 +19,8 @@ There is a 15-minute total script budget, bounded receives and per-command deadl
 
 Local `Documents/MazdaLink/native-transaction-checks/<run>` holds bounded schema-11 `events.jsonl` metadata and `verification.read`. The latter is a verification capture, not a replacement for the original matching-dual-read backup. The original folder is never overwritten. Logs contain no ROM or frame payloads. Keep this whole evidence folder locally; send `events.jsonl` for review.
 
+Alpha.15 additionally introduces a separate [original-only erase/restoration qualification path](ZYJ2_ORIGINAL_RESTORE_QUALIFICATION.md). The offline-only descriptions below document the alpha.14 release scope.
+
 ## Implemented offline writer work
 
 The same owned C source has a **separate offline flash candidate**. It is compiled and executed only in a synthetic SH-2 model; its bytes are not embedded in the application and no hardware channel selects it. The read/staging binary's SHA-256 is `1bc447e0e18e168767b16d7c7b1d7204b3e9d95cbcc3b8206b1d553dc8073c3f`.

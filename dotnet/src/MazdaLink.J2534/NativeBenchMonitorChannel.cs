@@ -64,6 +64,7 @@ public sealed class NativeBenchMonitorChannel : IBenchMonitorChannel
     private readonly WriteEnableControlPlan? writeEnableControl;
     private readonly RecoveryRehearsalPlan? recoveryRehearsal;
     private readonly TransactionTrialGate? transactionGate;
+    private readonly RestoreQualificationGate? restoreGate;
     private bool initialMonitorIdentified, ramFaulted;
     private int nextRamStep, verifiedRamBytes;
     private RamSelfTestStep? awaitingRamStep;
@@ -89,23 +90,26 @@ public sealed class NativeBenchMonitorChannel : IBenchMonitorChannel
     public NativeBenchMonitorChannel(J2534Driver driver) : this(driver, false) { }
     internal NativeBenchMonitorChannel(J2534Driver driver, bool allowRamSelfTest) : this(driver, allowRamSelfTest, false) { }
     internal NativeBenchMonitorChannel(J2534Driver driver, bool allowRamSelfTest, bool allowProtectedInitialization)
-        : this(driver, allowRamSelfTest, allowProtectedInitialization, null, null, null, null) { }
+        : this(driver, allowRamSelfTest, allowProtectedInitialization, null, null, null, null, null) { }
     internal NativeBenchMonitorChannel(J2534Driver driver, RecoveryBindingPlan recoveryBinding)
-        : this(driver, false, false, recoveryBinding, null, null, null) { }
+        : this(driver, false, false, recoveryBinding, null, null, null, null) { }
     internal NativeBenchMonitorChannel(J2534Driver driver, WriteEnableControlPlan plan)
-        : this(driver, false, false, null, plan, null, null) { }
+        : this(driver, false, false, null, plan, null, null, null) { }
     internal NativeBenchMonitorChannel(J2534Driver driver, RecoveryRehearsalPlan plan)
-        : this(driver, false, false, null, null, plan, null) { }
+        : this(driver, false, false, null, null, plan, null, null) { }
     internal NativeBenchMonitorChannel(J2534Driver driver, TransactionTrialPlan plan)
-        : this(driver, false, false, null, null, null, plan) { }
-    private NativeBenchMonitorChannel(J2534Driver driver, bool allowRamSelfTest, bool allowProtectedInitialization, RecoveryBindingPlan? recoveryBinding, WriteEnableControlPlan? writeEnableControl, RecoveryRehearsalPlan? recoveryRehearsal, TransactionTrialPlan? transactionTrial)
+        : this(driver, false, false, null, null, null, plan, null) { }
+    internal NativeBenchMonitorChannel(J2534Driver driver, RestoreQualificationGate gate)
+        : this(driver,false,false,null,null,null,null,gate) { }
+    private NativeBenchMonitorChannel(J2534Driver driver, bool allowRamSelfTest, bool allowProtectedInitialization, RecoveryBindingPlan? recoveryBinding, WriteEnableControlPlan? writeEnableControl, RecoveryRehearsalPlan? recoveryRehearsal, TransactionTrialPlan? transactionTrial, RestoreQualificationGate? restoreGate)
     {
-        if ((allowRamSelfTest ? 1 : 0) + (allowProtectedInitialization ? 1 : 0) + (recoveryBinding is null ? 0 : 1) + (writeEnableControl is null ? 0 : 1) + (recoveryRehearsal is null ? 0 : 1) + (transactionTrial is null ? 0 : 1) > 1) throw new ArgumentException("Choose one fixed RAM capability.");
+        if ((allowRamSelfTest ? 1 : 0) + (allowProtectedInitialization ? 1 : 0) + (recoveryBinding is null ? 0 : 1) + (writeEnableControl is null ? 0 : 1) + (recoveryRehearsal is null ? 0 : 1) + (transactionTrial is null ? 0 : 1) + (restoreGate is null ? 0 : 1) > 1) throw new ArgumentException("Choose one fixed RAM capability.");
         this.allowProtectedInitialization = allowProtectedInitialization;
         this.recoveryBinding = recoveryBinding;
         this.writeEnableControl = writeEnableControl;
         this.recoveryRehearsal = recoveryRehearsal;
         transactionGate=transactionTrial is null?null:new(transactionTrial);
+        this.restoreGate=restoreGate;
         this.allowRamSelfTest = allowRamSelfTest;
         var registered = J2534Drivers.Discover(driver.Kind).FirstOrDefault(d =>
             d.LibraryPath.Equals(Path.GetFullPath(driver.LibraryPath), StringComparison.OrdinalIgnoreCase) && d.RawCanSupported);
@@ -288,7 +292,7 @@ public sealed class NativeBenchMonitorChannel : IBenchMonitorChannel
         if ((packet.RxStatus & 1) != 0) stats.TxEchoes++;
         if ((packet.RxStatus & 0x0A) != 0) stats.Notifications++;
         if ((packet.RxStatus & 0x0B) != 0)
-        { var echo=new RecoveryFrame(0,packet.RxStatus,[]);transactionGate?.Observe(echo);return echo; }
+        { var echo=new RecoveryFrame(0,packet.RxStatus,[]);transactionGate?.Observe(echo);restoreGate?.Observe(echo);return echo; }
         if (packet.DataSize is < 4 or > 12 || packet.ExtraDataIndex > packet.DataSize)
             throw new TransportException("Malformed raw CAN bench message.");
         uint id = BinaryPrimitives.ReadUInt32BigEndian(packet.Data);
@@ -311,36 +315,36 @@ public sealed class NativeBenchMonitorChannel : IBenchMonitorChannel
                 awaitingRamStep = null;
             }
         }
-        transactionGate?.Observe(frame);
+        transactionGate?.Observe(frame);restoreGate?.Observe(frame);
         return frame;
     }
     // Only the separate NativeRamSelfTestChannel enables this capability.
     // The identification backend's public interface has no upload/execute method.
     internal void SendFixedRamSelfTestStep(int index)
     {
-        if (!allowRamSelfTest || allowProtectedInitialization || recoveryBinding is not null || writeEnableControl is not null || recoveryRehearsal is not null || transactionGate is not null) { ramFaulted = true; throw new TransportException("Read-only RAM capability is unavailable."); }
+        if (!allowRamSelfTest || allowProtectedInitialization || recoveryBinding is not null || writeEnableControl is not null || recoveryRehearsal is not null || transactionGate is not null || restoreGate is not null) { ramFaulted = true; throw new TransportException("Read-only RAM capability is unavailable."); }
         SendFixedStep(index, Zyj2RamSelfTestPolicy.Steps, Zyj2RamSelfTestPolicy.Image.Length);
     }
     internal void SendProtectedInitializationStep(int index)
     {
-        if (!allowProtectedInitialization || allowRamSelfTest || recoveryBinding is not null || writeEnableControl is not null || recoveryRehearsal is not null || transactionGate is not null) { ramFaulted = true; throw new TransportException("Protected initialization capability is unavailable."); }
+        if (!allowProtectedInitialization || allowRamSelfTest || recoveryBinding is not null || writeEnableControl is not null || recoveryRehearsal is not null || transactionGate is not null || restoreGate is not null) { ramFaulted = true; throw new TransportException("Protected initialization capability is unavailable."); }
         SendFixedStep(index, Zyj2ProtectedInitializationPolicy.Steps, Zyj2ProtectedInitializationPolicy.Image.Length);
     }
     internal void SendRecoveryBindingStep(int index)
     {
-        if (recoveryBinding is null || allowRamSelfTest || allowProtectedInitialization || writeEnableControl is not null || recoveryRehearsal is not null || transactionGate is not null)
+        if (recoveryBinding is null || allowRamSelfTest || allowProtectedInitialization || writeEnableControl is not null || recoveryRehearsal is not null || transactionGate is not null || restoreGate is not null)
         { ramFaulted = true; throw new TransportException("Read-only preserved-boot binding capability is unavailable."); }
         SendFixedStep(index, recoveryBinding, 0);
     }
     internal void SendWriteEnableControlStep(int index)
     {
-        if (writeEnableControl is null || recoveryBinding is not null || allowRamSelfTest || allowProtectedInitialization || recoveryRehearsal is not null || transactionGate is not null)
+        if (writeEnableControl is null || recoveryBinding is not null || allowRamSelfTest || allowProtectedInitialization || recoveryRehearsal is not null || transactionGate is not null || restoreGate is not null)
         { ramFaulted = true; throw new TransportException("Write-enable control capability is unavailable."); }
         SendFixedStep(index, writeEnableControl, RecoveryBindingPlan.PreservedBytes + Zyj2WriteEnableControlPolicy.Image.Length);
     }
     internal void SendRecoveryRehearsalStep(int index)
     {
-        if (recoveryRehearsal is null || writeEnableControl is not null || recoveryBinding is not null || allowRamSelfTest || allowProtectedInitialization || transactionGate is not null)
+        if (recoveryRehearsal is null || writeEnableControl is not null || recoveryBinding is not null || allowRamSelfTest || allowProtectedInitialization || transactionGate is not null || restoreGate is not null)
         { ramFaulted = true; throw new TransportException("Recovery rehearsal capability is unavailable."); }
         SendFixedStep(index, recoveryRehearsal, RecoveryBindingPlan.PreservedBytes + Zyj2RecoveryRehearsalPolicy.Image.Length);
     }
@@ -348,7 +352,7 @@ public sealed class NativeBenchMonitorChannel : IBenchMonitorChannel
     internal void SendTransactionTrialStep(int index)
     {
         RequireReady();
-        if(transactionGate is null)throw new TransportException("Native transaction capability is unavailable.");
+        if(restoreGate is not null || transactionGate is null)throw new TransportException("Native transaction capability is unavailable.");
         if(!initialMonitorIdentified||pulseStarted||ramFaulted){transactionGate.Fail();throw new TransportException("Native transaction monitor gate failed.");}
         try
         {
@@ -360,6 +364,25 @@ public sealed class NativeBenchMonitorChannel : IBenchMonitorChannel
         }
         catch{transactionGate.Fail();throw;}
     }
+    internal RestoreWireDiagnostics? RestoreDiagnostics=>restoreGate?.Diagnostics;
+    internal RestoreCommandObservation? RestoreLastResult=>restoreGate?.LastResult;
+    internal void SendOriginalRestoreStep(int index,CancellationToken cancel)
+    {
+        RequireReady();
+        if(restoreGate is null)throw new TransportException("Original restore capability is unavailable.");
+        if(!initialMonitorIdentified||pulseStarted||ramFaulted){restoreGate.Fail();throw new TransportException("Original restore monitor gate failed.");}
+        try
+        {
+            cancel.ThrowIfCancellationRequested();
+            var step=restoreGate.Begin(index);cancel.ThrowIfCancellationRequested();byte[] payload=step.Payload;
+            if(payload.AsSpan().SequenceEqual(Zyj2RecoveryPolicy.IdentityRequest))identityRequests++;
+            var packet=Packet(Zyj2RecoveryPolicy.RequestId,payload);uint count=1;
+            Check(write!(channel,ref packet,ref count,1000),"Send fixed original restore qualification step");
+            if(count!=1)throw new TransportException("Original restore write count was not one. No request was resent.");
+        }
+        catch{restoreGate.Fail();throw;}
+    }
+    internal void FailOriginalRestore()=>restoreGate?.Fail();
     internal void FailTransactionTrial()=>transactionGate?.Fail();
     internal void FailRecoveryBinding() => ramFaulted = true;
     private void SendFixedStep(int index, IReadOnlyList<RamSelfTestStep> steps, int imageLength)

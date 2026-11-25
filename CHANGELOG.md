@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.0-alpha.15
+
+- Add separately confirmed detached-ZYJ2 original-only EB14 erase/restoration qualification (menu 17) and a fresh-bind/full-erase recovery attempt (menu 18). Require the complete original backup and matching completed alpha.14 native read/staging evidence. The first test requires normal preflight; recovery allows existing EB14 changes while requiring all preserved regions exactly. Neither accepts a modified image or resume index.
+- Verify every boot/kernel/state/descriptor/staging byte. Flush intent before erase/program execution, verify complete blank/preserved regions, program each original unit once with independent unit readback, require two exact full-image reads and separately check monitor return and normal restart. No automatic request retry or power-interruption test.
+- Bind the separate 3012-byte writer to release metadata. Install RAM vectors before write-enable; count silicon-invoked RAM callbacks and observed timer services during the operation interval. Preserve full FPFR, stack/ABI, tainted-generation, GPIO/protection cleanup and no-ROM callback gates. The alpha.14 read/staging image remains byte-identical.
+- The supplied alpha.14 capture exactly matched the previous original, with all staging commands, monitor return and normal restart passed on one spare. Actual original restoration and interrupted-write recovery remain unqualified. Modified flashing and EB15 checksum-word handling remain unavailable.
+
 ## 0.9.0-alpha.14
 
 - Ship the native full-ROM read/RAM staging trial and offline original-only writer work described below, with a new 2036-byte embedded image. Alpha.13 was stopped before publication after supplemental fault testing found a callback ownership guard needed tightening.

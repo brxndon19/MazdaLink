@@ -125,4 +125,44 @@ transaction_service:
 .Lpin: .long 0xfffff782
 .Lkey: .word 0xa53d
 
+/* The silicon callback may clobber R0..R7, but preserves R8..R15/GBR.
+ * Count only invocations during the actual chip operation, and independently
+ * count observed timer services. No ROM call or controller access is added. */
+.if TRANSACTION_FLASH
+.section .text.flashservice,"ax"
+.balign 4
+.global transaction_flash_service
+transaction_flash_service:
+ mov.l .Lbusy,r0
+ mov.l @r0,r5
+ mov.l .Lservices,r0
+ mov.b @r0,r4
+ sts.l pr,@-r15
+ mov.l .Lcommon,r3
+ jsr @r3
+ nop
+ tst r5,r5
+ bt .Lflashreturn
+ mov.l .Lcounts,r0
+ mov.l @r0,r1
+ add #1,r1
+ mov.l r1,@r0
+ mov.l .Lservices,r0
+ mov.b @r0,r1
+ cmp/eq r4,r1
+ bt .Lflashreturn
+ mov.l .Lcounts,r0
+ mov.l @(4,r0),r1
+ add #1,r1
+ mov.l r1,@(4,r0)
+.Lflashreturn:
+ lds.l @r15+,pr
+ rts
+ nop
+.balign 4
+.Lbusy: .long 0xffffa0e0
+.Lservices: .long 0xffffa0e9
+.Lcounts: .long 0xffffa110
+.Lcommon: .long transaction_service
+.endif
 .section .note.GNU-stack,"",@progbits
