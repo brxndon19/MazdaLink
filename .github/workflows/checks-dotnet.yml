@@ -25,13 +25,14 @@ jobs:
       - name: Install the GNU SuperH assembler
         run: |
           sudo apt-get update
-          sudo apt-get install --no-install-recommends -y binutils-sh-elf
+          sudo apt-get install --no-install-recommends -y binutils-sh-elf libisl23 libmpc3 libmpfr6 libgmp10 libzstd1
       - name: Rebuild and verify the fixed RAM program without hardware
         run: |
           python3 dotnet/tools/Verify-RamSelfTestProgram.py
           python3 dotnet/tools/Verify-ProtectedInitialization.py
           python3 dotnet/tools/Verify-WriteEnableControl.py
           python3 dotnet/tools/Verify-RecoveryRehearsal.py
+          python3 dotnet/tools/Verify-TransactionKernel.py
   windows:
     runs-on: windows-latest
     timeout-minutes: 60

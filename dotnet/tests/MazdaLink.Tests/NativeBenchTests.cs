@@ -425,6 +425,59 @@ public sealed class NativeBenchTests
             return new(0, 1, 5, 0x100, 12, 0, data);
         }
     }
+    [Fact]
+    public void NativeTransactionCapabilityCannotBeAcquiredByExistingChannels()
+    {
+        foreach(var flags in new[]{(false,false),(true,false),(false,true)})
+        {using var d=new Driver(flags.Item1,flags.Item2);d.IdentifyMonitor();Assert.Throws<TransportException>(()=>d.SendTrialStep(0));}
+        using var trial=new Driver(trial:TransactionTests.Plan());trial.IdentifyMonitor();
+        Assert.Throws<TransportException>(()=>trial.SendRamStep(0));
+        Assert.Throws<TransportException>(()=>trial.SendInitStep(0));
+        Assert.Throws<TransportException>(()=>trial.SendBindingStep(0));
+        Assert.Throws<TransportException>(()=>trial.SendControlStep(0));
+        Assert.Throws<TransportException>(()=>trial.SendRehearsalStep(0));
+    }
+    [Fact]
+    public void NativeTrialRequiresMonitorFullBindingCodeStateAndEveryCommandReply()
+    {
+        var plan=TransactionTests.Plan();using var d=new Driver(trial:plan);d.IdentifyMonitor();
+        byte[] original=Enumerable.Range(0,TargetPolicy.RomSize).Select(i=>(byte)(i*11+7)).ToArray(),kernel=NativeTransactionPolicy.Image;
+        for(int i=0;i<plan.Count;i++)
+        {
+            var step=plan[i];d.SendTrialStep(i);
+            if(step.Kind==TransactionReplyKind.Command)
+            {
+                var cmd=step.Command!;byte[] data=cmd.Opcode==TransactionOpcode.ReadBlock?original.AsSpan(cmd.Index*512,512).ToArray():cmd.Staging??[];
+                foreach(var frame in TransactionTests.Reply(cmd,data)){d.SetTrialReply(frame);d.Channel.Read(25);}
+            }
+            else
+            {
+                byte[] p=step.Payload;byte[] data=new byte[8];
+                if(step.Kind==TransactionReplyKind.Echo){d.SetTrialReply(new(0,0x101,[]));d.Channel.Read(25);continue;}
+                if(p[1]==0x9c)p.AsSpan(0,6).CopyTo(data);
+                else if(p[1]==0xb4)
+                {
+                    uint a=System.Buffers.Binary.BinaryPrimitives.ReadUInt32BigEndian(p.AsSpan(2))-1;data[0]=0x7a;data[1]=0xb1;
+                    data[2]=step.BootByte?original[(int)a]:step.KernelByte?kernel[(int)(a-0xffff8000)]:step.StateByte?(byte)0:step.CommandByte?step.Command!.Descriptor()[(int)(a-0xffffa080)]:step.Command!.Staging![(int)(a-0xffffa000)];
+                }
+                else data=Zyj2RecoveryPolicy.ExpectedIdentity;
+                d.SetTrialReply(new(0x21,0x100,data));d.Channel.Read(25);
+            }
+        }
+        Assert.Throws<TransportException>(()=>d.SendTrialStep(0));
+    }
+    [Fact]
+    public void NativeTrialCannotSkipPendingRepliesOrFailedWrites()
+    {
+        var plan=TransactionTests.Plan();using var noMonitor=new Driver(trial:plan);
+        Assert.Throws<TransportException>(()=>noMonitor.SendTrialStep(0));
+        using var skipped=new Driver(trial:plan);skipped.IdentifyMonitor();Assert.Throws<TransportException>(()=>skipped.SendTrialStep(plan.InstallationEnd));
+        using var pending=new Driver(trial:plan);pending.IdentifyMonitor();pending.SendTrialStep(0);Assert.Throws<TransportException>(()=>pending.SendTrialStep(1));
+        using var failed=new Driver(trial:plan){WriteCount=0};
+        // Avoid using RequestIdentity with a failed write: identify before injecting the native test gate.
+        typeof(NativeBenchMonitorChannel).GetField("initialMonitorIdentified",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(failed.Channel,true);
+        Assert.Throws<TransportException>(()=>failed.SendTrialStep(0));Assert.Throws<TransportException>(()=>failed.SendTrialStep(0));
+    }
     private sealed class Driver : IDisposable
     {
         private const BindingFlags Hidden = BindingFlags.NonPublic | BindingFlags.Instance;
@@ -445,7 +498,7 @@ public sealed class NativeBenchTests
         public int Supply { get; init; } = 12500;
         public bool LeaveSupplyOutputUntouched { get; init; }
         public bool EmptyInputBuffer { get; private set; }
-        public Driver(bool allowRamSelfTest = false, bool allowProtectedInitialization = false, RecoveryBindingPlan? binding = null, WriteEnableControlPlan? control = null, RecoveryRehearsalPlan? rehearsal = null)
+        public Driver(bool allowRamSelfTest = false, bool allowProtectedInitialization = false, RecoveryBindingPlan? binding = null, WriteEnableControlPlan? control = null, RecoveryRehearsalPlan? rehearsal = null, TransactionTrialPlan? trial=null)
         {
             Channel = (NativeBenchMonitorChannel)RuntimeHelpers.GetUninitializedObject(Type);
             Set("allowRamSelfTest", allowRamSelfTest);
@@ -453,6 +506,7 @@ public sealed class NativeBenchTests
             Set("recoveryBinding", binding);
             Set("writeEnableControl", control);
             Set("recoveryRehearsal", rehearsal);
+            Set("transactionGate",trial is null?null:new TransactionTrialGate(trial));
             Set("opened", true); Set("connected", true); Set("filtered", true);
             BindMessage("write", nameof(Write)); BindMessage("startPeriodic", nameof(Start));
             var stop = Type.GetField("stopPeriodic", Hidden)!;
@@ -515,6 +569,12 @@ public sealed class NativeBenchTests
             };
             Reply=new(0,1,5,0x100,12,12,[0,0,0,0x21,..p]);
         }
+        public void SendTrialStep(int index)
+        {
+            try{Type.GetMethod("SendTransactionTrialStep",Hidden)!.Invoke(Channel,[index]);}
+            catch(TargetInvocationException e) when(e.InnerException is not null){System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(e.InnerException).Throw();}
+        }
+        public void SetTrialReply(RecoveryFrame frame)=>Reply=new(0,1,5,frame.Status,(uint)(frame.Data.Length+4),(uint)(frame.Data.Length+4),[0,0,0,0x21,..frame.Data]);
         public void SendRehearsalStep(int index)
         {
             try { Type.GetMethod("SendRecoveryRehearsalStep", Hidden)!.Invoke(Channel,[index]); }

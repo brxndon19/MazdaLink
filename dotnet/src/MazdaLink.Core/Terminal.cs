@@ -4,7 +4,8 @@ public sealed class Terminal(Func<IReadTransport> connect, TextReader input, Tex
     Func<IBenchMonitorChannel>? benchMonitor = null, Func<IFixedRamSelfTestChannel>? ramSelfTest = null, Func<IProtectedInitializationChannel>? protectedInitialization = null,
     Func<RecoveryBindingPlan, IRecoveryBindingChannel>? recoveryBinding = null,
     Func<RecoveryBindingPlan, IWriteEnableControlChannel>? writeEnableControl = null,
-    Func<RecoveryBindingPlan, IRecoveryRehearsalChannel>? recoveryRehearsal = null)
+    Func<RecoveryBindingPlan, IRecoveryRehearsalChannel>? recoveryRehearsal = null,
+    Func<TransactionTrialPlan,ITransactionTrialChannel>? transactionTrial = null)
 {
     public const string Help = """
 MazdaLink — Mazda 2 DE / ZY-VE
@@ -47,6 +48,9 @@ Commands:
                               REHEARSE ZYJ2 required. No write-enable change, erase or programming.
   original-restore-plan <original.rom>
                               Offline unchanged-backup EB14 recipe only; no hardware or flashing.
+  native-transaction-check <original.rom>
+                              Detached ZYJ2 spare: full-ROM CRC32 stream and original-unit RAM staging.
+                              TRANSACTION ZYJ2 required. No erase or programming capability.
   flash                       Unavailable: Mazda 2 write/recovery protocol is unverified.
   status                      Show read policy, checksum support, storage and programming status.
   license                     Show licence and attribution information.
@@ -71,7 +75,7 @@ Bench logs include adapter status and measured timing, without frame payloads.
         output.WriteLine($"Raw reads: no fixed calibration whitelist. Checksum preparation: {TargetPolicy.SoftwareId} only.\nStorage: {Path.GetFullPath(dataRoot)}\nFlashing: unavailable — write/recovery procedure is unverified.");
         while (!cancel.IsCancellationRequested)
         {
-            output.WriteLine("\n1  Identify ECU\n2  Read ECU and save backup\n3  Export backup as .rom\n4  Prepare an externally edited ROM\n5  Validate modified ROM\n6  Flash ROM back — unavailable\n7  Help\n8  Licence / credits\n9  ZYJ2 spare: bench monitor identification check\n10 ZYJ2 spare: fixed volatile RAM self-test — experimental\n11 ZYJ2 spare: protected flash-algorithm initialization — experimental\n12 ZYJ2 detached spare: read-only recovery boot binding — experimental\n13 ZYJ2 detached spare: write-enable control and restoration — experimental\n14 ZYJ2 detached spare: recovery kernel rehearsal — experimental\n15 Original-backup restore plan — offline only\n0  Exit");
+            output.WriteLine("\n1  Identify ECU\n2  Read ECU and save backup\n3  Export backup as .rom\n4  Prepare an externally edited ROM\n5  Validate modified ROM\n6  Flash ROM back — unavailable\n7  Help\n8  Licence / credits\n9  ZYJ2 spare: bench monitor identification check\n10 ZYJ2 spare: fixed volatile RAM self-test — experimental\n11 ZYJ2 spare: protected flash-algorithm initialization — experimental\n12 ZYJ2 detached spare: read-only recovery boot binding — experimental\n13 ZYJ2 detached spare: write-enable control and restoration — experimental\n14 ZYJ2 detached spare: recovery kernel rehearsal — experimental\n15 Original-backup restore plan — offline only\n16 ZYJ2 detached spare: native full-ROM read and RAM staging — experimental\n0  Exit");
             output.Write("> ");
             string? choice = input.ReadLine()?.Trim();
             if (choice is null or "0") return 0;
@@ -93,6 +97,7 @@ Bench logs include adapter status and measured timing, without frame payloads.
                 case "13": command = ["write-enable-check", Ask("ZYJ2 spare backup original.rom")]; break;
                 case "14": command = ["recovery-rehearsal", Ask("ZYJ2 spare backup original.rom")]; break;
                 case "15": command = ["original-restore-plan", Ask("ZYJ2 spare backup original.rom")]; break;
+                case "16": command = ["native-transaction-check",Ask("ZYJ2 spare backup original.rom")]; break;
                 default: output.WriteLine("Choose a listed number."); continue;
             }
             Execute(command, cancel); // Each hardware action creates/disposes a fresh connection; never retries.
@@ -135,6 +140,11 @@ Bench logs include adapter status and measured timing, without frame payloads.
                 new BenchRecoveryTerminal(connect, () => protectedInitialization(), input, output, dataRoot,
                     runProtectedInitialization: true).Run(args[1], cancel);
                 return 0;
+            }
+            if(args.Length==2 && args[0]=="native-transaction-check")
+            {
+                if(transactionTrial is null)throw new TransportException("Native transaction trial backend unavailable. No adapter was opened.");
+                new TransactionTrialTerminal(connect,transactionTrial,input,output,dataRoot).Run(args[1],cancel);return 0;
             }
             if(args.Length==2 && args[0]=="original-restore-plan")
             {

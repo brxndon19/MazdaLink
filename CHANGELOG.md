@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.9.0-alpha.14
+
+- Ship the native full-ROM read/RAM staging trial and offline original-only writer work described below, with a new 2036-byte embedded image. Alpha.13 was stopped before publication after supplemental fault testing found a callback ownership guard needed tightening.
+- Reset callback ownership before every preflight; allow watchdog/PB service only after current-entry pin guards and shadow normalization pass. Rejected preflights must not change outputs even with a pending timer overflow. Add preflight, DMA/vector and RAM-NMI fault cases to the machine-code gate. The destructive candidate remains offline only.
+
+## 0.9.0-alpha.13 (unpublished candidate)
+
+- Add menu 16: a separately confirmed detached-spare native transaction check. Verify all boot/code/state bytes, stream the full ROM with sequenced CRC32 replies and require an exact original match before eight original-unit RAM staging/echo checks. Retain monitor and normal restart evidence separately. The embedded kernel contains no erase/program entry.
+- Implement a separate offline EB14 erase/program candidate with RAM vectors/callback, staging CRCs, ordered units, full FPFR, tainted-generation handling and readback. It is not embedded or selectable through the application. Add a single-use original-only host backend with flushed intent records, no retries, complete re-erase after ambiguity and dual final full-image verification. No native destructive device implementation is shipped.
+- Rebuild both candidates through a pinned compiler and strict SH-2 assembler; execute synthetic instruction/fault and durable journal tests. Bind read/staging image and unqualified scope in schema-10 release metadata. New local trial evidence is schema 11.
+- The supplied alpha.12 spare evidence passed algorithm initialization, direct RAM callback rehearsal, monitor return and normal restart. Actual flash busy, interrupted-write recovery and modified ZYJ2 checksum policy remain unqualified.
+
 ## 0.9.0-alpha.12
 
 - Add a separate application-independent recovery rehearsal: fresh boot binding, immutable 1404-byte RAM image, both MCU algorithm initializations with a RAM callback, direct timer/PB15 service rehearsal and independent cleanup/restart evidence. Keep FWE low; no erase/program entry or programming key is present.

@@ -111,12 +111,27 @@
   write is allowed. Retain bounded evidence, independent model and release scope.
   Direct callback rehearsal is not observed silicon callback/flash-busy behavior.
 - The unchanged-original EB14 restore plan is offline only, with no native
-  transaction capability. Require exact original bytes, full preserved-region
+  destructive transaction capability. Require exact original bytes, full preserved-region
   equality, fixed EB14 bounds and aligned 128-byte units. No modified-image or
   generic address override is allowed. After ambiguous erase/program completion,
   never resend a unit: fresh bind and complete block erase precede a new one-pass
   program generation. Preserve the independent interruption/readback model;
   software recovery simulations do not qualify actual erased-application entry.
+- The separate native transaction trial requires `TRANSACTION ZYJ2`, a detached
+  spare, exact boot binding and every code/state/command/staging byte verified.
+  Embed only the fixed read/staging build; no FKEY5A, PD write or erase/program
+  operation is present. Require ordered command-bound CRC32 streams, exact full
+  original equality before eight original-only RAM staging units, final monitor
+  and independent normal restart. Preserve bounded metadata without payloads.
+  Reset callback ownership before each preflight; rejected preflights must not
+  service an unowned PB shadow, including with an already pending overflow.
+  No capability conversion, external code/address, skipped replies or retries.
+- The new destructive C variant and original-only durable host backend remain
+  offline model candidates. Never embed/select that binary or implement a native
+  destructive device contract until separate hardware qualification. Preserve
+  RAM vectors/callback, full FPFR, tainted-generation/one-pass programming rules,
+  flushed intent before destructive requests and complete re-erase after ambiguity.
+  Software models do not establish actual flash-busy or interrupted-write recovery.
 - Use the observed longer-off bench sequence: normal preflight, operator-confirmed
   ECU-only power removal, a monotonic 60-second host wait outside entry traffic,
   then open the adapter with ECU off and reconnect during the bounded entry window.
