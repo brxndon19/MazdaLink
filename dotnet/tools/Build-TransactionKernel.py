@@ -3,7 +3,8 @@
 """Pinned C compiler, then strict SH-2 assembler: no SH-3/4 opcode is accepted.
 The compiler configuration exposes an integer SH-4 backend; the owned source
 uses the SH-2 subset and both assembler and instruction model enforce that.
-Full flash candidate is an offline model artifact, never the embedded variant.
+The destructive variant belongs only to original-only qualification; both
+variants remain physically unqualified until their individual bench evidence.
 """
 import hashlib
 import json
@@ -42,9 +43,9 @@ def compiler(folder):
 def build_all():
     with tempfile.TemporaryDirectory(prefix='MazdaLink-transactions-') as name:
         folder=pathlib.Path(name);cc=compiler(folder)
-        subprocess.run(['sh-elf-as','-big','-isa=sh2','-o',str(folder/'entry.o'),str(ROOT/'firmware/zyj2-transaction-entry.S')],check=True)
         result={}
         for full in (0,1):
+            subprocess.run(['sh-elf-as','-big','-isa=sh2','--defsym',f'TRANSACTION_FLASH={full}','-o',str(folder/'entry.o'),str(ROOT/'firmware/zyj2-transaction-entry.S')],check=True)
             assembly=folder/f'kernel-{full}.S';obj=folder/f'kernel-{full}.o';elf=folder/f'kernel-{full}.elf';binary=folder/f'kernel-{full}.bin'
             subprocess.run([*cc,*FLAGS,f'-DENABLE_FLASH={full}','-S',str(ROOT/'firmware/zyj2-transaction.c'),'-o',str(assembly)],check=True)
             subprocess.run(['sh-elf-as','-big','-isa=sh2','-o',str(obj),str(assembly)],check=True)
@@ -61,4 +62,4 @@ def build_all():
 
 if __name__=='__main__':
     for full,(data,symbols) in build_all().items():
-        print(json.dumps({'variant':'offline-flash-candidate' if full else 'read-stage-only','bytes':len(data),'sha256':hashlib.sha256(data).hexdigest(),'symbols':symbols}))
+        print(json.dumps({'variant':'original-restore-qualification' if full else 'read-stage-only','bytes':len(data),'sha256':hashlib.sha256(data).hexdigest(),'symbols':symbols}))

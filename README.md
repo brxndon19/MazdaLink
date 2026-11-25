@@ -42,11 +42,15 @@ If driver cleanup cannot be confirmed, MazdaLink exits. Disconnect both USB and 
 
 Since alpha.4 the entry deadline uses monotonic elapsed time, rather than accumulating rounded sleeps. Driver start/stop calls can add latency; their measured durations and the observed entry duration are recorded separately. `events.jsonl` evidence includes application and adapter versions, optional adapter-supply readings before/after entry, native return codes, receive counts and bounded per-second traffic counts. Alpha.5 corrects the local TX-echo setting to use `SET_CONFIG` and adds a separate `GET_CONFIG` readback in schema-3 evidence. Alpha.4 accidentally read the setting instead of enabling it, so its zero configuration status did not establish that echoes were enabled. An echo is not proof that the ECU accepted a request, and a lack of echoes alone does not prove no transmission. Unsupported or unfilled optional adapter diagnostics are recorded as unavailable. Supply snapshots measure the adapter feed at those moments, not ECU voltage throughout the power cycle. No raw frame payloads are logged. Identification still requires the exact reply to the single post-entry query.
 
+## ZYJ2 original-only erase/write qualification
+
+Alpha.15 adds **menu 17** for an experimental original-only EB14 erase/restoration test, and **menu 18** for a separate fresh-bind/full-erase recovery attempt. These **do erase and program flash** on the detached spare. They require its complete original backup, the matching completed alpha.14 menu-16 log and explicit risk/setup confirmation. Keep the good ECU disconnected. Recovery is unqualified; do not intentionally interrupt the first test. Modified files remain blocked. See [the full preparation, sequence and evidence requirements](docs/ZYJ2_ORIGINAL_RESTORE_QUALIFICATION.md).
+
 ## ZYJ2 detached spare: native full-ROM read and RAM staging
 
 Alpha.14 adds menu **16**, `native-transaction-check <original.rom>`, with **TRANSACTION ZYJ2** confirmation. After exact boot/code verification it streams the complete ROM with ordered CRC32 replies, compares every byte to your original and stages/echoes eight original 128-byte units in RAM. FWE stays low; the embedded kernel contains no erase/program operation. Complete the separate normal restart and retain the new `events.jsonl`. See [the test sequence and writer progress](docs/ZYJ2_NATIVE_TRANSACTIONS.md).
 
-A separate erase/program kernel candidate and durable original-only host transaction engine now run in offline models. They are not enabled on hardware. Actual interrupted-write recovery, original restoration and ZYJ2 modified-image checksum support still need qualification before tuning or flashing the good ECU.
+The alpha.14 read/staging run passed on one spare. Alpha.15 adds a separate original-only hardware qualification path after offline erase/program and durable-intent testing. Actual interrupted-write recovery, original restoration and ZYJ2 modified-image checksum support still need qualification before tuning or flashing the good ECU.
 
 ## ZYJ2 spare: fixed volatile RAM self-test
 

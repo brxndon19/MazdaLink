@@ -5,7 +5,7 @@ $passed = @($run.TestRun.Results.UnitTestResult | Where-Object outcome -eq 'Pass
 foreach ($name in @('MazdaLink.Tests.TargetTests.RawReadsDoNotRequireAWhitelistedIdentityOrKnownRomLayout(identity: "ZYJ2EA000ZYV5050")','MazdaLink.Tests.TargetTests.KnownLookingRomFromUnknownCalibrationCannotUseTheZy87ChecksumPolicy','MazdaLink.Tests.TargetTests.RefusedReadStopsWithoutKeyRetryOrProtocolProbe','MazdaLink.Tests.TargetTests.EveryPrepareCorrectsAllRangesVerifiesDiskAndPreservesInputs','MazdaLink.Tests.TargetTests.ReadsBothPassesAt512AndExportsExactBytesWithNoOverwrite','MazdaLink.Tests.TargetTests.TransportRequiresValidIdentityBeforeSecurityEvenForDirectCalls','MazdaLink.Tests.TargetTests.MenuAndCommandsCannotOpenHardwareForFlashingOrOverrides')) {
     if ($passed -notcontains $name) { throw "Missing mandatory MazdaLink integrity/scope case: $name" }
 }
-if ([int]$run.TestRun.ResultSummary.Counters.total -lt 310) { throw 'Focused scope/integrity matrix is incomplete.' }
+if ([int]$run.TestRun.ResultSummary.Counters.total -lt 331) { throw 'Focused scope/integrity matrix is incomplete.' }
 foreach ($name in @('MazdaLink.Tests.BenchRecoveryTests.EntryStopsBeforeOneIdentificationAndNeverUploadsOrExecutes','MazdaLink.Tests.BenchRecoveryTests.CancellationStopsPeriodicTrafficBeforeAnyIdentificationRequest','MazdaLink.Tests.BenchRecoveryTests.WireGateAllowsOnlyItsTwoFixedNonProgrammingPayloads','MazdaLink.Tests.BenchRecoveryTests.SpoofingHeaderAndCalibrationDoesNotSatisfyTheBootCodeFingerprints','MazdaLink.Tests.NativeBenchTests.NativePacketsUseRawExtendedCanAndExactlyTwoFixedPayloads','MazdaLink.Tests.NativeBenchTests.FailedNativeWriteCannotBeRetried')) {
     if ($passed -notcontains $name) { throw "Missing mandatory bench-scope case: $name" }
 }
@@ -71,4 +71,14 @@ foreach ($name in @('NativeTransactionCapabilityCannotBeAcquiredByExistingChanne
 }
 foreach ($case in @(@('CorruptMissingDuplicatedOrReorderedFramesNeverPass',6),@('JournalFailureCannotAdvanceToTheNextDestructiveRequest',3),@('AmbiguousCompletionCannotResendAndNewSessionAlwaysReerases',4))) {
     if (@($passed | Where-Object { $_ -like ('MazdaLink.Tests.TransactionTests.'+$case[0]+'(*)') }).Count -ne $case[1]) { throw "Incomplete transaction fault matrix: $($case[0])" }
+}
+
+foreach ($name in @('FailedFullFpfrIsRetainedBeforeAnyProgrammingRequest','FixedPlanCannotAcceptModifiedDataAddressesOrRepeatedErase','OriginalWireSessionDurablyOrdersOneEraseAllUnitsAndTwoFullReads','RecoveryCannotIgnorePreservedMismatchOrAUnitReadbackFailure','MissingBusyCallbackFullFpfrOrWrongProgressCannotPass','GateCannotSkipVerificationOrAdvanceAnUnansweredStep','RestoreCliRefusesMissingEvidenceAndOverridesBeforeHardwareOpen','MalformedOrIncompletePrerequisiteCannotQualifyTheOriginal','FullQualificationJournalIsFlushedHashChainedAndContainsNoRomPayload')) {
+    if ($passed -notcontains ('MazdaLink.Tests.RestoreQualificationTests.'+$name)) { throw "Missing original restore qualification gate: $name" }
+}
+foreach ($name in @('NativeOriginalRestoreGateRequiresAllReadbacksIntentAndOnePassProgramming','NativeRestoreCannotBeAcquiredSkippedOrPromotedToOtherCapabilities')) {
+    if ($passed -notcontains ('MazdaLink.Tests.NativeBenchTests.'+$name)) { throw "Missing native original restore gate: $name" }
+}
+foreach ($case in @(@('UnknownCompletionStopsAndRecoveryAlwaysRebindsAndReerases',4),@('JournalFailureStopsBeforeAnyLaterDestructiveRequest',3),@('FirstRestoreRequiresExactCurrentImageBeforeErase',3))) {
+    if (@($passed | Where-Object { $_ -like ('MazdaLink.Tests.RestoreQualificationTests.'+$case[0]+'(*)') }).Count -ne $case[1]) { throw "Incomplete original qualification fault matrix: $($case[0])" }
 }

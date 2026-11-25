@@ -2,7 +2,7 @@ using System.Text.Json;
 
 namespace MazdaLink.Core;
 
-/// <summary>Offline backend contract. No shipped J2534 class implements this capability.</summary>
+/// <summary>Offline backend contract. The separate native original-only qualification uses its own fixed wire script and gate.</summary>
 public interface IOriginalRestoreDevice
 {
     void ColdBind(string preservedBootSha256);
@@ -33,6 +33,7 @@ public sealed class RestoreJournal : IRestoreJournal
         originalHash = plan.OriginalSha256;
         stream = new(path, FileMode.CreateNew, FileAccess.Write, FileShare.Read);
     }
+    public string OriginalSha256=>originalHash;
     public void Commit(string stage, int unit = -1)
     {
         if (failed || sequence >= 2060 || !Allowed(stage,unit))
