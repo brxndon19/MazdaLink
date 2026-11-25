@@ -4,7 +4,8 @@ using System.Text.Json;
 
 namespace MazdaLink.Core;
 
-public enum RestorePhase { Initialize, BeforeErase, Erase, EraseReadback, Program, UnitReadback, FinalReadback1, FinalReadback2, Finish }
+public enum RestorePhase { Initialize, BeforeErase, Erase, EraseReadback, Program, UnitReadback, FinalReadback1, FinalReadback2, Finish, PartialReadback, FinishPartial }
+public enum ControlledRecoveryStage { None, Prepare, Recover }
 public sealed record RestoreCommand(TransactionCommand Command,RestorePhase Phase);
 
 /// <summary>Consistent prior read/stage evidence; not authentication or unique ECU identification.</summary>
@@ -77,12 +78,16 @@ public sealed class RestoreQualificationPlan:IReadOnlyList<TransactionWireStep>
     public OriginalBlockRestorePlan Original { get; }
     public RecoveryBindingPlan Binding { get; }
     public bool Recovery { get; }
+    public ControlledRecoveryStage ControlledStage { get; }
+    public int ExpectedUnits=>ControlledStage==ControlledRecoveryStage.Prepare?1:1024;
     public IReadOnlyList<RestoreCommand> Commands { get; }
     public int InstallationEnd=>Binding.Count+installation.Count;
     public int Count { get; }
     private RestoreQualificationPlan(byte[] bytes,RecoveryBindingPlan binding,OriginalBlockRestorePlan originalPlan,bool recovery,uint cookie)
+        :this(bytes,binding,originalPlan,recovery,cookie,ControlledRecoveryStage.None) { }
+    private RestoreQualificationPlan(byte[] bytes,RecoveryBindingPlan binding,OriginalBlockRestorePlan originalPlan,bool recovery,uint cookie,ControlledRecoveryStage controlled)
     {
-        original=bytes.ToArray();Binding=binding;Original=originalPlan;Recovery=recovery;
+        original=bytes.ToArray();Binding=binding;Original=originalPlan;Recovery=recovery;ControlledStage=controlled;
         TransactionTrialPlan.AppendBlob(installation,NativeTransactionPolicy.KernelAddress,OriginalRestoreKernel.Image,"kernel",null);
         TransactionTrialPlan.AppendBlob(installation,NativeTransactionPolicy.StateAddress,new byte[48],"state",null);
         ushort seq=1;var commands=new List<RestoreCommand>();
@@ -90,8 +95,9 @@ public sealed class RestoreQualificationPlan:IReadOnlyList<TransactionWireStep>
         void ReadAll(RestorePhase phase){for(ushort i=0;i<2048;i++)Add(TransactionOpcode.ReadBlock,phase,i);}
         Add(TransactionOpcode.Initialize,RestorePhase.Initialize);ReadAll(RestorePhase.BeforeErase);
         Add(TransactionOpcode.Erase,RestorePhase.Erase,14);ReadAll(RestorePhase.EraseReadback);
-        for(ushort i=0;i<1024;i++){Add(TransactionOpcode.Program,RestorePhase.Program,i,Original.Data(i));Add(TransactionOpcode.VerifyOriginalUnit,RestorePhase.UnitReadback,i);}
-        ReadAll(RestorePhase.FinalReadback1);ReadAll(RestorePhase.FinalReadback2);Add(TransactionOpcode.Finish,RestorePhase.Finish);
+        for(ushort i=0;i<ExpectedUnits;i++){Add(TransactionOpcode.Program,RestorePhase.Program,i,Original.Data(i));Add(TransactionOpcode.VerifyOriginalUnit,RestorePhase.UnitReadback,i);}
+        if(controlled==ControlledRecoveryStage.Prepare){ReadAll(RestorePhase.PartialReadback);Add(TransactionOpcode.Finish,RestorePhase.FinishPartial);}
+        else{ReadAll(RestorePhase.FinalReadback1);ReadAll(RestorePhase.FinalReadback2);Add(TransactionOpcode.Finish,RestorePhase.Finish);}
         Commands=commands.AsReadOnly();starts=new int[commands.Count];int offset=InstallationEnd;
         for(int i=0;i<commands.Count;i++){starts[i]=offset;offset+=38+(commands[i].Command.Opcode==TransactionOpcode.Program?279:0);}
         Count=offset+1;
@@ -102,6 +108,22 @@ public sealed class RestoreQualificationPlan:IReadOnlyList<TransactionWireStep>
         Zyj2RecoveryPolicy.RequireBackup(stable);RestorePrerequisite.Require(prerequisiteEvidence,stable);
         uint cookie;do{cookie=BinaryPrimitives.ReadUInt32BigEndian(RandomNumberGenerator.GetBytes(4));}while(cookie==0);
         return new(stable.Data,RecoveryBindingPlan.Create(stable),OriginalBlockRestorePlan.Create(stable,stable.Data),recovery,cookie);
+    }
+    public static RestoreQualificationPlan CreateControlled(VerifiedRawBackup backup,string originalRestorationFolder,ControlledRecoveryStage stage)
+    {
+        if(stage==ControlledRecoveryStage.None)throw new ArgumentException("Choose a fixed controlled recovery stage.");
+        var stable=new VerifiedRawBackup(backup.Data.ToArray(),backup.ReportedCalibration);Zyj2RecoveryPolicy.RequireBackup(stable);
+        ControlledRecoveryEvidence.RequireOriginalRestoration(originalRestorationFolder,stable);
+        uint cookie;do{cookie=BinaryPrimitives.ReadUInt32BigEndian(RandomNumberGenerator.GetBytes(4));}while(cookie==0);
+        return new(stable.Data,RecoveryBindingPlan.Create(stable),OriginalBlockRestorePlan.Create(stable,stable.Data),stage==ControlledRecoveryStage.Recover,cookie,stage);
+    }
+    public byte[] ExpectedPartialImage()
+    {
+        byte[] expected=original.ToArray();expected.AsSpan(0xC0080,0x1FF80).Fill(255);return expected;
+    }
+    internal void RequirePartialImage(byte[] bytes)
+    {
+        if(!bytes.AsSpan().SequenceEqual(ExpectedPartialImage()))throw new InvalidDataException("The controlled partial image differs from the fixed unit-zero boundary. No later operation is permitted.");
     }
     public RestoreCommand? CommandFor(int index)
     {
@@ -139,6 +161,12 @@ public sealed class RestoreQualificationPlan:IReadOnlyList<TransactionWireStep>
         {if(!reply.Data.AsSpan().SequenceEqual(Original.Data(cmd.Index)))throw new InvalidDataException("Original unit readback differs; no request was resent.");return;}
         if(cmd.Opcode!=TransactionOpcode.ReadBlock)return;
         bool inBlock=address>=0xC0000 && address<0xE0000;
+        if(entry.Phase==RestorePhase.PartialReadback || entry.Phase==RestorePhase.BeforeErase && ControlledStage==ControlledRecoveryStage.Recover)
+        {
+            var expected=original.AsSpan(address,512).ToArray();
+            if(inBlock){expected.AsSpan().Fill(255);if(address==0xC0000)original.AsSpan(address,128).CopyTo(expected);}
+            if(!reply.Data.AsSpan().SequenceEqual(expected))throw new InvalidDataException("Controlled partial/preserved image mismatch. Recovery erase was not authorized.");return;
+        }
         if(entry.Phase==RestorePhase.BeforeErase && Recovery && inBlock)return;
         if(entry.Phase==RestorePhase.EraseReadback && inBlock)
         {if(reply.Data.Any(b=>b!=255))throw new InvalidDataException("Complete EB14 blank verification failed.");return;}

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.0-alpha.16
+
+- Add menu 19: controlled completed-unit-zero stop and paired cold recovery, gated by the completed alpha.15 restoration folder, both exact captures and its complete journal. Prepare exactly one original unit with an erased calibration ID; verify the full partial image, checked finish and monitor before prompting for ECU-only power cycling. This never interrupts an active chip operation.
+- Require fresh boot/state binding and exact live partial/preserved equality before recovery erase. Restore the original from unit zero after whole-block erase, require both full reads and independent normal restart. Menu 20 accepts only a valid boundary receipt/capture/preparation journal and copies its artifacts into a new recovery run.
+- Keep both MCU images byte-identical to alpha.15. Distinguish partial-stop and complete-restoration results/journals; block late replies after session failure. Bound phase metadata without payloads, retain original verification if a later restart fails, and declare active-operation power cuts and modified flashing unavailable.
+- Supplied alpha.15 evidence passed EB14 erase, silicon-operation RAM callback/timer service, all 1024 original units, exact dual full reads, monitor and normal restart on one detached spare. This does not qualify interrupted-write recovery.
+
 ## 0.9.0-alpha.15
 
 - Add separately confirmed detached-ZYJ2 original-only EB14 erase/restoration qualification (menu 17) and a fresh-bind/full-erase recovery attempt (menu 18). Require the complete original backup and matching completed alpha.14 native read/staging evidence. The first test requires normal preflight; recovery allows existing EB14 changes while requiring all preserved regions exactly. Neither accepts a modified image or resume index.

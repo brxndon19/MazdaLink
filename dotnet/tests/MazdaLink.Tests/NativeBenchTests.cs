@@ -504,6 +504,21 @@ public sealed class NativeBenchTests
             Assert.Throws<TransportException>(()=>{switch(name){case "ram":d.SendRamStep(0);break;case "init":d.SendInitStep(0);break;case "binding":d.SendBindingStep(0);break;case "control":d.SendControlStep(0);break;case "rehearsal":d.SendRehearsalStep(0);break;default:d.SendTrialStep(0);break;}});
         }
     }
+    [Fact]
+    public void NativeControlledStopEndsAtOneVerifiedUnitWithoutACompleteRestorationRecord()
+    {
+        var plan=ControlledRecoveryTests.Plan(ControlledRecoveryStage.Prepare);using var journal=new RestoreQualificationTests.MemoryJournal();
+        var gate=new RestoreQualificationGate(plan,journal);using var driver=new Driver(restore:gate);driver.IdentifyMonitor();
+        using var peerJournal=new RestoreQualificationTests.MemoryJournal();using var peer=new RestoreQualificationTests.Peer(plan,peerJournal);
+        for(int i=0;i<plan.Count;i++)
+        {
+            driver.SendRestoreStep(i);peer.SendRestoreStep(i);
+            while(peer.PendingFrames>0){var frame=peer.Read(25)!;driver.SetTrialReply(frame);driver.Channel.Read(25);}
+        }
+        Assert.Equal(1,gate.Diagnostics.OriginalUnitsVerified);Assert.Equal(6149,gate.Diagnostics.CommandsCompleted);
+        Assert.Equal(("controlled-stop",-1),journal.Entries.Last());Assert.Equal(1u,gate.LastResult!.NextUnit);
+        Assert.DoesNotContain(journal.Entries,e=>e.Stage=="complete");Assert.Throws<TransportException>(()=>driver.SendRestoreStep(plan.Count));
+    }
     private sealed class Driver : IDisposable
     {
         private const BindingFlags Hidden = BindingFlags.NonPublic | BindingFlags.Instance;

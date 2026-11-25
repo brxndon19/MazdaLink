@@ -49,7 +49,7 @@ public sealed class RestoreJournal : IRestoreJournal
     }
     internal static bool Allowed(string stage,int unit) =>
         stage is "unit-intent" or "unit-verified" ? unit is >=0 and <1024 :
-        unit==-1 && stage is "started" or "bound" or "erase-intent" or "erase-verified" or "full-readback-1" or "complete";
+        unit==-1 && stage is "started" or "bound" or "erase-intent" or "erase-verified" or "full-readback-1" or "complete" or "partial-readback" or "controlled-stop";
     public void Dispose() { failed=true;stream.Dispose(); }
 }
 
