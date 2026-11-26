@@ -5,7 +5,7 @@ $passed = @($run.TestRun.Results.UnitTestResult | Where-Object outcome -eq 'Pass
 foreach ($name in @('MazdaLink.Tests.TargetTests.RawReadsDoNotRequireAWhitelistedIdentityOrKnownRomLayout(identity: "ZYJ2EA000ZYV5050")','MazdaLink.Tests.TargetTests.KnownLookingRomFromUnknownCalibrationCannotUseTheZy87ChecksumPolicy','MazdaLink.Tests.TargetTests.RefusedReadStopsWithoutKeyRetryOrProtocolProbe','MazdaLink.Tests.TargetTests.EveryPrepareCorrectsAllRangesVerifiesDiskAndPreservesInputs','MazdaLink.Tests.TargetTests.ReadsBothPassesAt512AndExportsExactBytesWithNoOverwrite','MazdaLink.Tests.TargetTests.TransportRequiresValidIdentityBeforeSecurityEvenForDirectCalls','MazdaLink.Tests.TargetTests.MenuAndCommandsCannotOpenHardwareForFlashingOrOverrides')) {
     if ($passed -notcontains $name) { throw "Missing mandatory MazdaLink integrity/scope case: $name" }
 }
-if ([int]$run.TestRun.ResultSummary.Counters.total -lt 345) { throw 'Focused scope/integrity matrix is incomplete.' }
+if ([int]$run.TestRun.ResultSummary.Counters.total -lt 362) { throw 'Focused scope/integrity matrix is incomplete.' }
 foreach ($name in @('MazdaLink.Tests.BenchRecoveryTests.EntryStopsBeforeOneIdentificationAndNeverUploadsOrExecutes','MazdaLink.Tests.BenchRecoveryTests.CancellationStopsPeriodicTrafficBeforeAnyIdentificationRequest','MazdaLink.Tests.BenchRecoveryTests.WireGateAllowsOnlyItsTwoFixedNonProgrammingPayloads','MazdaLink.Tests.BenchRecoveryTests.SpoofingHeaderAndCalibrationDoesNotSatisfyTheBootCodeFingerprints','MazdaLink.Tests.NativeBenchTests.NativePacketsUseRawExtendedCanAndExactlyTwoFixedPayloads','MazdaLink.Tests.NativeBenchTests.FailedNativeWriteCannotBeRetried')) {
     if ($passed -notcontains $name) { throw "Missing mandatory bench-scope case: $name" }
 }
@@ -88,3 +88,10 @@ foreach ($name in @('FixedBoundaryContainsExactlyOneOriginalUnitAndAnErasedCalib
 }
 if (@($passed | Where-Object { $_ -like 'MazdaLink.Tests.ControlledRecoveryTests.UnexpectedPartialOrPreservedBytesStopBeforeRecoveryErase(*)' }).Count -ne 5) { throw 'Controlled recovery partial/preserved mismatch matrix incomplete.' }
 if ($passed -notcontains 'MazdaLink.Tests.NativeBenchTests.NativeControlledStopEndsAtOneVerifiedUnitWithoutACompleteRestorationRecord') { throw 'Missing native fixed partial-stop gate.' }
+
+foreach ($name in @('IndependentBigEndianSumsVerifyAllNineteenRangesAndEveryCorrectionWord','EveryCorrectionIsRecalculatedAndUneditedExportIsByteExact','OfflineReportAndModifiedFlashOverridesCannotAcquireNativeCapabilities')) {
+ if ($passed -notcontains ('MazdaLink.Tests.Zyj2IntegrityTests.'+$name)) { throw "Missing ZYJ2 integrity gate: $name" }
+}
+foreach ($case in @(@('CalibrationEditRequiresEb15CorrectionAndPlanNeverOpensHardware',3),@('ChangedCodeIdentityHeaderRangesOrUnqualifiedCalibrationCannotBePrepared',7),@('InvalidOriginalChecksumOrLayoutCannotAuthorizeAnExport',4))) {
+ if (@($passed | Where-Object { $_ -like ('MazdaLink.Tests.Zyj2IntegrityTests.'+$case[0]+'(*)') }).Count -ne $case[1]) { throw 'ZYJ2 checksum/preparation matrix incomplete.' }
+}

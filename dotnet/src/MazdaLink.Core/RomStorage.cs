@@ -32,9 +32,10 @@ public static class RomStorage
     public static byte[] LoadEditorBackup(string path)
     {
         var backup = LoadVerifiedBackup(path);
-        if (backup.ReportedCalibration != TargetPolicy.SoftwareId)
-            throw new InvalidDataException($"Checksum preparation/validation is not established for {backup.ReportedCalibration}. Raw read/export is available; the known checksum policy is only for {TargetPolicy.SoftwareId}.");
-        TargetPolicy.RequireSoftware(backup.Data);
+        string embedded = RomIntegrity.Software(backup.Data);
+        if (backup.ReportedCalibration != embedded)
+            throw new InvalidDataException("Reported backup identity does not match the embedded checksum profile.");
+        RomIntegrity.RequireLayout(backup.Data);
         return backup.Data;
     }
     public static VerifiedRawBackup LoadVerifiedBackup(string path)
@@ -69,24 +70,25 @@ public static class RomEditor
     {
         return ValidateBytes(RomStorage.LoadEditorBackup(originalBackup), File.ReadAllBytes(modified), requireChecksums);
     }
-    private static Zy87RegionChanges ValidateBytes(byte[] original, byte[] edited, bool requireChecksums)
+    internal static Zy87RegionChanges ValidateBytes(byte[] original, byte[] edited, bool requireChecksums)
     {
-        Zy87Integrity.RequireLayout(original); Zy87Integrity.RequireLayout(edited);
-        if (Zy87Integrity.Check(original).Any(x => !x.Valid)) throw new InvalidDataException("The original backup fails checksum verification.");
-        var changes = Zy87Integrity.Compare(original, edited);
+        RomIntegrity.RequireLayout(original); RomIntegrity.RequireLayout(edited);
+        if (RomIntegrity.Software(original) != RomIntegrity.Software(edited)) throw new InvalidDataException("Original and edited software profiles must match.");
+        if (RomIntegrity.Check(original).Any(x => !x.Valid)) throw new InvalidDataException("The original backup fails checksum verification.");
+        var changes = RomIntegrity.Compare(original, edited);
         if (changes.Boot != 0 || changes.Program != 0 || changes.Other != 0)
             throw new InvalidDataException("Only changes inside the established calibration region are accepted. Boot, program, identity and other bytes must remain unchanged.");
-        if (requireChecksums && Zy87Integrity.Check(edited).Any(x => !x.Valid)) throw new InvalidDataException("The modified ROM has invalid checksums. Use Prepare modified ROM first.");
+        if (requireChecksums && RomIntegrity.Check(edited).Any(x => !x.Valid)) throw new InvalidDataException("The modified ROM has invalid checksums. Use Prepare modified ROM first.");
         return changes;
     }
     public static void SaveNew(string originalBackup, string modified, string output)
     {
         byte[] original = RomStorage.LoadEditorBackup(originalBackup), edited = File.ReadAllBytes(modified);
         ValidateBytes(original, edited, requireChecksums: false);
-        byte[] prepared = Zy87Integrity.Correct(edited);
+        byte[] prepared = RomIntegrity.Correct(edited);
         RomStorage.SaveNew(output, prepared, bytes =>
         {
-            if (Zy87Integrity.Check(bytes).Any(x => !x.Valid)) throw new InvalidDataException("Prepared ROM failed checksum verification.");
+            if (RomIntegrity.Check(bytes).Any(x => !x.Valid)) throw new InvalidDataException("Prepared ROM failed checksum verification.");
         });
     }
 }

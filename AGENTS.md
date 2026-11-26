@@ -8,7 +8,10 @@
   calibration, recheck it before unlock, and retain its actual value in backup metadata.
   Do not impose ZY87 header/checksum-layout assumptions on raw captures.
 - Checksum preparation/validation remains limited to independently established policies:
-  currently only `ZY87EC000ZYV5050`. Never relabel an unknown backup or apply a known
+  currently `ZY87EC000ZYV5050` and independently traced `ZYJ2EA000ZYV5050`.
+  The ZYJ2 editor permits data changes only in C0100..DFFFF and recalculates all
+  19 correction words; retain its entire initial 256-byte header. The offline
+  modified-ROM report has no native capability. EB15 writing remains unavailable. Never relabel an unknown backup or apply a known
   correction policy merely because read procedures or software suffixes look similar.
 - Keep the fixed bounded raw-read protocol, engine-stopped gate and matching dual reads.
   No automatic protocol probing, key retry or write/reset override is permitted.
@@ -149,6 +152,10 @@
 - The supplied alpha.15 hardware evidence passed uninterrupted original EB14
   restoration on one spare, including callback/timer observations, 1024 units,
   both exact full reads, monitor and normal restart. Do not generalize that pass.
+- The supplied alpha.16 evidence passed controlled cold recovery from the completed
+  unit-zero boundary on that same spare: exact partial image with erased calibration
+  ID, fresh pre-erase full check, full original restoration, both exact final reads
+  and normal restart. Active-operation physical power loss remains unqualified.
 - Controlled recovery requires the complete passed alpha.15 run folder and both
   original-matching captures plus the full validated journal. Prepare only unit 0;
   verify the exact complete partial image with the calibration ID erased, checked
