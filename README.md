@@ -4,7 +4,7 @@ A Windows terminal application for Mazda 2 DE raw ECU backups and verified ROM-c
 
 **Raw reads have no calibration whitelist.** A reported ID such as `ZYJ2EA000ZYV5050` no longer fails merely because it differs from ZY87. MazdaLink attempts its existing fixed read-only protocol (CAN 500 kbit/s, 7E0/7E8, session 10 03, security 27 03/04, read 23 24, 512-byte blocks, 1 MiB image). Compatibility is not established for every ECU: it stops if the ECU refuses the procedure, a reply is malformed, or the two reads differ. It does not probe other protocols or retry security keys.
 
-**Checksum preparation/validation still supports only `ZY87EC000ZYV5050`.** Reading compatibility or a matching `ZYV5050` suffix does not establish another calibration's checksum or flash procedure.
+**Checksum preparation/validation supports exact profiles `ZY87EC000ZYV5050` and `ZYJ2EA000ZYV5050`.** ZYJ2 data edits are restricted to C0100..DFFFF, preserving its header and identity; all 19 checksums are recalculated. Menu 21 reports the EB14/EB15 differences offline. EB15 writing and modified flashing remain unavailable. See [ZYJ2 checksum preparation](docs/ZYJ2_CHECKSUM_PREPARATION.md). Reading compatibility or a matching `ZYV5050` suffix does not establish another calibration's checksum or flash procedure.
 
 [![Checks](https://github.com/brxndon19/MazdaLink/actions/workflows/checks-dotnet.yml/badge.svg)](https://github.com/brxndon19/MazdaLink/actions/workflows/checks-dotnet.yml)
 

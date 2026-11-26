@@ -11,7 +11,7 @@ public sealed class Terminal(Func<IReadTransport> connect, TextReader input, Tex
     public const string Help = """
 MazdaLink — Mazda 2 DE / ZY-VE
 Raw reads: no fixed calibration whitelist (including ZYJ2EA000ZYV5050).
-Checksum preparation: ZY87EC000ZYV5050 only; other checksum layouts remain unverified.
+Checksum preparation: ZY87EC000ZYV5050 and ZYJ2EA000ZYV5050 only.
 Adapter: Mongoose-Plus ISO/CAN3, manufacturer's 32-bit J2534 04.04 driver
 
 Commands:
@@ -21,9 +21,9 @@ Commands:
   export <original.rom> <new.rom>
                               Export an exact copy of a complete MazdaLink backup.
   prepare <original.rom> <edited.rom> <new.rom>
-                              ZY87 only: prepare calibration-only edits and verify all 19 checksums.
+                              Exact supported profile: prepare calibration-only edits and verify all 19 checksums.
   validate <original.rom> <edited.rom>
-                              ZY87 only: check permitted changes and all 19 checksums.
+                              Exact supported profile: check permitted changes and all 19 checksums.
   bench-recovery-check <original.rom>
                               ZYJ2 spare only: identify its boot monitor and check normal restart.
                               Requires a complete MazdaLink backup and a detached bench ECU.
@@ -65,6 +65,8 @@ Commands:
   controlled-recovery-resume <original.rom> <alpha15-run-folder> <boundary-run-folder>
                               Recover only from a validated completed-unit-zero receipt.
                               RESUME BOUNDARY ZYJ2. No active-operation power interruption test.
+  modified-rom-plan <original.rom> <prepared.rom>
+                              Offline ZYJ2 EB14/EB15 difference report; no hardware or flashing.
   flash                       Unavailable: Mazda 2 write/recovery protocol is unverified.
   status                      Show read policy, checksum support, storage and programming status.
   license                     Show licence and attribution information.
@@ -87,10 +89,10 @@ Bench logs include adapter status and measured timing, without frame payloads.
     {
         if (args.Length > 0) return Execute(args, cancel);
         output.WriteLine("MazdaLink — Mazda 2 DE");
-        output.WriteLine($"Raw reads: no fixed calibration whitelist. Checksum preparation: {TargetPolicy.SoftwareId} only.\nStorage: {Path.GetFullPath(dataRoot)}\nFlashing: unavailable — write/recovery procedure is unverified.");
+        output.WriteLine($"Raw reads: no fixed calibration whitelist. Checksum preparation: {RomIntegrity.Supported}.\nStorage: {Path.GetFullPath(dataRoot)}\nFlashing: unavailable — write/recovery procedure is unverified.");
         while (!cancel.IsCancellationRequested)
         {
-            output.WriteLine("\n1  Identify ECU\n2  Read ECU and save backup\n3  Export backup as .rom\n4  Prepare an externally edited ROM\n5  Validate modified ROM\n6  Flash ROM back — unavailable\n7  Help\n8  Licence / credits\n9  ZYJ2 spare: bench monitor identification check\n10 ZYJ2 spare: fixed volatile RAM self-test — experimental\n11 ZYJ2 spare: protected flash-algorithm initialization — experimental\n12 ZYJ2 detached spare: read-only recovery boot binding — experimental\n13 ZYJ2 detached spare: write-enable control and restoration — experimental\n14 ZYJ2 detached spare: recovery kernel rehearsal — experimental\n15 Original-backup restore plan — offline only\n16 ZYJ2 detached spare: native full-ROM read and RAM staging — experimental\n17 ZYJ2 detached spare: ERASE / RESTORE ORIGINAL EB14 — unqualified\n18 ZYJ2 detached spare: original recovery attempt — unqualified\n19 ZYJ2 detached spare: controlled unit-zero boundary / cold recovery\n20 ZYJ2 detached spare: resume validated boundary recovery\n0  Exit");
+            output.WriteLine("\n1  Identify ECU\n2  Read ECU and save backup\n3  Export backup as .rom\n4  Prepare an externally edited ROM\n5  Validate modified ROM\n6  Flash ROM back — unavailable\n7  Help\n8  Licence / credits\n9  ZYJ2 spare: bench monitor identification check\n10 ZYJ2 spare: fixed volatile RAM self-test — experimental\n11 ZYJ2 spare: protected flash-algorithm initialization — experimental\n12 ZYJ2 detached spare: read-only recovery boot binding — experimental\n13 ZYJ2 detached spare: write-enable control and restoration — experimental\n14 ZYJ2 detached spare: recovery kernel rehearsal — experimental\n15 Original-backup restore plan — offline only\n16 ZYJ2 detached spare: native full-ROM read and RAM staging — experimental\n17 ZYJ2 detached spare: ERASE / RESTORE ORIGINAL EB14 — unqualified\n18 ZYJ2 detached spare: original recovery attempt — unqualified\n19 ZYJ2 detached spare: controlled unit-zero boundary / cold recovery\n20 ZYJ2 detached spare: resume validated boundary recovery\n21 ZYJ2 modified-ROM block report — offline only\n0  Exit");
             output.Write("> ");
             string? choice = input.ReadLine()?.Trim();
             if (choice is null or "0") return 0;
@@ -117,6 +119,7 @@ Bench logs include adapter status and measured timing, without frame payloads.
                 case "18": command=["original-restore-recover",Ask("ZYJ2 spare backup original.rom"),Ask("Completed alpha.14 native-transaction events.jsonl")]; break;
                 case "19": command=["controlled-recovery-check",Ask("ZYJ2 spare backup original.rom"),Ask("Completed alpha.15 original-restore-tests run folder")]; break;
                 case "20": command=["controlled-recovery-resume",Ask("ZYJ2 spare backup original.rom"),Ask("Completed alpha.15 original-restore-tests run folder"),Ask("Controlled boundary run folder containing boundary.json")]; break;
+                case "21": command=["modified-rom-plan",Ask("ZYJ2 backup original.rom"),Ask("Prepared modified .rom")]; break;
                 default: output.WriteLine("Choose a listed number."); continue;
             }
             Execute(command, cancel); // Each hardware action creates/disposes a fresh connection; never retries.
@@ -137,7 +140,7 @@ Bench logs include adapter status and measured timing, without frame payloads.
             }
             if (args.Length == 1 && args[0] == "status")
             {
-                output.WriteLine($"MazdaLink\nRead identity policy: reported calibration; no whitelist\nChecksum preparation: {TargetPolicy.SoftwareId} only\nROM: 1 MiB\nRead block: 512 bytes\nProcess: {IntPtr.Size * 8}-bit\nRuntime: {Environment.Version}\nFlashing: unavailable for modified ROMs\nOriginal EB14 restoration: detached-spare qualification only; recovery unproved\nProtected initialization: ZYJ2 SH7058S spare only; experimental, no erase or programming\nRecovery boot binding: detached ZYJ2 spare only; read-only and experimental\nOther-vehicle workflows: absent\nStorage: {Path.GetFullPath(dataRoot)}"); return 0;
+                output.WriteLine($"MazdaLink\nRead identity policy: reported calibration; no whitelist\nChecksum preparation: {RomIntegrity.Supported}\nROM: 1 MiB\nRead block: 512 bytes\nProcess: {IntPtr.Size * 8}-bit\nRuntime: {Environment.Version}\nFlashing: unavailable for modified ROMs\nOriginal EB14 restoration: detached-spare only; completed-boundary cold recovery observed on one spare; active-operation power loss unqualified\nProtected initialization: ZYJ2 SH7058S spare only; experimental, no erase or programming\nRecovery boot binding: detached ZYJ2 spare only; read-only and experimental\nOther-vehicle workflows: absent\nStorage: {Path.GetFullPath(dataRoot)}"); return 0;
             }
             if (args.Length > 0 && args[0] == "flash")
                 throw new InvalidDataException("Flashing is unavailable. This ECU's erase/write/recovery procedure has not been verified. No adapter was opened and no ECU command was sent.");
@@ -174,6 +177,11 @@ Bench logs include adapter status and measured timing, without frame payloads.
             {
                 if(transactionTrial is null)throw new TransportException("Native transaction trial backend unavailable. No adapter was opened.");
                 new TransactionTrialTerminal(connect,transactionTrial,input,output,dataRoot).Run(args[1],cancel);return 0;
+            }
+            if(args.Length==3 && args[0]=="modified-rom-plan")
+            {
+                output.WriteLine(System.Text.Json.JsonSerializer.Serialize(ModifiedRomPlan.Create(args[1],args[2]),new System.Text.Json.JsonSerializerOptions { WriteIndented=true }));
+                return 0;
             }
             if(args.Length==2 && args[0]=="original-restore-plan")
             {

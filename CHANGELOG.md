@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.0-alpha.17
+
+- Add independently traced ZYJ2EA000ZYV5050 checksum preparation and validation to menus 4/5. Restrict ZYJ2 data edits to C0100..DFFFF, retain its complete header and identity, and recalculate/verify all 19 correction words and durable output.
+- Add menu 21 / modified-rom-plan for an offline EB14/EB15 difference inventory. The calibration correction word is in EB15; no EB15 writer or modified flashing capability is enabled.
+- Retain the passing alpha.16 completed-boundary cold-recovery result on one spare without claiming active-operation power-loss recovery or good-ECU qualification. Embedded firmware and destructive capabilities are unchanged.
+
 ## 0.9.0-alpha.16
 
 - Add menu 19: controlled completed-unit-zero stop and paired cold recovery, gated by the completed alpha.15 restoration folder, both exact captures and its complete journal. Prepare exactly one original unit with an erased calibration ID; verify the full partial image, checked finish and monitor before prompting for ECU-only power cycling. This never interrupts an active chip operation.
