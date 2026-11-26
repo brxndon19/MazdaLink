@@ -67,6 +67,13 @@ Commands:
                               RESUME BOUNDARY ZYJ2. No active-operation power interruption test.
   modified-rom-plan <original.rom> <prepared.rom>
                               Offline ZYJ2 EB14/EB15 difference report; no hardware or flashing.
+  eb15-original-restore-check <original.rom> <alpha16-run-folder>
+                              Detached ZYJ2 spare: ORIGINAL-only EB15 erase/write qualification.
+                              RESTORE EB15 ORIGINAL ZYJ2. No intentional power interruption.
+  eb15-original-restore-recover <original.rom> <alpha16-run-folder>
+                              Unqualified original-only EB15 recovery: fresh cold binding,
+                              exact preserved bytes and whole EB15 re-erase; no app/RPM preflight.
+                              RECOVER EB15 ORIGINAL ZYJ2. No modified image or unit resume.
   flash                       Unavailable: Mazda 2 write/recovery protocol is unverified.
   status                      Show read policy, checksum support, storage and programming status.
   license                     Show licence and attribution information.
@@ -76,7 +83,7 @@ Use read with ignition ON and engine OFF. Keep the entire backup folder.
 Modified ROMs must be edited externally. A checksum pass does not establish tuning safety.
 Raw reading uses one bounded read-only protocol; matching backups do not prove checksum or flashing compatibility.
 Generic flashing, external code/address overrides and ECU reset remain unavailable.
-The separate original-only qualification workflow can erase and program EB14 on the detached spare.
+Separate original-only qualification workflows can erase/program EB14 or EB15 on the detached spare, each with its own fixed kernel.
 The ZYJ2 bench check sends only fixed monitor-entry and identification messages.
 The separate RAM self-test accepts no external kernel, address or executable.
 It does not qualify recovery after interrupted flashing or enable a flash kernel.
@@ -92,7 +99,7 @@ Bench logs include adapter status and measured timing, without frame payloads.
         output.WriteLine($"Raw reads: no fixed calibration whitelist. Checksum preparation: {RomIntegrity.Supported}.\nStorage: {Path.GetFullPath(dataRoot)}\nFlashing: unavailable — write/recovery procedure is unverified.");
         while (!cancel.IsCancellationRequested)
         {
-            output.WriteLine("\n1  Identify ECU\n2  Read ECU and save backup\n3  Export backup as .rom\n4  Prepare an externally edited ROM\n5  Validate modified ROM\n6  Flash ROM back — unavailable\n7  Help\n8  Licence / credits\n9  ZYJ2 spare: bench monitor identification check\n10 ZYJ2 spare: fixed volatile RAM self-test — experimental\n11 ZYJ2 spare: protected flash-algorithm initialization — experimental\n12 ZYJ2 detached spare: read-only recovery boot binding — experimental\n13 ZYJ2 detached spare: write-enable control and restoration — experimental\n14 ZYJ2 detached spare: recovery kernel rehearsal — experimental\n15 Original-backup restore plan — offline only\n16 ZYJ2 detached spare: native full-ROM read and RAM staging — experimental\n17 ZYJ2 detached spare: ERASE / RESTORE ORIGINAL EB14 — unqualified\n18 ZYJ2 detached spare: original recovery attempt — unqualified\n19 ZYJ2 detached spare: controlled unit-zero boundary / cold recovery\n20 ZYJ2 detached spare: resume validated boundary recovery\n21 ZYJ2 modified-ROM block report — offline only\n0  Exit");
+            output.WriteLine("\n1  Identify ECU\n2  Read ECU and save backup\n3  Export backup as .rom\n4  Prepare an externally edited ROM\n5  Validate modified ROM\n6  Flash ROM back — unavailable\n7  Help\n8  Licence / credits\n9  ZYJ2 spare: bench monitor identification check\n10 ZYJ2 spare: fixed volatile RAM self-test — experimental\n11 ZYJ2 spare: protected flash-algorithm initialization — experimental\n12 ZYJ2 detached spare: read-only recovery boot binding — experimental\n13 ZYJ2 detached spare: write-enable control and restoration — experimental\n14 ZYJ2 detached spare: recovery kernel rehearsal — experimental\n15 Original-backup restore plan — offline only\n16 ZYJ2 detached spare: native full-ROM read and RAM staging — experimental\n17 ZYJ2 detached spare: ERASE / RESTORE ORIGINAL EB14 — unqualified\n18 ZYJ2 detached spare: original recovery attempt — unqualified\n19 ZYJ2 detached spare: controlled unit-zero boundary / cold recovery\n20 ZYJ2 detached spare: resume validated boundary recovery\n21 ZYJ2 modified-ROM block report — offline only\n22 ZYJ2 detached spare: ERASE / RESTORE ORIGINAL EB15 — unqualified\n23 ZYJ2 detached spare: original EB15 recovery attempt — unqualified\n0  Exit");
             output.Write("> ");
             string? choice = input.ReadLine()?.Trim();
             if (choice is null or "0") return 0;
@@ -120,6 +127,8 @@ Bench logs include adapter status and measured timing, without frame payloads.
                 case "19": command=["controlled-recovery-check",Ask("ZYJ2 spare backup original.rom"),Ask("Completed alpha.15 original-restore-tests run folder")]; break;
                 case "20": command=["controlled-recovery-resume",Ask("ZYJ2 spare backup original.rom"),Ask("Completed alpha.15 original-restore-tests run folder"),Ask("Controlled boundary run folder containing boundary.json")]; break;
                 case "21": command=["modified-rom-plan",Ask("ZYJ2 backup original.rom"),Ask("Prepared modified .rom")]; break;
+                case "22": command=["eb15-original-restore-check",Ask("ZYJ2 backup original.rom"),Ask("Completed alpha.16 controlled-recovery run folder")]; break;
+                case "23": command=["eb15-original-restore-recover",Ask("ZYJ2 backup original.rom"),Ask("Completed alpha.16 controlled-recovery run folder")]; break;
                 default: output.WriteLine("Choose a listed number."); continue;
             }
             Execute(command, cancel); // Each hardware action creates/disposes a fresh connection; never retries.
@@ -140,7 +149,7 @@ Bench logs include adapter status and measured timing, without frame payloads.
             }
             if (args.Length == 1 && args[0] == "status")
             {
-                output.WriteLine($"MazdaLink\nRead identity policy: reported calibration; no whitelist\nChecksum preparation: {RomIntegrity.Supported}\nROM: 1 MiB\nRead block: 512 bytes\nProcess: {IntPtr.Size * 8}-bit\nRuntime: {Environment.Version}\nFlashing: unavailable for modified ROMs\nOriginal EB14 restoration: detached-spare only; completed-boundary cold recovery observed on one spare; active-operation power loss unqualified\nProtected initialization: ZYJ2 SH7058S spare only; experimental, no erase or programming\nRecovery boot binding: detached ZYJ2 spare only; read-only and experimental\nOther-vehicle workflows: absent\nStorage: {Path.GetFullPath(dataRoot)}"); return 0;
+                output.WriteLine($"MazdaLink\nRead identity policy: reported calibration; no whitelist\nChecksum preparation: {RomIntegrity.Supported}\nROM: 1 MiB\nRead block: 512 bytes\nProcess: {IntPtr.Size * 8}-bit\nRuntime: {Environment.Version}\nFlashing: unavailable for modified ROMs\nOriginal EB14 restoration: detached-spare only; completed-boundary cold recovery observed on one spare; active-operation power loss unqualified\nOriginal EB15 restoration: detached-spare original-only qualification; cold/active recovery unqualified\nProtected initialization: ZYJ2 SH7058S spare only; experimental, no erase or programming\nRecovery boot binding: detached ZYJ2 spare only; read-only and experimental\nOther-vehicle workflows: absent\nStorage: {Path.GetFullPath(dataRoot)}"); return 0;
             }
             if (args.Length > 0 && args[0] == "flash")
                 throw new InvalidDataException("Flashing is unavailable. This ECU's erase/write/recovery procedure has not been verified. No adapter was opened and no ECU command was sent.");
@@ -167,6 +176,11 @@ Bench logs include adapter status and measured timing, without frame payloads.
             {
                 if(originalRestore is null)throw new TransportException("Separate controlled recovery backend unavailable. No adapter was opened.");
                 new ControlledRecoveryTerminal(connect,originalRestore,input,output,dataRoot).Run(args[1],args[2],args.Length==4?args[3]:null,cancel);return 0;
+            }
+            if(args.Length==3 && args[0] is "eb15-original-restore-check" or "eb15-original-restore-recover")
+            {
+                if(originalRestore is null)throw new TransportException("Separate EB15 qualification backend unavailable. No adapter was opened.");
+                new RestoreQualificationTerminal(connect,originalRestore,input,output,dataRoot).RunEb15(args[1],args[2],args[0]=="eb15-original-restore-recover",cancel);return 0;
             }
             if(args.Length==3 && args[0] is "original-restore-check" or "original-restore-recover")
             {

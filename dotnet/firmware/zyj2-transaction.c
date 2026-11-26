@@ -10,6 +10,17 @@ typedef unsigned int u32;
 #ifndef ENABLE_FLASH
 #define ENABLE_FLASH 0
 #endif
+/* Compile-time scope only. A descriptor can never choose another block. */
+#ifndef RESTORE_BLOCK
+#define RESTORE_BLOCK 14
+#endif
+#if RESTORE_BLOCK != 14 && RESTORE_BLOCK != 15
+#error Unsupported fixed original-restoration block
+#endif
+#if RESTORE_BLOCK == 15 && !ENABLE_FLASH
+#error EB15 is a separate destructive qualification image only
+#endif
+#define RESTORE_START (0xc0000U + (RESTORE_BLOCK-14U)*0x20000U)
 #define B(a) (*(volatile u8 *)(a))
 #define W(a) (*(volatile u16 *)(a))
 #define L(a) (*(volatile u32 *)(a))
@@ -142,17 +153,17 @@ static u32 operation(u32 op,u32 index,u32 expected_crc) {
  if(error) { disable();return error; }
  if(S->faults || S->service_error) { disable();return 17; }
  S->busy=1;B(F+4)=0x5a;
- if(op==ERASE)r=((u32 (*)(u32))0xffff2010U)(14);
- else r=((u32 (*)(u32,u32))0xffff1010U)((u32)BUFFER,0xc0000U+unit_offset(index));
+ if(op==ERASE)r=((u32 (*)(u32))0xffff2010U)(RESTORE_BLOCK);
+ else r=((u32 (*)(u32,u32))0xffff1010U)((u32)BUFFER,RESTORE_START+unit_offset(index));
  /* Only after the silicon routine returns may protection/FWE change. */
  S->fpfr=r;B(F+4)=0;S->busy=0;error=disable();
  if(r || error || S->faults || S->service_error)return error?error:17;
  if(op==ERASE) {
-  for(i=0;i<0x20000U;i++) { if(B(0xc0000U+i)!=255)return 18;if(!(i&127))transaction_service(); }
+  for(i=0;i<0x20000U;i++) { if(B(RESTORE_START+i)!=255)return 18;if(!(i&127))transaction_service(); }
   if(!BUSY_CALLS || !BUSY_SERVICES)return 25;
   S->erased=1;S->generation++;S->next_unit=0;
  } else {
-  for(i=0;i<128;i++)if(B(0xc0000U+unit_offset(index)+i)!=BUFFER[i])return 19;
+  for(i=0;i<128;i++)if(B(RESTORE_START+unit_offset(index)+i)!=BUFFER[i])return 19;
   S->next_unit++;
  }
  if(S->service_error)return 20;
@@ -181,8 +192,8 @@ void transaction_main(void) {
    data=BUFFER;length=128;if(crc32(data,length)!=wanted) {status=16;length=0;}
   } else if(op==END && !index && !wanted) { if(!cleanup())status=11;else S->magic=0; }
 #if ENABLE_FLASH
-  else if(op==0x13U && index<1024 && !wanted) { data=(const volatile u8 *)(0xc0000U+unit_offset(index));length=128; }
-  else if(op==ERASE && index==14 && !wanted)status=operation(op,0,0);
+  else if(op==0x13U && index<1024 && !wanted) { data=(const volatile u8 *)(RESTORE_START+unit_offset(index));length=128; }
+  else if(op==ERASE && index==RESTORE_BLOCK && !wanted)status=operation(op,0,0);
   else if(op==PROGRAM && index<1024)status=operation(op,index,wanted);
 #endif
   else status=24;

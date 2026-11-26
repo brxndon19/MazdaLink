@@ -12,7 +12,8 @@ MASK=0xffffffff; BASE=0xffff8000; F=0xffffe800; STATE=0xffffa0c0
 
 def sx(v,b):return (v-(1<<b) if v&(1<<(b-1)) else v)&MASK
 class Machine:
- def __init__(self,image,symbols,full=False):
+ def __init__(self,image,symbols,full=False,block=14):
+  assert block in (14,15);self.block=block;self.start=0xc0000+(block-14)*0x20000
   self.code=image;self.symbols=symbols;self.full=full
   self.mem=dict(enumerate(image,BASE));self.rom=bytearray((i*11+7)&255 for i in range(0x100000))
   self.rom[0x6200:0x6204]=b'ZYC3';self.rom[0x7000:0x7004]=bytes.fromhex('0001fffe')
@@ -87,11 +88,11 @@ class Machine:
     self.pc=returnpc
    self.busy=False
    if target==0xffff2010:
-    assert self.r[4]==14;self.rom[0xc0000:0xe0000]=b'\xff'*0x20000;self.operations.append(('erase',14))
-    if self.fault.get('erase_corrupt'):self.rom[0xdffff]=0
+    assert self.r[4]==self.block;self.rom[self.start:self.start+0x20000]=b'\xff'*0x20000;self.operations.append(('erase',self.block))
+    if self.fault.get('erase_corrupt'):self.rom[self.start+0x1ffff]=0
    else:
-    assert self.r[4]==0xffffa000;address=self.r[5];assert 0xc0000<=address<=0xdff80 and address%128==0
-    assert ('program',address) not in self.operations[self.operations.index(('erase',14))+1:],'Duplicate programming in erase generation'
+    assert self.r[4]==0xffffa000;address=self.r[5];assert self.start<=address<=self.start+0x1ff80 and address%128==0
+    assert ('program',address) not in self.operations[self.operations.index(('erase',self.block))+1:],'Duplicate programming in erase generation'
     data=bytes(self.read(0xffffa000+i) for i in range(128))
     for i,b in enumerate(data):self.rom[address+i]&=b
     if self.fault.get('readback'):self.rom[address]^=1
@@ -211,6 +212,9 @@ def main():
  text=(builder.ROOT/'src/MazdaLink.Core/OriginalRestoreKernel.cs').read_text()
  embedded_full=bytes.fromhex(re.search(r'Convert.FromHexString\(\"([0-9A-F]+)\"\)',text)[1])
  assert embedded_full==builds[1][0] and hashlib.sha256(embedded_full).hexdigest() in text
+ text=(builder.ROOT/'src/MazdaLink.Core/Eb15OriginalRestoreKernel.cs').read_text()
+ eb15=bytes.fromhex(re.search(r'Convert.FromHexString\("([0-9A-F]+)"\)',text)[1])
+ assert eb15==builds[2][0] and hashlib.sha256(eb15).hexdigest() in text
  cases=0
  for full in (False,True):
   image,symbols=builds[int(full)];m=Machine(image,symbols,full)
@@ -270,5 +274,32 @@ def main():
  m=Machine(*builds[1],True);assert m.command(0,1)[0]==0;m.write(STATE+32,1,4);m.mem[STATE+41]=255;m.cycles+=300000
  saved=m.r[8:].copy();m.pc=m.symbols['transaction_flash_service'];m.pr=0xfffffff0;m.run(0xfffffff0,10000)
  assert m.r[8:]==saved and m.read(STATE+41)==0 and m.read(0xffffa110,4)==m.read(0xffffa114,4)==1;cases+=1
- print(f'PASS: {cases} synthetic SH-2 transaction cases; both exact binaries, ordered CRC32 streams, fixed EB14 operations, RAM-only busy callback, full FPFR, taint and cleanup. Offline silicon ABI model; no hardware qualification.')
+ # Independent ABI scope checks for the separately compiled EB15 image.
+ for fault in ({'class':2},{'dpfr':1},{'init_result':0x100}):
+  m=Machine(*builds[2],True,15);m.fault=fault;assert m.command(0,1)[0]!=0 and not m.operations;cases+=1
+ m=Machine(*builds[2],True,15);assert m.command(0,1)[:4]==(0,0,1,0);cases+=1
+ assert m.command(0x21,2,14)[0]==24 and not m.operations;cases+=1
+ m=Machine(*builds[2],True,15);assert m.command(0,1)[0]==0
+ assert m.command(0x22,2,0,m.original[0xe0000:0xe0080])[0]==15 and not m.operations;cases+=1
+ m=Machine(*builds[2],True,15);assert m.command(0,1)[0]==0
+ assert m.command(0x21,2,15)[:4]==(0,0,99,0);cases+=1
+ assert m.rom[:0xe0000]==m.original[:0xe0000] and m.rom[0xe0000:]==b'\xff'*0x20000;cases+=1
+ seq=3
+ for unit in (0,1,1005,1023):
+  if unit>1:m.write(STATE+12,unit,4) # Isolate high unit address arithmetic; host tests cover all ordered units.
+  data=m.original[0xe0000+unit*128:0xe0080+unit*128]
+  assert m.command(0x22,seq,unit,data)[:4]==(0,0,99,unit+1);seq+=1
+  assert m.operations[-1]==('program',0xe0000+unit*128);cases+=1
+  assert m.command(0x13,seq,unit)[4]==data;seq+=1;cases+=1
+  assert m.rom[:0xe0000]==m.original[:0xe0000];cases+=1
+ assert m.rom[0xfff80:]==m.original[0xfff80:];cases+=1
+ assert m.command(0x7f,seq)[:4]==(0,0,99,1024) and m.read(F)==0 and m.io[F+4]==0;cases+=1
+ for fault in ({'operation_result':0x100},{'readback':True},{'nmi':True},{'pin_stuck':True},{'timer_changes':True}):
+  m=Machine(*builds[2],True,15);assert m.command(0,1)[0]==0;assert m.command(0x21,2,15)[0]==0;m.fault=fault
+  assert m.command(0x22,3,0,m.original[0xe0000:0xe0080])[0]!=0 and m.read(F)==0 and m.io[F+4]==0
+  n=len(m.operations);m.fault={};assert m.command(0x22,3,0,m.original[0xe0000:0xe0080])[0]!=0 and len(m.operations)==n;cases+=1
+ for fault in ({'erase_corrupt':True},{'no_callback':True}):
+  m=Machine(*builds[2],True,15);assert m.command(0,1)[0]==0;m.fault=fault
+  assert m.command(0x21,2,15)[0]!=0 and m.read(F)==0 and m.io[F+4]==0;cases+=1
+ print(f'PASS: {cases} synthetic SH-2 transaction cases; three exact binaries, ordered CRC32 streams, separate fixed EB14/EB15 operations, RAM-only busy callback, full FPFR, taint and cleanup. Offline silicon ABI model; no hardware qualification.')
 if __name__=='__main__':main()

@@ -22,7 +22,7 @@ public sealed class RestoreQualificationGate
         {
             if(failed||pending is not null||index!=next||index<0||index>=plan.Count)throw new TransportException("Original restore sequence/reply gate failed. No retry is permitted.");
             var step=plan[index];
-            if(index>=plan.InstallationEnd && (boot!=28928||kernel!=OriginalRestoreKernel.ImageLength||state!=48))throw new TransportException("Every boot, kernel and state byte must be verified first.");
+            if(index>=plan.InstallationEnd && (boot!=28928||kernel!=plan.KernelBytes||state!=48))throw new TransportException("Every boot, kernel and state byte must be verified first.");
             if(step.Command is not null && !ReferenceEquals(current,step.Command)){current=step.Command;commandBytes=0;stagingBytes=0;}
             if(step.Kind==TransactionReplyKind.Command)
             {

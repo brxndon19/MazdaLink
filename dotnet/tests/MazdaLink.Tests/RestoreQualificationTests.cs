@@ -127,20 +127,20 @@ public sealed class RestoreQualificationTests
     }
     internal sealed class Peer:IOriginalRestoreChannel
     {
-        private readonly RestoreQualificationPlan plan;private readonly MemoryJournal journal;private readonly Queue<RecoveryFrame> frames=[];private readonly byte[] kernel=OriginalRestoreKernel.Image;
-        public readonly RestoreQualificationGate Gate;public readonly byte[] Bytes;public int Next,Erases,Programs,Cut=-2;public bool CorruptUnit,FailEraseFpfr;
-        public Peer(RestoreQualificationPlan plan,MemoryJournal journal,byte[]? initial=null){this.plan=plan;this.journal=journal;Gate=new(plan,journal);Bytes=initial?.ToArray()??Image();}
+        private readonly RestoreQualificationPlan plan;private readonly MemoryJournal journal;private readonly Queue<RecoveryFrame> frames=[];private readonly byte[] kernel;
+        public readonly RestoreQualificationGate Gate;public readonly byte[] Bytes;public int Next,Erases,Programs,Cut=-2,CorruptBlankAddress=-1;public bool CorruptUnit,FailEraseFpfr;
+        public Peer(RestoreQualificationPlan plan,MemoryJournal journal,byte[]? initial=null){this.plan=plan;this.journal=journal;kernel=plan.KernelImage;Gate=new(plan,journal);Bytes=initial?.ToArray()??Image();}
         public void SendRestoreStep(int index,CancellationToken cancel=default)
         {
             cancel.ThrowIfCancellationRequested();Assert.Empty(frames);Assert.Equal(Next++,index);var step=Gate.Begin(index);var cmd=step.Command;
             if(step.Kind==TransactionReplyKind.Command)
             {
                 var entry=plan.CommandFor(index)!;byte[] data=[];
-                if(cmd!.Opcode==TransactionOpcode.Erase){Assert.Equal(("erase-intent",-1),journal.Entries.Last());Erases++;Bytes.AsSpan(0xC0000,0x20000).Fill(255);}
-                if(cmd.Opcode==TransactionOpcode.Program){Assert.Equal(("unit-intent",(int)cmd.Index),journal.Entries.Last());Programs++;cmd.Staging!.CopyTo(Bytes,0xC0000+cmd.Index*128);}
+                if(cmd!.Opcode==TransactionOpcode.Erase){Assert.Equal(("erase-intent",-1),journal.Entries.Last());Erases++;Bytes.AsSpan(plan.Original.SelectedStart,0x20000).Fill(255);if(CorruptBlankAddress>=0)Bytes[CorruptBlankAddress]=0;}
+                if(cmd.Opcode==TransactionOpcode.Program){Assert.Equal(("unit-intent",(int)cmd.Index),journal.Entries.Last());Programs++;cmd.Staging!.CopyTo(Bytes,plan.Original.SelectedStart+cmd.Index*128);}
                 if((cmd.Opcode==TransactionOpcode.Erase&&Cut==-1)||(cmd.Opcode==TransactionOpcode.Program&&Cut==cmd.Index)){Gate.Fail();throw new TransportException("Simulated missing completion after effect.");}
                 if(cmd.Opcode==TransactionOpcode.ReadBlock)data=Bytes.AsSpan(cmd.Index*512,512).ToArray();
-                if(cmd.Opcode==TransactionOpcode.VerifyOriginalUnit){data=Bytes.AsSpan(0xC0000+cmd.Index*128,128).ToArray();if(CorruptUnit)data[0]^=1;}
+                if(cmd.Opcode==TransactionOpcode.VerifyOriginalUnit){data=Bytes.AsSpan(plan.Original.SelectedStart+cmd.Index*128,128).ToArray();if(CorruptUnit)data[0]^=1;}
                 var replies=Reply(entry,data);
                 if(FailEraseFpfr && cmd.Opcode==TransactionOpcode.Erase)BinaryPrimitives.WriteUInt32BigEndian(replies.Where(f=>f.Data[1]==0xF6).ElementAt(3).Data.AsSpan(4),0x100);
                 foreach(var f in replies)frames.Enqueue(f);return;

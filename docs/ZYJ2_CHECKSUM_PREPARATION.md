@@ -29,10 +29,10 @@ The public policy requires exact image size, embedded full software ID, calibrat
 
 Private, non-hardware instruction-model checks exercised the supplied native verifier for every original range, mutations and corrected images, and malformed range rejection. Public regression tests use generated synthetic images and independent big-endian sums; no supplied ROM bytes are distributed. Instruction modeling does not qualify silicon erase/program behavior.
 
-Range 11 covers **C0000..F7FFF**; its correction word is **FF6DC..FF6DF**, in **EB15 (E0000..FFFFF)**. Thus an ordinary accepted edit in EB14 generally also changes EB15. A checksum-neutral edit can leave that word unchanged, but still does not bypass the modified-flashing block. The present native kernel can erase/program only original EB14 and cannot write EB15.
+Range 11 covers **C0000..F7FFF**; its correction word is **FF6DC..FF6DF**, in **EB15 (E0000..FFFFF)**. Thus an ordinary accepted edit in EB14 generally also changes EB15. A checksum-neutral edit can leave that word unchanged, but still does not bypass the modified-flashing block. The EB14 kernel cannot write EB15. Alpha.18 adds a separate original-only EB15 qualification kernel and menus 22/23; those do not accept a prepared modified file.
 
 ## Remaining writer work
 
 The alpha.16 hardware evidence passed controlled cold recovery from a completed unit-zero boundary with the application ID erased, followed by exact original restoration and normal restart on one spare. This does not establish recovery after physical power loss during an active chip operation.
 
-Before enabling modified flashing, separately qualify EB15 erase/programming, preservation of its unrelated data and boot/checksum metadata, restoration ordering and original recovery across the affected blocks. The good ECU remains unqualified. This release changes no embedded MCU image, block selector, controller operation, original-restore capability or recovery prerequisite.
+Before enabling modified flashing, separately qualify EB15 erase/programming, preservation of its unrelated data and boot/checksum metadata, restoration ordering and original recovery across the affected blocks. The good ECU remains unqualified. Alpha.18 provides a separate [original-only EB15 qualification](ZYJ2_EB15_ORIGINAL_QUALIFICATION.md) while preserving the prior EB14/read-staging binaries. Modified flashing remains unavailable.

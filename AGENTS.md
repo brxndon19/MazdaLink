@@ -11,7 +11,7 @@
   currently `ZY87EC000ZYV5050` and independently traced `ZYJ2EA000ZYV5050`.
   The ZYJ2 editor permits data changes only in C0100..DFFFF and recalculates all
   19 correction words; retain its entire initial 256-byte header. The offline
-  modified-ROM report has no native capability. EB15 writing remains unavailable. Never relabel an unknown backup or apply a known
+  modified-ROM report has no native capability. Modified EB15 writing remains unavailable. Never relabel an unknown backup or apply a known
   correction policy merely because read procedures or software suffixes look similar.
 - Keep the fixed bounded raw-read protocol, engine-stopped gate and matching dual reads.
   No automatic protocol probing, key retry or write/reset override is permitted.
@@ -145,7 +145,7 @@
   readbacks, two exact final full reads, monitor and separate normal restart.
   Flush durable intent before each destructive execute request; any uncertain
   completion permanently stops that session. Recovery always re-erases the whole
-  block after fresh binding. Do not write EB15 or change checksum policy.
+  block after fresh binding. That EB14 capability must never write EB15 or accept a different checksum policy.
   Actual original-restoration and interrupted-write recovery remain unqualified
   until separately observed. Do not intentionally interrupt the first test or
   expose modified flashing. Keep raw private evidence and ROMs outside Git.
@@ -170,6 +170,28 @@
   original reads, monitor and separate normal restart. Reject late replies after
   session failure. No active-operation power cut or reset is implemented; this
   test cannot qualify unknown completions or physical loss during a flash pulse.
+- The separately selected original-only EB15 qualification requires RESTORE EB15
+  ORIGINAL ZYJ2 / RECOVER EB15 ORIGINAL ZYJ2, the complete original backup and the
+  completed paired alpha.16 cold-recovery folder. Validate all 174 records, the
+  boundary receipt/capture, both old journals and both exact original final reads.
+  Require exact ZYJ2 layout and all original checksums. Accept no intended-image,
+  external block, code, address or resume argument. Keep generic modified flash blocked.
+- EB15 has its own immutable compiled kernel (3012 bytes, SHA-256
+  59a08f914f848badd851ee139b416859d2b7ee80873d5ee2b53dbeb848ade4f6).
+  Its sole erase block is 15 and programming base is E0000. Preserve the exact old
+  EB14 and read/staging binaries. First-test normal identity/RPM and exact full
+  original equality precede erase; recovery skips app diagnostics but only EB15
+  may differ. Require fresh boot/code/state binding, all blank/preserved bytes,
+  all 1024 original units in order, dual final reads, monitor and normal restart.
+  Restore the pointer-containing unit 1023 LAST. Flush intent before execute and
+  retain full FPFR, RAM callback/timer, vector and FWE cleanup gates. No retry.
+- EB15 journals use schema 2 and Block=15 on every record; old EB14 journals retain
+  schema 1 with no block field. The offline EB14 device contract must reject an
+  EB15 plan. Existing capability channels cannot be promoted to the new image.
+  The original-only EB15 recovery attempt always cold-binds and re-erases the
+  whole block from unit zero; physical erased-EB15 entry and active-operation
+  power-loss recovery remain unqualified. Never intentionally interrupt the first
+  EB15 test. No two-block modified writer or good-ECU qualification is implied.
 - Use the observed longer-off bench sequence: normal preflight, operator-confirmed
   ECU-only power removal, a monotonic 60-second host wait outside entry traffic,
   then open the adapter with ECU off and reconnect during the bounded entry window.
