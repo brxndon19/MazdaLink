@@ -9,6 +9,7 @@ public interface IOriginalRestoreChannel:IBenchMonitorChannel
 }
 public sealed record RestoreQualificationResult(int Commands,int OriginalUnits,string OriginalSha256,string FinalRead1Sha256,string FinalRead2Sha256,bool FinalMonitorPassed);
 public sealed record ControlledStopResult(int Commands,int OriginalUnits,string OriginalSha256,string PartialSha256,bool CalibrationIdErased,bool FinalMonitorPassed);
+public sealed record Eb15ControlledStopResult(int Commands,int OriginalUnits,string OriginalSha256,string PartialSha256,bool BootValidityPointerErased,bool FinalMonitorPassed);
 public sealed class RestoreQualificationRunner
 {
     public RestoreQualificationResult Run(IOriginalRestoreChannel channel,RestoreQualificationPlan plan,Action<string> record,
@@ -23,11 +24,21 @@ public sealed class RestoreQualificationRunner
     public ControlledStopResult RunToControlledStop(IOriginalRestoreChannel channel,RestoreQualificationPlan plan,Action<string> record,
         CancellationToken cancel=default,Action<byte[]>? observePartial=null)
     {
-        if(plan.ControlledStage!=ControlledRecoveryStage.Prepare)throw new InvalidOperationException("Only the fixed unit-zero plan may create a partial boundary.");
+        if(plan.SelectedBlock!=14||plan.ControlledStage!=ControlledRecoveryStage.Prepare)throw new InvalidOperationException("Only the fixed unit-zero plan may create a partial boundary.");
         var evidence=Execute(channel,plan,record,cancel,null,observePartial);plan.RequirePartialImage(evidence.Partial);
         bool absent=evidence.Partial.AsSpan(0xC0091,Zyj2RecoveryPolicy.SoftwareId.Length).ToArray().All(b=>b==255);
         if(!absent)throw new InvalidDataException("Calibration ID was not erased at the controlled boundary.");
         record("completed-unit-zero-partial-image-and-final-monitor-passed-no-active-operation");
+        return new(evidence.Commands,evidence.Units,plan.Original.OriginalSha256,RomStorage.Hash(evidence.Partial),true,true);
+    }
+    public Eb15ControlledStopResult RunEb15ToControlledStop(IOriginalRestoreChannel channel,RestoreQualificationPlan plan,Action<string> record,
+        CancellationToken cancel=default,Action<byte[]>? observePartial=null)
+    {
+        if(plan.SelectedBlock!=15||plan.ControlledStage!=ControlledRecoveryStage.Prepare)throw new InvalidOperationException("Only the fixed EB15 unit-zero plan may create this boundary.");
+        var evidence=Execute(channel,plan,record,cancel,null,observePartial);plan.RequirePartialImage(evidence.Partial);
+        bool erased=evidence.Partial.AsSpan(0xFFFFC,4).ToArray().All(b=>b==255) && evidence.Partial.AsSpan(0xFF650,19*12+4).ToArray().All(b=>b==255);
+        if(!erased)throw new InvalidDataException("EB15 boot/checksum metadata was not erased at the completed boundary.");
+        record("completed-eb15-unit-zero-partial-image-and-final-monitor-passed-no-active-operation");
         return new(evidence.Commands,evidence.Units,plan.Original.OriginalSha256,RomStorage.Hash(evidence.Partial),true,true);
     }
     private sealed record ScriptEvidence(int Commands,int Units,byte[][] Final,byte[] Partial);

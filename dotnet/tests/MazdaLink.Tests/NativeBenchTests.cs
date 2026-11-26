@@ -561,6 +561,21 @@ public sealed class NativeBenchTests
         }
         Assert.Fail("Expected image mismatch was never checked");
     }
+    [Fact]
+    public void NativeEb15ControlledBoundaryStopsAtOneUnitWithNoCompleteRestorationRecord()
+    {
+        var plan=Eb15ControlledRecoveryTests.Plan(ControlledRecoveryStage.Prepare);using var journal=new RestoreQualificationTests.MemoryJournal();
+        var gate=new RestoreQualificationGate(plan,journal);using var driver=new Driver(restore:gate);driver.IdentifyMonitor();
+        using var pj=new RestoreQualificationTests.MemoryJournal();using var peer=new RestoreQualificationTests.Peer(plan,pj);
+        for(int i=0;i<plan.Count;i++)
+        {
+            driver.SendRestoreStep(i);peer.SendRestoreStep(i);
+            while(peer.PendingFrames>0){var f=peer.Read(25)!;driver.SetTrialReply(f);driver.Channel.Read(25);}
+        }
+        Assert.Equal(1,gate.Diagnostics.OriginalUnitsVerified);Assert.Equal(6149,gate.Diagnostics.CommandsCompleted);Assert.Equal(298431,gate.Diagnostics.SentSteps);
+        Assert.Equal(("controlled-stop",-1),journal.Entries[^1]);Assert.DoesNotContain(journal.Entries,e=>e.Stage=="complete");
+        Assert.All(peer.Bytes.AsSpan(0xFFFFC,4).ToArray(),b=>Assert.Equal(255,b));Assert.Throws<TransportException>(()=>driver.SendRestoreStep(0));
+    }
     private sealed class Driver : IDisposable
     {
         private const BindingFlags Hidden = BindingFlags.NonPublic | BindingFlags.Instance;

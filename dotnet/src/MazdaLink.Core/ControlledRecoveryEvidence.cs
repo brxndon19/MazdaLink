@@ -43,7 +43,9 @@ public static class ControlledRecoveryEvidence
         foreach(string name in new[]{"final-pass-1.read","final-pass-2.read"})RequireImage(Path.Combine(folder,name),backup.Data);
         RequireJournal(Path.Combine(folder,"transaction.jsonl"),hash,false);
     });
-    public static void RequireJournal(string path,string originalHash,bool partial)=>Validate(()=>
+    public static void RequireJournal(string path,string originalHash,bool partial)=>RequireJournalBlock(path,originalHash,partial,false);
+    internal static void RequireEb15Journal(string path,string originalHash,bool partial)=>RequireJournalBlock(path,originalHash,partial,true);
+    private static void RequireJournalBlock(string path,string originalHash,bool partial,bool eb15)=>Validate(()=>
     {
         string[] lines=Lines(path,2060);var expected=new List<(string,int)>{("started",-1),("bound",-1),("erase-intent",-1),("erase-verified",-1)};
         for(int i=0;i<(partial?1:1024);i++){expected.Add(("unit-intent",i));expected.Add(("unit-verified",i));}
@@ -53,7 +55,7 @@ public static class ControlledRecoveryEvidence
         for(int i=0;i<lines.Length;i++)
         {
             var entry=JsonSerializer.Deserialize<RestoreJournalEntry>(lines[i])??throw new InvalidDataException("Missing journal entry.");session??=entry.Session;
-            Require(entry.Schema==1&&entry.Block is null&&Guid.TryParseExact(entry.Session,"N",out _)&&entry.Session==session&&entry.Sequence==i+1&&entry.PreviousHash==previous&&entry.OriginalSha256==originalHash&&
+            Require(entry.Schema==(eb15?2:1)&&(eb15?entry.Block==15:entry.Block is null)&&Guid.TryParseExact(entry.Session,"N",out _)&&entry.Session==session&&entry.Sequence==i+1&&entry.PreviousHash==previous&&entry.OriginalSha256==originalHash&&
                 (entry.Stage,entry.Unit)==expected[i],"Transaction journal binding, hash chain or intent/verification order failed.");
             previous=RomStorage.Hash(Encoding.UTF8.GetBytes(lines[i]));
         }

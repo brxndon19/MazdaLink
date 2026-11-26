@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.0-alpha.19
+
+- Add menus 24/25 for controlled EB15 completed-unit-zero cold recovery and receipt-bound recovery-only continuation on the detached ZYJ2 spare. Require the complete passed first alpha.18 EB15 run folder and original backup.
+- Verify the exact partial image with the checksum table and boot-validity pointer erased, checked cleanup and monitor return before a power-cycle prompt. Fresh cold boot/code/state binding and whole partial/preserved equality precede a new full-block erase and original restoration. No active-operation interruption or unit resume is enabled.
+- Bind distinct EB15 receipts/results to Block=15, both prerequisite file hashes and an eight-record controlled-stop journal; preserve older workflows and all embedded MCU images. Require dual original full reads and independent normal restart. Modified flashing remains disabled.
+
 ## 0.9.0-alpha.18
 
 - Add menu 22 / original-only EB15 erase/restoration qualification on the detached ZYJ2 spare, gated by the complete passed alpha.16 run folder and original backup. Preserve EB14 and all other bytes; restore every original EB15 unit once, with the boot-validity pointer unit last, full blank/unit checks, dual final reads, monitor and separate normal restart.
