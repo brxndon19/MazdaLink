@@ -77,6 +77,10 @@ public sealed class RestoreQualificationPlan:IReadOnlyList<TransactionWireStep>
     private List<TransactionWireStep> commandSteps=[];
     public OriginalBlockRestorePlan Original { get; }
     public RecoveryBindingPlan Binding { get; }
+    public int SelectedBlock=>Original.SelectedBlock;
+    public byte[] KernelImage=>SelectedBlock==15?Eb15OriginalRestoreKernel.Image:OriginalRestoreKernel.Image;
+    public string KernelSha256=>SelectedBlock==15?Eb15OriginalRestoreKernel.ImageSha256:OriginalRestoreKernel.ImageSha256;
+    public int KernelBytes=>SelectedBlock==15?Eb15OriginalRestoreKernel.ImageLength:OriginalRestoreKernel.ImageLength;
     public bool Recovery { get; }
     public ControlledRecoveryStage ControlledStage { get; }
     public int ExpectedUnits=>ControlledStage==ControlledRecoveryStage.Prepare?1:1024;
@@ -87,14 +91,15 @@ public sealed class RestoreQualificationPlan:IReadOnlyList<TransactionWireStep>
         :this(bytes,binding,originalPlan,recovery,cookie,ControlledRecoveryStage.None) { }
     private RestoreQualificationPlan(byte[] bytes,RecoveryBindingPlan binding,OriginalBlockRestorePlan originalPlan,bool recovery,uint cookie,ControlledRecoveryStage controlled)
     {
+        if(originalPlan.SelectedBlock==15 && controlled!=ControlledRecoveryStage.None)throw new InvalidDataException("EB15 cannot acquire the EB14 controlled-stop path.");
         original=bytes.ToArray();Binding=binding;Original=originalPlan;Recovery=recovery;ControlledStage=controlled;
-        TransactionTrialPlan.AppendBlob(installation,NativeTransactionPolicy.KernelAddress,OriginalRestoreKernel.Image,"kernel",null);
+        TransactionTrialPlan.AppendBlob(installation,NativeTransactionPolicy.KernelAddress,KernelImage,"kernel",null);
         TransactionTrialPlan.AppendBlob(installation,NativeTransactionPolicy.StateAddress,new byte[48],"state",null);
         ushort seq=1;var commands=new List<RestoreCommand>();
-        void Add(TransactionOpcode op,RestorePhase phase,ushort index=0,byte[]? staging=null)=>commands.Add(new(new(op,seq++,cookie,index,staging),phase));
+        void Add(TransactionOpcode op,RestorePhase phase,ushort index=0,byte[]? staging=null)=>commands.Add(new(op==TransactionOpcode.Erase&&SelectedBlock==15?TransactionCommand.Eb15Erase(seq++,cookie):new TransactionCommand(op,seq++,cookie,index,staging),phase));
         void ReadAll(RestorePhase phase){for(ushort i=0;i<2048;i++)Add(TransactionOpcode.ReadBlock,phase,i);}
         Add(TransactionOpcode.Initialize,RestorePhase.Initialize);ReadAll(RestorePhase.BeforeErase);
-        Add(TransactionOpcode.Erase,RestorePhase.Erase,14);ReadAll(RestorePhase.EraseReadback);
+        Add(TransactionOpcode.Erase,RestorePhase.Erase,(ushort)SelectedBlock);ReadAll(RestorePhase.EraseReadback);
         for(ushort i=0;i<ExpectedUnits;i++){Add(TransactionOpcode.Program,RestorePhase.Program,i,Original.Data(i));Add(TransactionOpcode.VerifyOriginalUnit,RestorePhase.UnitReadback,i);}
         if(controlled==ControlledRecoveryStage.Prepare){ReadAll(RestorePhase.PartialReadback);Add(TransactionOpcode.Finish,RestorePhase.FinishPartial);}
         else{ReadAll(RestorePhase.FinalReadback1);ReadAll(RestorePhase.FinalReadback2);Add(TransactionOpcode.Finish,RestorePhase.Finish);}
@@ -108,6 +113,13 @@ public sealed class RestoreQualificationPlan:IReadOnlyList<TransactionWireStep>
         Zyj2RecoveryPolicy.RequireBackup(stable);RestorePrerequisite.Require(prerequisiteEvidence,stable);
         uint cookie;do{cookie=BinaryPrimitives.ReadUInt32BigEndian(RandomNumberGenerator.GetBytes(4));}while(cookie==0);
         return new(stable.Data,RecoveryBindingPlan.Create(stable),OriginalBlockRestorePlan.Create(stable,stable.Data),recovery,cookie);
+    }
+    public static RestoreQualificationPlan CreateEb15(VerifiedRawBackup backup,string completedColdRecoveryFolder,bool recovery)
+    {
+        var stable=new VerifiedRawBackup(backup.Data.ToArray(),backup.ReportedCalibration);
+        Zyj2RecoveryPolicy.RequireBackup(stable);Eb15Prerequisite.Require(completedColdRecoveryFolder,stable);
+        uint cookie;do{cookie=BinaryPrimitives.ReadUInt32BigEndian(RandomNumberGenerator.GetBytes(4));}while(cookie==0);
+        return new(stable.Data,RecoveryBindingPlan.Create(stable),OriginalBlockRestorePlan.CreateEb15(stable),recovery,cookie);
     }
     public static RestoreQualificationPlan CreateControlled(VerifiedRawBackup backup,string originalRestorationFolder,ControlledRecoveryStage stage)
     {
@@ -160,7 +172,7 @@ public sealed class RestoreQualificationPlan:IReadOnlyList<TransactionWireStep>
         if(entry.Phase==RestorePhase.UnitReadback)
         {if(!reply.Data.AsSpan().SequenceEqual(Original.Data(cmd.Index)))throw new InvalidDataException("Original unit readback differs; no request was resent.");return;}
         if(cmd.Opcode!=TransactionOpcode.ReadBlock)return;
-        bool inBlock=address>=0xC0000 && address<0xE0000;
+        bool inBlock=address>=Original.SelectedStart && address<Original.SelectedStart+OriginalBlockRestorePlan.Length;
         if(entry.Phase==RestorePhase.PartialReadback || entry.Phase==RestorePhase.BeforeErase && ControlledStage==ControlledRecoveryStage.Recover)
         {
             var expected=original.AsSpan(address,512).ToArray();
@@ -169,7 +181,7 @@ public sealed class RestoreQualificationPlan:IReadOnlyList<TransactionWireStep>
         }
         if(entry.Phase==RestorePhase.BeforeErase && Recovery && inBlock)return;
         if(entry.Phase==RestorePhase.EraseReadback && inBlock)
-        {if(reply.Data.Any(b=>b!=255))throw new InvalidDataException("Complete EB14 blank verification failed.");return;}
+        {if(reply.Data.Any(b=>b!=255))throw new InvalidDataException($"Complete EB{SelectedBlock} blank verification failed.");return;}
         if(!reply.Data.AsSpan().SequenceEqual(original.AsSpan(address,512)))throw new InvalidDataException("Full image or preserved-region mismatch. No later operation is permitted.");
     }
     public IEnumerator<TransactionWireStep> GetEnumerator(){for(int i=0;i<Count;i++)yield return this[i];}

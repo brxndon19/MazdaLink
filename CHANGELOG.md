@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.0-alpha.18
+
+- Add menu 22 / original-only EB15 erase/restoration qualification on the detached ZYJ2 spare, gated by the complete passed alpha.16 run folder and original backup. Preserve EB14 and all other bytes; restore every original EB15 unit once, with the boot-validity pointer unit last, full blank/unit checks, dual final reads, monitor and separate normal restart.
+- Add menu 23 / unqualified original-only EB15 recovery attempt: fresh application-independent cold binding and full-block re-erase, never a unit resume. No intentional power interruption is implemented or qualified.
+- Bind the separate fixed EB15 kernel to its own hash and native byte/reply gates. Record block 15 on every schema-2 durable journal entry; preserve schema-1 EB14 journals and exact existing EB14/read-stage binaries. Modified flashing stays disabled.
+
 ## 0.9.0-alpha.17
 
 - Add independently traced ZYJ2EA000ZYV5050 checksum preparation and validation to menus 4/5. Restrict ZYJ2 data edits to C0100..DFFFF, retain its complete header and identity, and recalculate/verify all 19 correction words and durable output.

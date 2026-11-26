@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace MazdaLink.Core;
 
@@ -13,7 +14,8 @@ public interface IOriginalRestoreDevice
 }
 
 public sealed record RestoreJournalEntry(int Schema, string Session, int Sequence, string PreviousHash,
-    string OriginalSha256, string Stage, int Unit);
+    string OriginalSha256, string Stage, int Unit,
+    [property:JsonIgnore(Condition=JsonIgnoreCondition.WhenWritingNull)] int? Block=null);
 
 public interface IRestoreJournal : IDisposable
 {
@@ -24,23 +26,25 @@ public interface IRestoreJournal : IDisposable
 public sealed class RestoreJournal : IRestoreJournal
 {
     private readonly FileStream stream;
+    private readonly int selectedBlock;
     private readonly string originalHash, session = Guid.NewGuid().ToString("N");
     private string previous = new('0',64);
     private int sequence;
     private bool failed;
     public RestoreJournal(string path, OriginalBlockRestorePlan plan)
     {
-        originalHash = plan.OriginalSha256;
+        selectedBlock=plan.SelectedBlock;originalHash = plan.OriginalSha256;
         stream = new(path, FileMode.CreateNew, FileAccess.Write, FileShare.Read);
     }
     public string OriginalSha256=>originalHash;
+    public int SelectedBlock=>selectedBlock;
     public void Commit(string stage, int unit = -1)
     {
         if (failed || sequence >= 2060 || !Allowed(stage,unit))
             throw new IOException("Restore journal is closed, exhausted or invalid.");
         try
         {
-            var entry = new RestoreJournalEntry(1,session,++sequence,previous,originalHash,stage,unit);
+            var entry = new RestoreJournalEntry(selectedBlock==15?2:1,session,++sequence,previous,originalHash,stage,unit,selectedBlock==15?15:null);
             byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(entry);
             stream.Write(bytes);stream.WriteByte(10);stream.Flush(flushToDisk:true);
             previous = RomStorage.Hash(bytes);
@@ -60,6 +64,7 @@ public sealed class OriginalRestoreTransaction(OriginalBlockRestorePlan plan, IO
     private bool used;
     public void Run(CancellationToken cancel=default)
     {
+        if(plan.SelectedBlock!=14)throw new InvalidOperationException("The offline EB14 device contract cannot execute an EB15 plan.");
         if (used) throw new InvalidOperationException("A restore session is single-use. Fresh binding and full erase are required.");
         used=true;
         void Record(string stage,int unit=-1) { cancel.ThrowIfCancellationRequested();journal.Commit(stage,unit);cancel.ThrowIfCancellationRequested(); }

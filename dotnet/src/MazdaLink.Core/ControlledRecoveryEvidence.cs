@@ -53,7 +53,7 @@ public static class ControlledRecoveryEvidence
         for(int i=0;i<lines.Length;i++)
         {
             var entry=JsonSerializer.Deserialize<RestoreJournalEntry>(lines[i])??throw new InvalidDataException("Missing journal entry.");session??=entry.Session;
-            Require(entry.Schema==1&&Guid.TryParseExact(entry.Session,"N",out _)&&entry.Session==session&&entry.Sequence==i+1&&entry.PreviousHash==previous&&entry.OriginalSha256==originalHash&&
+            Require(entry.Schema==1&&entry.Block is null&&Guid.TryParseExact(entry.Session,"N",out _)&&entry.Session==session&&entry.Sequence==i+1&&entry.PreviousHash==previous&&entry.OriginalSha256==originalHash&&
                 (entry.Stage,entry.Unit)==expected[i],"Transaction journal binding, hash chain or intent/verification order failed.");
             previous=RomStorage.Hash(Encoding.UTF8.GetBytes(lines[i]));
         }

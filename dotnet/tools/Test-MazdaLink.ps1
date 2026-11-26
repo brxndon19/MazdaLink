@@ -67,3 +67,8 @@ if ($status -notmatch 'Process: 32-bit' -or !$status.Contains("Runtime: $runtime
 $modifiedPlan = Invoke-Check -Arguments @('modified-rom-plan','missing/original.rom','edited.rom') -InputText '' -Expected 1 -Name 'modified-plan-refused-before-open'
 $modifiedOverride = Invoke-Check -Arguments @('modified-rom-plan','original.rom','edited.rom','--write-eb15') -InputText '' -Expected 1 -Name 'modified-plan-override-refused'
 if ($modifiedPlan -notmatch 'STOPPED' -or $modifiedOverride -notmatch 'Unknown command' -or $help -notmatch 'ZYJ2EA000ZYV5050 only' -or $help -notmatch 'modified-rom-plan' -or $menu -notmatch 'modified-ROM block report') { throw 'Offline ZYJ2 preparation scope missing.' }
+
+$eb15 = Invoke-Check -Arguments @('eb15-original-restore-check','missing/original.rom','missing/alpha16') -InputText '' -Expected 1 -Name 'eb15-original-refused-before-open'
+$eb15Recovery = Invoke-Check -Arguments @('eb15-original-restore-recover','missing/original.rom','missing/alpha16') -InputText '' -Expected 1 -Name 'eb15-recovery-refused-before-open'
+$eb15Override = Invoke-Check -Arguments @('eb15-original-restore-check','original.rom','run','modified.rom') -InputText '' -Expected 1 -Name 'eb15-modified-override-refused'
+if ($eb15 -notmatch 'STOPPED' -or $eb15Recovery -notmatch 'STOPPED' -or $eb15Override -notmatch 'Unknown command' -or $help -notmatch 'RESTORE EB15 ORIGINAL ZYJ2' -or $help -notmatch 'RECOVER EB15 ORIGINAL ZYJ2' -or $menu -notmatch 'ERASE / RESTORE ORIGINAL EB15') { throw 'EB15 original-only prerequisite/scope gates missing.' }

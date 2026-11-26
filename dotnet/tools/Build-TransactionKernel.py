@@ -44,10 +44,11 @@ def build_all():
     with tempfile.TemporaryDirectory(prefix='MazdaLink-transactions-') as name:
         folder=pathlib.Path(name);cc=compiler(folder)
         result={}
-        for full in (0,1):
+        for variant in (0,1,2):
+            full=int(variant!=0);block=15 if variant==2 else 14
             subprocess.run(['sh-elf-as','-big','-isa=sh2','--defsym',f'TRANSACTION_FLASH={full}','-o',str(folder/'entry.o'),str(ROOT/'firmware/zyj2-transaction-entry.S')],check=True)
             assembly=folder/f'kernel-{full}.S';obj=folder/f'kernel-{full}.o';elf=folder/f'kernel-{full}.elf';binary=folder/f'kernel-{full}.bin'
-            subprocess.run([*cc,*FLAGS,f'-DENABLE_FLASH={full}','-S',str(ROOT/'firmware/zyj2-transaction.c'),'-o',str(assembly)],check=True)
+            subprocess.run([*cc,*FLAGS,f'-DENABLE_FLASH={full}',f'-DRESTORE_BLOCK={block}','-S',str(ROOT/'firmware/zyj2-transaction.c'),'-o',str(assembly)],check=True)
             subprocess.run(['sh-elf-as','-big','-isa=sh2','-o',str(obj),str(assembly)],check=True)
             subprocess.run(['sh-elf-ld','-T',str(ROOT/'firmware/zyj2-transaction.ld'),'-o',str(elf),str(folder/'entry.o'),str(obj)],check=True)
             assert not subprocess.check_output(['sh-elf-nm','-u',str(elf)],text=True).strip(),'Unexpected external runtime dependency'
@@ -57,9 +58,9 @@ def build_all():
                 parts=line.split()
                 if len(parts)==3:symbols[parts[2]]=int(parts[0],16)
             data=binary.read_bytes();assert 0<len(data)<=8192
-            result[full]=(data,symbols)
+            result[variant]=(data,symbols)
         return result
 
 if __name__=='__main__':
     for full,(data,symbols) in build_all().items():
-        print(json.dumps({'variant':'original-restore-qualification' if full else 'read-stage-only','bytes':len(data),'sha256':hashlib.sha256(data).hexdigest(),'symbols':symbols}))
+        print(json.dumps({'variant':'eb15-original-qualification' if full==2 else 'original-restore-qualification' if full else 'read-stage-only','bytes':len(data),'sha256':hashlib.sha256(data).hexdigest(),'symbols':symbols}))

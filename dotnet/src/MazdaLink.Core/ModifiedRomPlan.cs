@@ -16,7 +16,7 @@ public static class ModifiedRomPlan
             blocks=new[] { new { block=14, start=0xC0000, length=0x20000, changedBytes=Count(0xC0000,0xE0000) },
                 new { block=15, start=0xE0000, length=0x20000, changedBytes=Count(0xE0000,0x100000) } },
             correctionAddress=Zyj2Integrity.CorrectionAddress(11), checksumRangesVerified=19,
-            modifiedFlashingEnabled=false, eb15WritingImplemented=false,
+            modifiedFlashingEnabled=false, eb15WritingImplemented=true, eb15WritingScope="original-only-detached-spare-qualification", eb15ModifiedWritingImplemented=false,
             limitation="Offline checksum/difference report only. The existing original-only EB14 writer rejects this modified image. EB15 write/recovery and active-operation power-loss recovery remain unqualified." };
     }
 }

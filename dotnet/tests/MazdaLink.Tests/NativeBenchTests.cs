@@ -519,6 +519,48 @@ public sealed class NativeBenchTests
         Assert.Equal(("controlled-stop",-1),journal.Entries.Last());Assert.Equal(1u,gate.LastResult!.NextUnit);
         Assert.DoesNotContain(journal.Entries,e=>e.Stage=="complete");Assert.Throws<TransportException>(()=>driver.SendRestoreStep(plan.Count));
     }
+    [Fact]
+    public void NativeEb15RequiresItsOwnImageEveryReplyAndAnEntireOriginalRestoration()
+    {
+        var plan=Eb15QualificationTests.Plan();using var journal=new RestoreQualificationTests.MemoryJournal();
+        var gate=new RestoreQualificationGate(plan,journal);using var driver=new Driver(restore:gate);driver.IdentifyMonitor();
+        using var peerJournal=new RestoreQualificationTests.MemoryJournal();using var peer=new RestoreQualificationTests.Peer(plan,peerJournal);
+        for(int i=0;i<plan.Count;i++)
+        {
+            driver.SendRestoreStep(i);peer.SendRestoreStep(i);
+            while(peer.PendingFrames>0){var frame=peer.Read(25)!;driver.SetTrialReply(frame);driver.Channel.Read(25);}
+        }
+        Assert.Equal(1024,gate.Diagnostics.OriginalUnitsVerified);Assert.Equal(10243,gate.Diagnostics.CommandsCompleted);
+        Assert.Equal(("complete",-1),journal.Entries.Last());Assert.Equal(RomStorage.Hash(RestoreQualificationTests.Image()),RomStorage.Hash(peer.Bytes));
+        Assert.Throws<TransportException>(()=>driver.SendRestoreStep(0));
+        using var j=new RestoreQualificationTests.MemoryJournal();using var wrong=new Driver(restore:new(plan,j));wrong.IdentifyMonitor();
+        Assert.Throws<TransportException>(()=>wrong.SendTrialStep(0));
+    }
+    [Fact]
+    public void NativeEb15RejectsAnEb14KernelByteBeforeAnyExecution()
+    {
+        var plan=Eb15QualificationTests.Plan();byte[] own=plan.KernelImage,old=OriginalRestoreKernel.Image;
+        int different=Enumerable.Range(0,own.Length).First(i=>own[i]!=old[i]);
+        using var journal=new RestoreQualificationTests.MemoryJournal();var gate=new RestoreQualificationGate(plan,journal);
+        using var driver=new Driver(restore:gate);driver.IdentifyMonitor();
+        using var pj=new RestoreQualificationTests.MemoryJournal();using var peer=new RestoreQualificationTests.Peer(plan,pj);
+        for(int i=0;i<plan.InstallationEnd;i++)
+        {
+            var step=plan[i];driver.SendRestoreStep(i);peer.SendRestoreStep(i);
+            while(peer.PendingFrames>0)
+            {
+                var frame=peer.Read(25)!;
+                if(step.KernelByte && BinaryPrimitives.ReadUInt32BigEndian(step.Payload.AsSpan(2))-1-NativeTransactionPolicy.KernelAddress==(uint)different)
+                {
+                    frame.Data[2]=old[different];driver.SetTrialReply(frame);
+                    Assert.Throws<TransportException>(()=>driver.Channel.Read(25));Assert.True(gate.Diagnostics.Failed);Assert.Equal(0,peer.Erases);
+                    Assert.Throws<TransportException>(()=>driver.SendRestoreStep(i+1));return;
+                }
+                driver.SetTrialReply(frame);driver.Channel.Read(25);
+            }
+        }
+        Assert.Fail("Expected image mismatch was never checked");
+    }
     private sealed class Driver : IDisposable
     {
         private const BindingFlags Hidden = BindingFlags.NonPublic | BindingFlags.Instance;

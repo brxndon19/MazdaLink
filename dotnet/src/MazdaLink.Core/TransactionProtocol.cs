@@ -22,9 +22,12 @@ public sealed class TransactionCommand
     public byte[]? Staging => staging?.ToArray();
     public int DataLength => Opcode==TransactionOpcode.ReadBlock?512:Opcode is TransactionOpcode.StageEcho or TransactionOpcode.VerifyOriginalUnit?128:0;
     internal TransactionCommand(TransactionOpcode opcode,ushort sequence,uint cookie,ushort index=0,byte[]? staging=null)
+        :this(opcode,sequence,cookie,index,staging,false) { }
+    internal static TransactionCommand Eb15Erase(ushort sequence,uint cookie)=>new(TransactionOpcode.Erase,sequence,cookie,15,null,true);
+    private TransactionCommand(TransactionOpcode opcode,ushort sequence,uint cookie,ushort index,byte[]? staging,bool eb15Erase)
     {
         if(sequence==0||cookie==0)throw new ArgumentException("A nonzero command identity is required.");
-        if(opcode==TransactionOpcode.ReadBlock && index>=2048 || opcode is TransactionOpcode.StageEcho or TransactionOpcode.Program && (index>=1024||staging?.Length!=128) || opcode==TransactionOpcode.VerifyOriginalUnit && (index>=1024||staging is not null) || opcode==TransactionOpcode.Erase && (index!=14||staging is not null))throw new ArgumentOutOfRangeException(nameof(index));
+        if(opcode==TransactionOpcode.ReadBlock && index>=2048 || opcode is TransactionOpcode.StageEcho or TransactionOpcode.Program && (index>=1024||staging?.Length!=128) || opcode==TransactionOpcode.VerifyOriginalUnit && (index>=1024||staging is not null) || opcode==TransactionOpcode.Erase && (index!=(eb15Erase?15:14)||staging is not null))throw new ArgumentOutOfRangeException(nameof(index));
         Opcode=opcode;Sequence=sequence;Cookie=cookie;Index=index;this.staging=staging?.ToArray();
     }
     public byte[] Descriptor()
