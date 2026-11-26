@@ -192,6 +192,26 @@
   whole block from unit zero; physical erased-EB15 entry and active-operation
   power-loss recovery remain unqualified. Never intentionally interrupt the first
   EB15 test. No two-block modified writer or good-ECU qualification is implied.
+- The supplied alpha.18 hardware evidence passed uninterrupted original EB15
+  restoration on the same spare: all 1024 units with the pointer unit last, both
+  exact original full reads, complete Block=15 journal, monitor and normal restart.
+  This does not qualify erased-EB15 cold recovery or active-operation power loss.
+- The separate controlled EB15 workflow requires the passed first alpha.18 EB15
+  folder (all 115 records, Block=15 journal and both exact captures), original
+  backup and BOUNDARY EB15 RECOVERY ZYJ2 / RESUME EB15 BOUNDARY ZYJ2 confirmation.
+  Prepare only original E0000..E007F, verify the complete fixed partial image with
+  E0080..FFFFF erased (checksum table and boot-validity pointer included), checked
+  cleanup and monitor return, then close before persisting a receipt and prompting.
+  Use a distinct EB15 typed result; never claim its EB14 calibration ID was erased.
+- EB15 boundary receipts bind block, original/partial/kernel hashes, one unit,
+  erased-pointer flag and both prerequisite file hashes; require the eight-record
+  schema-2 Block=15 journal ending controlled-stop. Reject legacy EB14 receipts.
+  Copy resume artifacts into the new run. Fresh cold binding/code/state and exact
+  whole partial/preserved comparison precede recovery erase. Always re-erase and
+  restore all original units; never resume an index. A changed live partial state
+  stops before erase. Require dual full final reads, monitor and normal restart.
+  Keep all MCU images unchanged. No active-operation interruption or two-block
+  modified writer is implemented; software simulations are not hardware passes.
 - Use the observed longer-off bench sequence: normal preflight, operator-confirmed
   ECU-only power removal, a monotonic 60-second host wait outside entry traffic,
   then open the adapter with ECU off and reconnect during the bounded entry window.

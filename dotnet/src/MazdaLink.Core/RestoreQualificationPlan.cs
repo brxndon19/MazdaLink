@@ -90,8 +90,11 @@ public sealed class RestoreQualificationPlan:IReadOnlyList<TransactionWireStep>
     private RestoreQualificationPlan(byte[] bytes,RecoveryBindingPlan binding,OriginalBlockRestorePlan originalPlan,bool recovery,uint cookie)
         :this(bytes,binding,originalPlan,recovery,cookie,ControlledRecoveryStage.None) { }
     private RestoreQualificationPlan(byte[] bytes,RecoveryBindingPlan binding,OriginalBlockRestorePlan originalPlan,bool recovery,uint cookie,ControlledRecoveryStage controlled)
+        :this(bytes,binding,originalPlan,recovery,cookie,controlled,false) { }
+    private RestoreQualificationPlan(byte[] bytes,RecoveryBindingPlan binding,OriginalBlockRestorePlan originalPlan,bool recovery,uint cookie,ControlledRecoveryStage controlled,bool eb15Controlled)
     {
-        if(originalPlan.SelectedBlock==15 && controlled!=ControlledRecoveryStage.None)throw new InvalidDataException("EB15 cannot acquire the EB14 controlled-stop path.");
+        if(eb15Controlled && (originalPlan.SelectedBlock!=15||controlled is not (ControlledRecoveryStage.Prepare or ControlledRecoveryStage.Recover)))throw new InvalidDataException("Choose the fixed EB15 boundary stage.");
+        if(!eb15Controlled && originalPlan.SelectedBlock==15 && controlled!=ControlledRecoveryStage.None)throw new InvalidDataException("EB15 cannot acquire the EB14 controlled-stop path.");
         original=bytes.ToArray();Binding=binding;Original=originalPlan;Recovery=recovery;ControlledStage=controlled;
         TransactionTrialPlan.AppendBlob(installation,NativeTransactionPolicy.KernelAddress,KernelImage,"kernel",null);
         TransactionTrialPlan.AppendBlob(installation,NativeTransactionPolicy.StateAddress,new byte[48],"state",null);
@@ -129,9 +132,17 @@ public sealed class RestoreQualificationPlan:IReadOnlyList<TransactionWireStep>
         uint cookie;do{cookie=BinaryPrimitives.ReadUInt32BigEndian(RandomNumberGenerator.GetBytes(4));}while(cookie==0);
         return new(stable.Data,RecoveryBindingPlan.Create(stable),OriginalBlockRestorePlan.Create(stable,stable.Data),stage==ControlledRecoveryStage.Recover,cookie,stage);
     }
+    public static RestoreQualificationPlan CreateEb15Controlled(VerifiedRawBackup backup,string originalEb15RestorationFolder,ControlledRecoveryStage stage)
+    {
+        if(stage is not (ControlledRecoveryStage.Prepare or ControlledRecoveryStage.Recover))throw new ArgumentException("Choose the fixed EB15 controlled recovery stage.");
+        var stable=new VerifiedRawBackup(backup.Data.ToArray(),backup.ReportedCalibration);Zyj2RecoveryPolicy.RequireBackup(stable);
+        Eb15ControlledRecoveryEvidence.RequireOriginalRestoration(originalEb15RestorationFolder,stable);
+        uint cookie;do{cookie=BinaryPrimitives.ReadUInt32BigEndian(RandomNumberGenerator.GetBytes(4));}while(cookie==0);
+        return new(stable.Data,RecoveryBindingPlan.Create(stable),OriginalBlockRestorePlan.CreateEb15(stable),stage==ControlledRecoveryStage.Recover,cookie,stage,true);
+    }
     public byte[] ExpectedPartialImage()
     {
-        byte[] expected=original.ToArray();expected.AsSpan(0xC0080,0x1FF80).Fill(255);return expected;
+        byte[] expected=original.ToArray();expected.AsSpan(Original.SelectedStart+128,OriginalBlockRestorePlan.Length-128).Fill(255);return expected;
     }
     internal void RequirePartialImage(byte[] bytes)
     {
@@ -176,7 +187,7 @@ public sealed class RestoreQualificationPlan:IReadOnlyList<TransactionWireStep>
         if(entry.Phase==RestorePhase.PartialReadback || entry.Phase==RestorePhase.BeforeErase && ControlledStage==ControlledRecoveryStage.Recover)
         {
             var expected=original.AsSpan(address,512).ToArray();
-            if(inBlock){expected.AsSpan().Fill(255);if(address==0xC0000)original.AsSpan(address,128).CopyTo(expected);}
+            if(inBlock){expected.AsSpan().Fill(255);if(address==Original.SelectedStart)original.AsSpan(address,128).CopyTo(expected);}
             if(!reply.Data.AsSpan().SequenceEqual(expected))throw new InvalidDataException("Controlled partial/preserved image mismatch. Recovery erase was not authorized.");return;
         }
         if(entry.Phase==RestorePhase.BeforeErase && Recovery && inBlock)return;

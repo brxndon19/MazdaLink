@@ -72,3 +72,8 @@ $eb15 = Invoke-Check -Arguments @('eb15-original-restore-check','missing/origina
 $eb15Recovery = Invoke-Check -Arguments @('eb15-original-restore-recover','missing/original.rom','missing/alpha16') -InputText '' -Expected 1 -Name 'eb15-recovery-refused-before-open'
 $eb15Override = Invoke-Check -Arguments @('eb15-original-restore-check','original.rom','run','modified.rom') -InputText '' -Expected 1 -Name 'eb15-modified-override-refused'
 if ($eb15 -notmatch 'STOPPED' -or $eb15Recovery -notmatch 'STOPPED' -or $eb15Override -notmatch 'Unknown command' -or $help -notmatch 'RESTORE EB15 ORIGINAL ZYJ2' -or $help -notmatch 'RECOVER EB15 ORIGINAL ZYJ2' -or $menu -notmatch 'ERASE / RESTORE ORIGINAL EB15') { throw 'EB15 original-only prerequisite/scope gates missing.' }
+
+$eb15Boundary = Invoke-Check -Arguments @('eb15-controlled-recovery-check','missing/original.rom','missing/alpha18') -InputText '' -Expected 1 -Name 'eb15-boundary-refused-before-open'
+$eb15Resume = Invoke-Check -Arguments @('eb15-controlled-recovery-resume','missing/original.rom','missing/alpha18','missing/boundary') -InputText '' -Expected 1 -Name 'eb15-boundary-resume-refused-before-open'
+$eb15BoundaryOverride = Invoke-Check -Arguments @('eb15-controlled-recovery-check','original.rom','run','--unit=1') -InputText '' -Expected 1 -Name 'eb15-boundary-unit-override-refused'
+if ($eb15Boundary -notmatch 'STOPPED' -or $eb15Resume -notmatch 'STOPPED' -or $eb15BoundaryOverride -notmatch 'Unknown command' -or $help -notmatch 'BOUNDARY EB15 RECOVERY ZYJ2' -or $help -notmatch 'RESUME EB15 BOUNDARY ZYJ2' -or $menu -notmatch 'controlled EB15 boundary / cold recovery') { throw 'EB15 controlled boundary scope/prerequisite gates missing.' }

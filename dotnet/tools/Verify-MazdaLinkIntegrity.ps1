@@ -5,7 +5,7 @@ $passed = @($run.TestRun.Results.UnitTestResult | Where-Object outcome -eq 'Pass
 foreach ($name in @('MazdaLink.Tests.TargetTests.RawReadsDoNotRequireAWhitelistedIdentityOrKnownRomLayout(identity: "ZYJ2EA000ZYV5050")','MazdaLink.Tests.TargetTests.KnownLookingRomFromUnknownCalibrationCannotUseTheZy87ChecksumPolicy','MazdaLink.Tests.TargetTests.RefusedReadStopsWithoutKeyRetryOrProtocolProbe','MazdaLink.Tests.TargetTests.EveryPrepareCorrectsAllRangesVerifiesDiskAndPreservesInputs','MazdaLink.Tests.TargetTests.ReadsBothPassesAt512AndExportsExactBytesWithNoOverwrite','MazdaLink.Tests.TargetTests.TransportRequiresValidIdentityBeforeSecurityEvenForDirectCalls','MazdaLink.Tests.TargetTests.MenuAndCommandsCannotOpenHardwareForFlashingOrOverrides')) {
     if ($passed -notcontains $name) { throw "Missing mandatory MazdaLink integrity/scope case: $name" }
 }
-if ([int]$run.TestRun.ResultSummary.Counters.total -lt 391) { throw 'Focused scope/integrity matrix is incomplete.' }
+if ([int]$run.TestRun.ResultSummary.Counters.total -lt 407) { throw 'Focused scope/integrity matrix is incomplete.' }
 foreach ($name in @('MazdaLink.Tests.BenchRecoveryTests.EntryStopsBeforeOneIdentificationAndNeverUploadsOrExecutes','MazdaLink.Tests.BenchRecoveryTests.CancellationStopsPeriodicTrafficBeforeAnyIdentificationRequest','MazdaLink.Tests.BenchRecoveryTests.WireGateAllowsOnlyItsTwoFixedNonProgrammingPayloads','MazdaLink.Tests.BenchRecoveryTests.SpoofingHeaderAndCalibrationDoesNotSatisfyTheBootCodeFingerprints','MazdaLink.Tests.NativeBenchTests.NativePacketsUseRawExtendedCanAndExactlyTwoFixedPayloads','MazdaLink.Tests.NativeBenchTests.FailedNativeWriteCannotBeRetried')) {
     if ($passed -notcontains $name) { throw "Missing mandatory bench-scope case: $name" }
 }
@@ -108,3 +108,9 @@ foreach ($name in @('CompletedPairedRecoveryEvidenceRequiresEveryCaptureAndBothJ
 if ($passed -notcontains 'MazdaLink.Tests.NativeBenchTests.NativeEb15RequiresItsOwnImageEveryReplyAndAnEntireOriginalRestoration') { throw 'Missing native EB15 capability gate.' }
 
 if ($passed -notcontains 'MazdaLink.Tests.NativeBenchTests.NativeEb15RejectsAnEb14KernelByteBeforeAnyExecution') { throw 'Missing EB15 cross-image byte gate.' }
+
+foreach ($name in @('FixedEb15BoundaryPreservesEb14AndErasesChecksumTableAndBootPointer','Eb15PartialStopHasItsOwnResultAndCannotClaimCompleteRestorationOrErasedCalibrationId','Eb15ColdRecoveryChecksExactPartialImageThenReerasesAndRestoresEveryOriginalUnit','Alpha18PrerequisiteRequiresBothOriginalCapturesAndTheBlock15Journal','ReceiptRequiresExactEb15CaptureAndEightBlock15RecordsBoundToTheCompletedRestoration','WrongBlockPointerOrCaptureCannotAuthorizeEb15BoundaryResume','MissingEvidenceAndCodeBlockOrUnitOverridesNeverOpenEitherBackend')) {
+ if ($passed -notcontains ('MazdaLink.Tests.Eb15ControlledRecoveryTests.'+$name)) { throw "Missing controlled EB15 gate: $name" }
+}
+if (@($passed | Where-Object { $_ -like 'MazdaLink.Tests.Eb15ControlledRecoveryTests.AnyUnexpectedPartialOrPreservedByteStopsBeforeRecoveryErase(*)' }).Count -ne 8) { throw 'Incomplete EB15 partial/preserved mismatch matrix.' }
+if ($passed -notcontains 'MazdaLink.Tests.NativeBenchTests.NativeEb15ControlledBoundaryStopsAtOneUnitWithNoCompleteRestorationRecord') { throw 'Missing native EB15 completed-boundary gate.' }

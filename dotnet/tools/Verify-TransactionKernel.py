@@ -301,5 +301,11 @@ def main():
  for fault in ({'erase_corrupt':True},{'no_callback':True}):
   m=Machine(*builds[2],True,15);assert m.command(0,1)[0]==0;m.fault=fault
   assert m.command(0x21,2,15)[0]!=0 and m.read(F)==0 and m.io[F+4]==0;cases+=1
+ # A clean completed EB15 unit-zero boundary needs no new MCU image or active-operation cut.
+ m=Machine(*builds[2],True,15);assert m.command(0,1)[0]==0;assert m.command(0x21,2,15)[0]==0
+ assert m.command(0x22,3,0,m.original[0xe0000:0xe0080])[:4]==(0,0,99,1);cases+=1
+ assert m.rom[:0xe0080]==m.original[:0xe0080] and m.rom[0xe0080:]==b'\xff'*0x1ff80;cases+=1
+ assert m.command(0x11,4,2047)[4]==b'\xff'*512;cases+=1
+ assert m.command(0x7f,5)[:4]==(0,0,99,1) and m.read(F)==0 and m.io[F+4]==0 and m.io[0xfffff740]==0;cases+=1
  print(f'PASS: {cases} synthetic SH-2 transaction cases; three exact binaries, ordered CRC32 streams, separate fixed EB14/EB15 operations, RAM-only busy callback, full FPFR, taint and cleanup. Offline silicon ABI model; no hardware qualification.')
 if __name__=='__main__':main()
