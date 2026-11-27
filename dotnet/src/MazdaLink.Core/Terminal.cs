@@ -13,6 +13,7 @@ public sealed class Terminal(Func<IReadTransport> connect, TextReader input, Tex
 MazdaLink — Mazda 2 DE / ZY-VE
 Raw reads: no fixed calibration whitelist (including ZYJ2EA000ZYV5050).
 Checksum preparation: ZY87EC000ZYV5050 and ZYJ2EA000ZYV5050 only.
+Default launch: Windows interface. Use MazdaLink.exe --terminal for the console menu.
 Adapter: Mongoose-Plus ISO/CAN3, manufacturer's 32-bit J2534 04.04 driver
 
 Commands:

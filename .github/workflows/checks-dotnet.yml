@@ -88,5 +88,6 @@ jobs:
             dotnet/TestResults/**/*.trx
             dotnet/TestResults/**/*.json
             dotnet/TestResults/**/*.txt
+            dotnet/TestResults/MazdaLinkStandalone/ui-*.png
           if-no-files-found: warn
           retention-days: 14

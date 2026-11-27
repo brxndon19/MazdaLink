@@ -25,7 +25,7 @@ $help = Invoke-Check -Arguments @('help') -InputText '' -Expected 0 -Name 'help'
 $licence = Invoke-Check -Arguments @('license') -InputText '' -Expected 0 -Name 'licence'
 if ($licence -notmatch 'GNU GENERAL PUBLIC LICENSE' -or $licence -notmatch 'MIT License') { throw 'Embedded application/runtime licences are missing.' }
 $status = Invoke-Check -Arguments @('status') -InputText '' -Expected 0 -Name 'status'
-$menu = Invoke-Check -Arguments @() -InputText "6`n7`n0`n" -Expected 0 -Name 'menu'
+$menu = Invoke-Check -Arguments @('--terminal') -InputText "6`n7`n0`n" -Expected 0 -Name 'menu'
 $flash = Invoke-Check -Arguments @('flash','does-not-exist.rom') -InputText '' -Expected 1 -Name 'flash-refused'
 $override = Invoke-Check -Arguments @('read','--gen2') -InputText '' -Expected 1 -Name 'override-refused'
 $bench = Invoke-Check -Arguments @('bench-recovery-check','does-not-exist\original.rom') -InputText '' -Expected 1 -Name 'bench-refused-before-open'
@@ -82,3 +82,6 @@ $modifiedWrite = Invoke-Check -Arguments @('modified-spare-flash','missing/origi
 $modifiedRecover = Invoke-Check -Arguments @('modified-spare-recover','missing/original.rom') -InputText '' -Expected 1 -Name 'modified-spare-recovery-backup-refused'
 $modifiedAddress = Invoke-Check -Arguments @('modified-spare-flash','original.rom','tune.bin','--address','0') -InputText '' -Expected 1 -Name 'modified-spare-address-refused'
 if ($modifiedWrite -notmatch 'STOPPED' -or $modifiedRecover -notmatch 'STOPPED' -or $modifiedAddress -notmatch 'Unknown command' -or $help -notmatch 'modified-spare-flash' -or $help -notmatch 'RECOVER BOTH ORIGINAL ZYJ2' -or $menu -notmatch '26 ZYJ2 detached spare' -or $status -notmatch 'combined hardware acceptance unqualified') { throw 'Modified spare scope/refusal gates missing.' }
+
+$ui = Invoke-Check -Arguments @('--ui-smoke',$root) -InputText '' -Expected 0 -Name 'desktop-ui-smoke'
+if ($ui -notmatch 'UI SMOKE PASSED' -or !(Test-Path (Join-Path $root 'ui-read.png')) -or !(Test-Path (Join-Path $root 'ui-write.png'))) { throw 'Windows desktop rendering smoke failed.' }

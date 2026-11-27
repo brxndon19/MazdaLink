@@ -2,7 +2,13 @@
 
 ## Product scope
 
-- The current product is the independent terminal application in `dotnet/src/MazdaLink*`.
+- The current product is the independent Windows interface with retained `--terminal`
+  mode in `dotnet/src/MazdaLink*`. The UI must use the same core integrity/capability
+  gates, keep hardware work off the UI thread and disable concurrent actions.
+  Retain original backups automatically; prepare and verify a separate edited BIN
+  copy before enabling Write. Reject changes to that prepared file after review.
+  Default launch opens the UI; preserve CLI commands and test the actual Windows
+  UI rendering and initial disabled actions in the standalone release gate.
   Ship only `MazdaLink.exe`, never the legacy desktop or reader binaries.
 - Raw reads and exports have no calibration whitelist. Require a valid reported
   calibration, recheck it before unlock, and retain its actual value in backup metadata.

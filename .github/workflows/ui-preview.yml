@@ -1,0 +1,40 @@
+name: Windows UI preview
+on:
+  push:
+    branches: [feat/windows-interface]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ui-preview-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  desktop:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: dotnet
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+        with:
+          global-json-file: dotnet/global.json
+      - name: Restore pinned Windows desktop application
+        run: |
+          dotnet restore src/MazdaLink --locked-mode
+          if ($LASTEXITCODE -ne 0) { throw 'Locked desktop restore failed.' }
+      - name: Exercise standalone CLI and render both desktop sections
+        run: ./tools/Test-MazdaLink.ps1 -Output TestResults/UiPreview
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: ${{ always() }}
+        with:
+          name: ui-preview-${{ github.run_id }}
+          path: |
+            dotnet/TestResults/UiPreview/*.png
+            dotnet/TestResults/UiPreview/*.json
+            dotnet/TestResults/UiPreview/*.txt
+          if-no-files-found: warn
+          retention-days: 14

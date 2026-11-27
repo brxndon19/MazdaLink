@@ -1,7 +1,7 @@
 {
   "version": 1,
   "dependencies": {
-    "net10.0": {
+    "net10.0-windows7.0": {
       "Microsoft.NET.ILLink.Tasks": {
         "type": "Direct",
         "requested": "[10.0.14, )",
@@ -14,10 +14,10 @@
       "mazdalink.j2534": {
         "type": "Project",
         "dependencies": {
-          "MazdaLink.Core": "[0.9.0-alpha.1, )"
+          "MazdaLink.Core": "[0.9.0-alpha.21, )"
         }
       }
     },
-    "net10.0/win-x86": {}
+    "net10.0-windows7.0/win-x86": {}
   }
 }

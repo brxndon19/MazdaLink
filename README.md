@@ -1,6 +1,6 @@
 # MazdaLink
 
-A Windows terminal application for Mazda 2 DE raw ECU backups, verified ROM-copy preparation and experimental detached-ZYJ2-spare flashing.
+A Windows desktop application for Mazda 2 DE raw ECU backups, verified ROM-copy preparation and experimental detached-ZYJ2-spare flashing.
 
 **Raw reads have no calibration whitelist.** A reported ID such as `ZYJ2EA000ZYV5050` no longer fails merely because it differs from ZY87. MazdaLink attempts its existing fixed read-only protocol (CAN 500 kbit/s, 7E0/7E8, session 10 03, security 27 03/04, read 23 24, 512-byte blocks, 1 MiB image). Compatibility is not established for every ECU: it stops if the ECU refuses the procedure, a reply is malformed, or the two reads differ. It does not probe other protocols or retry security keys.
 
@@ -8,7 +8,7 @@ A Windows terminal application for Mazda 2 DE raw ECU backups, verified ROM-copy
 
 [![Checks](https://github.com/brxndon19/MazdaLink/actions/workflows/checks-dotnet.yml/badge.svg)](https://github.com/brxndon19/MazdaLink/actions/workflows/checks-dotnet.yml)
 
-Download **MazdaLink.exe** from [Releases](https://github.com/brxndon19/MazdaLink/releases). Double-click it for the menu; no .NET installation is needed. The app targets Windows 10/11 with the manufacturer's registered **32-bit J2534 04.04 Mongoose-Plus ISO/CAN3 driver**. Hardware support remains experimental and has not been qualified on your physical ECU/adapter by this project.
+Download **MazdaLink.exe** from [Releases](https://github.com/brxndon19/MazdaLink/releases). Double-click it for the Windows interface; no .NET installation is needed. The app targets Windows 10/11 with the manufacturer's registered **32-bit J2534 04.04 Mongoose-Plus ISO/CAN3 driver**. Hardware support remains experimental and has not been qualified on your physical ECU/adapter by this project.
 
 ## What it does
 
@@ -24,11 +24,12 @@ Download **MazdaLink.exe** from [Releases](https://github.com/brxndon19/MazdaLin
 ## Start
 
 1. Install your Mongoose driver, connect the adapter, switch ignition ON and keep the engine OFF.
-2. Double-click `MazdaLink.exe`, choose **Identify ECU**, then **Read ECU and save backup**.
-3. Choose **Export backup as .rom** if you want a separate working copy. Keep the original backup folder intact.
-4. For the supported exact ZY87/ZYJ2 profile, choose **Prepare an externally edited ROM** (4), then **Validate modified ROM** (5). BIN and ROM are accepted as raw files. Only the detached ZYJ2/ZYC3 spare has the experimental menu 26/27 workflow; follow its linked procedure.
+2. Open `MazdaLink.exe`, select your adapter driver and use **Read & save → Read ECU & save backup**. The complete verified original stays under Documents\MazdaLink\backups.
+3. Choose **Save a .bin copy** and edit that working copy externally. Keep the complete backup folder intact.
+4. Under **Write edited BIN**, choose the original backup (the latest read is already selected), then **Load edited .bin & check**. MazdaLink creates a separate checksum-corrected copy and leaves both inputs unchanged.
+5. **Write prepared BIN to spare** uses the same experimental detached-ZYJ2/ZYC3 two-block capability. Follow the power/typed-confirmation dialogs. This is not good-ZY87 or in-car flashing.
 
-Run `MazdaLink.exe help` for commands or `MazdaLink.exe drivers` to list registered drivers. If several are installed, the menu asks which one to use. Command-line operations accept `--driver "exact registered name"` at the end.
+Run `MazdaLink.exe --terminal` for the console menu, or `MazdaLink.exe help` for commands or `MazdaLink.exe drivers` to list registered drivers. If several are installed, the menu asks which one to use. Command-line operations accept `--driver "exact registered name"` at the end.
 
 ## ZYJ2 spare: bench monitor check
 
