@@ -36,7 +36,7 @@ internal sealed class MainWindow:Form
         Font=new Font("Segoe UI",10);BackColor=Color.FromArgb(242,245,249);AutoScaleMode=AutoScaleMode.Dpi;
         StartPosition=FormStartPosition.CenterScreen;
         var layout=new TableLayoutPanel{Dock=DockStyle.Fill,ColumnCount=1,RowCount=6,Padding=new Padding(20),BackColor=BackColor};
-        foreach(float h in new[]{80f,58f,0f,26f,130f,46f})layout.RowStyles.Add(new(h==0?SizeType.Percent:SizeType.Absolute,h==0?100:h));
+        foreach(float h in new[]{80f,58f,0f,26f,110f,46f})layout.RowStyles.Add(new(h==0?SizeType.Percent:SizeType.Absolute,h==0?100:h));
         var header=new Panel{Dock=DockStyle.Fill,BackColor=Color.FromArgb(21,43,68),Padding=new Padding(16,5,16,5)};
         var title=Label("MazdaLink","Title");title.Font=new Font("Segoe UI",23,FontStyle.Bold);title.ForeColor=Color.White;title.Dock=DockStyle.Top;title.Height=40;
         var sub=Label("Mazda 2 DE  •  Read your ECU, edit externally, write a prepared file","Subtitle");sub.ForeColor=Color.FromArgb(192,213,235);sub.Dock=DockStyle.Bottom;sub.Height=23;
