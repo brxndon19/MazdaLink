@@ -66,8 +66,9 @@ public static class RestorePrerequisite
     }
 }
 
-/// <summary>Fixed original-only EB14 script. Recovery always cold-binds and re-erases;
-/// no external code, address, modified data or resume index is accepted.</summary>
+/// <summary>Fixed-block wire scripts. Original-only factories retain their scope; the
+/// dedicated modified factory binds a separately validated two-image step. No external
+/// code, erase block, address or resume index is accepted.</summary>
 public sealed class RestoreQualificationPlan:IReadOnlyList<TransactionWireStep>
 {
     private readonly List<TransactionWireStep> installation=[];
@@ -76,6 +77,10 @@ public sealed class RestoreQualificationPlan:IReadOnlyList<TransactionWireStep>
     private int cached=-1;
     private List<TransactionWireStep> commandSteps=[];
     public OriginalBlockRestorePlan Original { get; }
+    public ModifiedFlashStep? Modified { get; private set; }
+    public byte[] ProgramData(int unit)=>Modified?.ProgramData(unit)??Original.Data(unit);
+    public void RequireFullReadback(byte[] bytes)
+    { if(Modified is null)Original.RequireFullReadback(bytes);else Modified.RequireFinal(bytes); }
     public RecoveryBindingPlan Binding { get; }
     public int SelectedBlock=>Original.SelectedBlock;
     public byte[] KernelImage=>SelectedBlock==15?Eb15OriginalRestoreKernel.Image:OriginalRestoreKernel.Image;
@@ -92,7 +97,10 @@ public sealed class RestoreQualificationPlan:IReadOnlyList<TransactionWireStep>
     private RestoreQualificationPlan(byte[] bytes,RecoveryBindingPlan binding,OriginalBlockRestorePlan originalPlan,bool recovery,uint cookie,ControlledRecoveryStage controlled)
         :this(bytes,binding,originalPlan,recovery,cookie,controlled,false) { }
     private RestoreQualificationPlan(byte[] bytes,RecoveryBindingPlan binding,OriginalBlockRestorePlan originalPlan,bool recovery,uint cookie,ControlledRecoveryStage controlled,bool eb15Controlled)
+        :this(bytes,binding,originalPlan,recovery,cookie,controlled,eb15Controlled,null) { }
+    private RestoreQualificationPlan(byte[] bytes,RecoveryBindingPlan binding,OriginalBlockRestorePlan originalPlan,bool recovery,uint cookie,ControlledRecoveryStage controlled,bool eb15Controlled,ModifiedFlashStep? modified)
     {
+        Modified=modified;
         if(eb15Controlled && (originalPlan.SelectedBlock!=15||controlled is not (ControlledRecoveryStage.Prepare or ControlledRecoveryStage.Recover)))throw new InvalidDataException("Choose the fixed EB15 boundary stage.");
         if(!eb15Controlled && originalPlan.SelectedBlock==15 && controlled!=ControlledRecoveryStage.None)throw new InvalidDataException("EB15 cannot acquire the EB14 controlled-stop path.");
         original=bytes.ToArray();Binding=binding;Original=originalPlan;Recovery=recovery;ControlledStage=controlled;
@@ -103,7 +111,7 @@ public sealed class RestoreQualificationPlan:IReadOnlyList<TransactionWireStep>
         void ReadAll(RestorePhase phase){for(ushort i=0;i<2048;i++)Add(TransactionOpcode.ReadBlock,phase,i);}
         Add(TransactionOpcode.Initialize,RestorePhase.Initialize);ReadAll(RestorePhase.BeforeErase);
         Add(TransactionOpcode.Erase,RestorePhase.Erase,(ushort)SelectedBlock);ReadAll(RestorePhase.EraseReadback);
-        for(ushort i=0;i<ExpectedUnits;i++){Add(TransactionOpcode.Program,RestorePhase.Program,i,Original.Data(i));Add(TransactionOpcode.VerifyOriginalUnit,RestorePhase.UnitReadback,i);}
+        for(ushort i=0;i<ExpectedUnits;i++){Add(TransactionOpcode.Program,RestorePhase.Program,i,ProgramData(i));Add(TransactionOpcode.VerifyOriginalUnit,RestorePhase.UnitReadback,i);}
         if(controlled==ControlledRecoveryStage.Prepare){ReadAll(RestorePhase.PartialReadback);Add(TransactionOpcode.Finish,RestorePhase.FinishPartial);}
         else{ReadAll(RestorePhase.FinalReadback1);ReadAll(RestorePhase.FinalReadback2);Add(TransactionOpcode.Finish,RestorePhase.Finish);}
         Commands=commands.AsReadOnly();starts=new int[commands.Count];int offset=InstallationEnd;
@@ -139,6 +147,12 @@ public sealed class RestoreQualificationPlan:IReadOnlyList<TransactionWireStep>
         Eb15ControlledRecoveryEvidence.RequireOriginalRestoration(originalEb15RestorationFolder,stable);
         uint cookie;do{cookie=BinaryPrimitives.ReadUInt32BigEndian(RandomNumberGenerator.GetBytes(4));}while(cookie==0);
         return new(stable.Data,RecoveryBindingPlan.Create(stable),OriginalBlockRestorePlan.CreateEb15(stable),stage==ControlledRecoveryStage.Recover,cookie,stage,true);
+    }
+    internal static RestoreQualificationPlan CreateModified(VerifiedRawBackup backup,ModifiedFlashStep step)
+    {
+        uint cookie;do{cookie=BinaryPrimitives.ReadUInt32BigEndian(RandomNumberGenerator.GetBytes(4));}while(cookie==0);
+        var originalPlan=step.Block==14?OriginalBlockRestorePlan.Create(backup,backup.Data):OriginalBlockRestorePlan.CreateEb15(backup);
+        return new(backup.Data,RecoveryBindingPlan.Create(backup),originalPlan,step.Recovery,cookie,ControlledRecoveryStage.None,false,step);
     }
     public byte[] ExpectedPartialImage()
     {
@@ -179,6 +193,7 @@ public sealed class RestoreQualificationPlan:IReadOnlyList<TransactionWireStep>
     }
     internal void RequireData(RestoreCommand entry,TransactionReply reply)
     {
+        if(Modified is not null){Modified.RequireData(entry,reply);return;}
         var cmd=entry.Command;int address=cmd.Index*512;
         if(entry.Phase==RestorePhase.UnitReadback)
         {if(!reply.Data.AsSpan().SequenceEqual(Original.Data(cmd.Index)))throw new InvalidDataException("Original unit readback differs; no request was resent.");return;}

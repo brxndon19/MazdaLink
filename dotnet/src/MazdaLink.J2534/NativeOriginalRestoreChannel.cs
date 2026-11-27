@@ -7,6 +7,7 @@ public sealed class NativeOriginalRestoreChannel:IOriginalRestoreChannel
     private readonly NativeBenchMonitorChannel inner;
     public NativeOriginalRestoreChannel(J2534Driver driver,RestoreQualificationPlan plan,RestoreJournal journal)
     {
+        if(plan.Modified is not null)throw new InvalidDataException("Original-only capability cannot accept a modified transaction.");
         if(plan.Original.OriginalSha256!=journal.OriginalSha256||plan.SelectedBlock!=journal.SelectedBlock)throw new InvalidDataException("Restore journal is bound to another backup or erase block.");
         inner=new(driver,new RestoreQualificationGate(plan,journal));
     }

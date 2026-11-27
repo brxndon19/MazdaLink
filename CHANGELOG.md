@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.0-alpha.20
+
+- Add separately confirmed menu 26 modified BIN/ROM flashing for the detached ZYJ2EA000ZYV5050 / ZYC3 spare. Coordinate fixed EB14 then EB15 kernels in one powered monitor connection, with exact current-image policy, frozen preserved bytes, durable two-image journal, per-unit checks and dual full reads after each block. Restore the pointer unit last.
+- Add menu 27 experimental cold recovery restoring BOTH complete blocks to the verified original. Never resume an index or resend an ambiguous operation; preserve original-only capability isolation and all existing firmware images.
+- Reuse the observed single-block original-write and completed-unit cold-entry evidence. Test combined transitions, mutable/interrupted state and original recovery independently. Combined modified hardware acceptance, active-operation power loss, good-ZY87 compatibility and tuning semantics remain unqualified.
+
 ## 0.9.0-alpha.19
 
 - Add menus 24/25 for controlled EB15 completed-unit-zero cold recovery and receipt-bound recovery-only continuation on the detached ZYJ2 spare. Require the complete passed first alpha.18 EB15 run folder and original backup.

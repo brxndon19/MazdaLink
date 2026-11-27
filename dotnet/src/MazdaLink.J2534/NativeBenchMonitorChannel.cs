@@ -64,7 +64,7 @@ public sealed class NativeBenchMonitorChannel : IBenchMonitorChannel
     private readonly WriteEnableControlPlan? writeEnableControl;
     private readonly RecoveryRehearsalPlan? recoveryRehearsal;
     private readonly TransactionTrialGate? transactionGate;
-    private readonly RestoreQualificationGate? restoreGate;
+    private RestoreQualificationGate? restoreGate;
     private bool initialMonitorIdentified, ramFaulted;
     private int nextRamStep, verifiedRamBytes;
     private RamSelfTestStep? awaitingRamStep;
@@ -383,6 +383,14 @@ public sealed class NativeBenchMonitorChannel : IBenchMonitorChannel
         catch{restoreGate.Fail();throw;}
     }
     internal void FailOriginalRestore()=>restoreGate?.Fail();
+    internal void AdvanceModifiedRestore(RestoreQualificationGate next)
+    {
+        RequireReady();
+        if(restoreGate is null || !restoreGate.ModifiedCapability || !restoreGate.Complete ||
+           !next.ModifiedCapability || pulseStarted || ramFaulted || !initialMonitorIdentified)
+        { restoreGate?.Fail();next.Fail();throw new TransportException("Both-block transition requires the completed first modified block and monitor return."); }
+        restoreGate=next;
+    }
     internal void FailTransactionTrial()=>transactionGate?.Fail();
     internal void FailRecoveryBinding() => ramFaulted = true;
     private void SendFixedStep(int index, IReadOnlyList<RamSelfTestStep> steps, int imageLength)

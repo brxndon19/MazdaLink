@@ -11,7 +11,7 @@
   currently `ZY87EC000ZYV5050` and independently traced `ZYJ2EA000ZYV5050`.
   The ZYJ2 editor permits data changes only in C0100..DFFFF and recalculates all
   19 correction words; retain its entire initial 256-byte header. The offline
-  modified-ROM report has no native capability. Modified EB15 writing remains unavailable. Never relabel an unknown backup or apply a known
+  modified-ROM report has no native capability. Modified EB15 writing is limited to the dedicated two-block detached-spare workflow below. Never relabel an unknown backup or apply a known
   correction policy merely because read procedures or software suffixes look similar.
 - Keep the fixed bounded raw-read protocol, engine-stopped gate and matching dual reads.
   No automatic protocol probing, key retry or write/reset override is permitted.
@@ -29,7 +29,7 @@
   bounded metadata/counters, never raw frame payloads. TX echoes do not prove
   ECU acceptance, and adapter supply snapshots do not prove ECU power cycling.
 - Generic/modified `flash` must refuse before driver open. The separately selected
-  original-only detached-spare qualification below is the sole destructive exception;
+  original-only detached-spare qualification and explicitly authorized modified-spare workflow below are the destructive exceptions;
   do not infer a Mazda 2 writer from generic UDS or Gen 1 code.
 - The separately selected ZYJ2 fixed RAM self-test has its own backend capability
   and `RAM ZYJ2` confirmation. Permit only the immutable built-in 120-byte program
@@ -223,6 +223,33 @@
   does not negate earlier RAM evidence or qualify recovery; record the stages separately.
 - Preserve original GPL credits. Legacy sources/definitions and their core integrity
   regression matrix remain archived in place, but are not application dependencies.
+
+## Modified detached-spare transaction
+
+- The user explicitly authorized modified BIN/ROM flashing after the alpha.15/16
+  EB14 and alpha.18/19 EB15 original-write/completed-unit cold-entry results.
+  Reuse that evidence; another original-only bench repetition is not inherently required.
+- Only `ZYJ2EA000ZYV5050` / ZYC3 with the examined boot fingerprints is supported.
+  Accept a complete verified original backup and a prepared raw 1 MiB BIN/ROM.
+  Validate permitted data edits and all 19 checksums; EB15 may change only FF6DC..FF6DF.
+  Do not expose good-ZY87 flashing or infer hardware equivalence from suffixes.
+- Use a dedicated capability and confirmation: FLASH MODIFIED SPARE ZYJ2.
+  EB14 then EB15 execute in the same powered monitor session, with fresh immutable
+  kernel/code/state/command/staging verification for each block and the pointer unit last.
+  A completed gate and both exact intermediate full reads precede the second block.
+  Existing original-only channels must reject modified plans before driver access.
+- Freeze the complete current image before erase. An ordinary tune requires valid
+  supported calibration/checksums; recovery may accept unknown bytes only in EB14/15.
+  Every other byte must match the original, and the unselected block must remain
+  exactly equal to the captured image throughout each phase. Require unit readback,
+  dual exact full reads, monitor return and separate normal restart.
+- RECOVER BOTH ORIGINAL ZYJ2 always cold-binds and re-erases/restores both entire
+  blocks to the original from zero. No individual request retry or unit resume.
+  The separate durable journal binds transaction, original/target/live intermediate
+  hashes and fixed block order; flush each intent before execution.
+- Combined modified hardware acceptance, good-ECU compatibility, tuning semantics
+  and active-operation power-loss recovery remain unqualified. Do not intentionally
+  interrupt an active flash operation or claim recovery is guaranteed.
 
 ## Reliability and releases
 

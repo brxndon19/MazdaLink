@@ -59,7 +59,8 @@ try
         plan => new NativeWriteEnableControlChannel(SelectDriver(), plan),
         plan => new NativeRecoveryRehearsalChannel(SelectDriver(), plan),
         plan => new NativeTransactionTrialChannel(SelectDriver(),plan),
-        (plan,journal) => new NativeOriginalRestoreChannel(SelectDriver(),plan,journal)).Run(args, cancel.Token);
+        (plan,journal) => new NativeOriginalRestoreChannel(SelectDriver(),plan,journal),
+        (transaction,plan,journal) => new NativeModifiedFlashChannel(SelectDriver(),transaction,plan,journal)).Run(args, cancel.Token);
 }
 catch (Exception error)
 {
