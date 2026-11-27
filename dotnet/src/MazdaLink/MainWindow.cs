@@ -30,12 +30,13 @@ internal sealed class MainWindow:Form
     private readonly bool smoke;
     public MainWindow(bool smoke=false)
     {
+        SuspendLayout();AutoScaleDimensions=new SizeF(96,96);AutoScaleMode=AutoScaleMode.Dpi;
         this.smoke=smoke;files=new(root);
         Text="MazdaLink — Mazda 2 DE";Name="MazdaLink";ClientSize=new Size(1120,850);MinimumSize=new Size(900,680);
         Font=new Font("Segoe UI",10);BackColor=Color.FromArgb(242,245,249);AutoScaleMode=AutoScaleMode.Dpi;
         StartPosition=FormStartPosition.CenterScreen;
         var layout=new TableLayoutPanel{Dock=DockStyle.Fill,ColumnCount=1,RowCount=6,Padding=new Padding(20),BackColor=BackColor};
-        foreach(float h in new[]{80f,46f,0f,26f,190f,30f})layout.RowStyles.Add(new(h==0?SizeType.Percent:SizeType.Absolute,h==0?100:h));
+        foreach(float h in new[]{80f,58f,0f,26f,130f,46f})layout.RowStyles.Add(new(h==0?SizeType.Percent:SizeType.Absolute,h==0?100:h));
         var header=new Panel{Dock=DockStyle.Fill,BackColor=Color.FromArgb(21,43,68),Padding=new Padding(16,5,16,5)};
         var title=Label("MazdaLink","Title");title.Font=new Font("Segoe UI",23,FontStyle.Bold);title.ForeColor=Color.White;title.Dock=DockStyle.Top;title.Height=40;
         var sub=Label("Mazda 2 DE  •  Read your ECU, edit externally, write a prepared file","Subtitle");sub.ForeColor=Color.FromArgb(192,213,235);sub.Dock=DockStyle.Bottom;sub.Height=23;
@@ -56,25 +57,29 @@ internal sealed class MainWindow:Form
         Shown+=(_,_)=>{if(!smoke)RefreshDrivers();};
         FormClosing+=(_,e)=>{if(busy){e.Cancel=true;Stop();}};
         FormClosed+=(_,_)=>{timer.Dispose();cancellation?.Dispose();};
-        UpdateActions();
+        UpdateActions();ResumeLayout(true);
     }
     private Control ReadPage()
     {
-        var panel=Grid(6,36,48,46,60,60,46);
+        var panel=Grid(5,36,48,48,64,56);
         var title=Label("Read and keep an original backup","ReadHeading");title.Font=new Font(Font.FontFamily,16,FontStyle.Bold);panel.Controls.Add(title);
         panel.Controls.Add(Label("Connect your Mongoose, switch ignition on and keep the engine off. Save the BIN copy for editing in your preferred tuning tool.","ReadDescription"));
-        panel.Controls.Add(read);panel.Controls.Add(readInfo);
+        var actions=new TableLayoutPanel{Dock=DockStyle.Fill,ColumnCount=2};actions.ColumnStyles.Add(new(SizeType.Percent,55));actions.ColumnStyles.Add(new(SizeType.Percent,45));actions.Controls.Add(read,0,0);actions.Controls.Add(export,1,0);
+        panel.Controls.Add(actions);panel.Controls.Add(readInfo);
         panel.Controls.Add(Label("The complete backup stays in Documents\\MazdaLink\\backups. Keep this folder intact; the BIN copy is your external working file.","BackupHint"));
-        panel.Controls.Add(export);return panel;
+        return panel;
     }
     private Control WritePage()
     {
-        var panel=Grid(6,36,48,65,65,85,46);
+        var host=new Panel{Dock=DockStyle.Fill};
+        var body=new Panel{Dock=DockStyle.Fill,AutoScroll=true};
+        var panel=Grid(5,32,44,60,60,70);panel.Padding=new Padding(12);body.Controls.Add(panel);
         var title=Label("Load your edited file and write it back","WriteHeading");title.Font=new Font(Font.FontFamily,16,FontStyle.Bold);panel.Controls.Add(title);
         var scope=Label("Experimental: detached ZYJ2 / ZYC3 bench spare only. Keep the good ECU disconnected. In-car and ZY87 writing are unavailable.","WriteScope");scope.ForeColor=Color.FromArgb(148,72,13);panel.Controls.Add(scope);
         panel.Controls.Add(FileRow("Original backup",original,choose));panel.Controls.Add(FileRow("Externally edited BIN",edited,load));
         panel.Controls.Add(preparedInfo);
-        var actions=new TableLayoutPanel{Dock=DockStyle.Fill,ColumnCount=2};actions.ColumnStyles.Add(new(SizeType.Percent,55));actions.ColumnStyles.Add(new(SizeType.Percent,45));actions.Controls.Add(write,0,0);actions.Controls.Add(recover,1,0);panel.Controls.Add(actions);return panel;
+        var actions=new TableLayoutPanel{Dock=DockStyle.Fill,ColumnCount=2};actions.ColumnStyles.Add(new(SizeType.Percent,55));actions.ColumnStyles.Add(new(SizeType.Percent,45));actions.Controls.Add(write,0,0);actions.Controls.Add(recover,1,0);actions.Dock=DockStyle.Bottom;actions.Height=52;actions.Padding=new Padding(12,0,12,6);
+        host.Controls.Add(body);host.Controls.Add(actions);return host;
     }
     private static TableLayoutPanel Grid(int rows,params float[] heights)
     {
@@ -176,6 +181,8 @@ internal sealed class MainWindow:Form
         export.Enabled=!busy&&files.OriginalPath is not null;load.Enabled=!busy&&files.OriginalPath is not null;
         write.Enabled=!busy&&adapter&&files.PreparedPath is not null&&files.Calibration==Zyj2RecoveryPolicy.SoftwareId;recover.Enabled=!busy&&adapter&&files.OriginalPath is not null&&files.Calibration==Zyj2RecoveryPolicy.SoftwareId;
         stop.Enabled=busy;
+        foreach(var button in new[]{read,load,write})
+        {button.BackColor=button.Enabled?Color.FromArgb(27,100,187):Color.FromArgb(232,238,246);button.ForeColor=button.Enabled?Color.White:Color.FromArgb(110,120,135);}
     }
     private void ShowError(Exception error){Append("STOPPED: "+error.Message);status.Text="Stopped — see activity";}
     private void Append(string text)=>Ui(()=>{if(log.TextLength>500000)log.Text=log.Text[^250000..];log.AppendText($"[{DateTime.Now:HH:mm:ss}] {text}\n");log.SelectionStart=log.TextLength;log.ScrollToCaret();});
@@ -204,7 +211,7 @@ internal sealed class MainWindow:Form
         Directory.CreateDirectory(folder);using var window=new MainWindow(true);window.Show();Application.DoEvents();
         if(window.read.Enabled||window.write.Enabled||window.recover.Enabled||window.export.Enabled||window.stop.Enabled||window.tabs.TabPages.Count!=2)throw new InvalidDataException("Unsafe initial UI action state.");
         for(int i=0;i<2;i++){window.tabs.SelectedIndex=i;Application.DoEvents();using var bitmap=new Bitmap(window.Width,window.Height);window.DrawToBitmap(bitmap,new Rectangle(Point.Empty,bitmap.Size));bitmap.Save(Path.Combine(folder,i==0?"ui-read.png":"ui-write.png"));}
-        File.WriteAllText(Path.Combine(folder,"ui-report.json"),JsonSerializer.Serialize(new{passed=true,frontend="WindowsForms",sections=new[]{"Read & save","Write edited BIN"},hardwareAccessed=false,unpreparedWriteDisabled=true,noAdapterActionsDisabled=true,imagesRendered=2}));
+        File.WriteAllText(Path.Combine(folder,"ui-report.json"),JsonSerializer.Serialize(new{passed=true,frontend="WindowsForms",sections=new[]{"Read & save","Write edited BIN"},hardwareAccessed=false,unpreparedWriteDisabled=true,noAdapterActionsDisabled=true,imagesRendered=2,dpi=window.DeviceDpi,width=window.Width,height=window.Height,clientWidth=window.ClientSize.Width,clientHeight=window.ClientSize.Height,writeActionVisible=window.write.Visible}));
         window.Close();Console.WriteLine("UI SMOKE PASSED — two sections rendered; hardware unopened and unprepared writing disabled.");return 0;
     }
     private sealed class PromptReader(Func<string> read):TextReader{public override string ReadLine()=>read();}
