@@ -210,9 +210,25 @@ internal sealed class MainWindow:Form
     {
         Directory.CreateDirectory(folder);using var window=new MainWindow(true);window.Show();Application.DoEvents();
         if(window.read.Enabled||window.write.Enabled||window.recover.Enabled||window.export.Enabled||window.stop.Enabled||window.tabs.TabPages.Count!=2)throw new InvalidDataException("Unsafe initial UI action state.");
-        for(int i=0;i<2;i++){window.tabs.SelectedIndex=i;Application.DoEvents();using var bitmap=new Bitmap(window.Width,window.Height);window.DrawToBitmap(bitmap,new Rectangle(Point.Empty,bitmap.Size));bitmap.Save(Path.Combine(folder,i==0?"ui-read.png":"ui-write.png"));}
-        File.WriteAllText(Path.Combine(folder,"ui-report.json"),JsonSerializer.Serialize(new{passed=true,frontend="WindowsForms",sections=new[]{"Read & save","Write edited BIN"},hardwareAccessed=false,unpreparedWriteDisabled=true,noAdapterActionsDisabled=true,imagesRendered=2,dpi=window.DeviceDpi,width=window.Width,height=window.Height,clientWidth=window.ClientSize.Width,clientHeight=window.ClientSize.Height,writeActionVisible=window.write.Visible}));
+        void Render(string name){using var bitmap=new Bitmap(window.Width,window.Height);window.DrawToBitmap(bitmap,new Rectangle(Point.Empty,bitmap.Size));bitmap.Save(Path.Combine(folder,name));}
+        for(int i=0;i<2;i++)
+        {
+            window.tabs.SelectedIndex=i;Application.DoEvents();
+            foreach(var action in i==0?new[]{window.read,window.export,window.refresh,window.stop}:new[]{window.write,window.recover,window.refresh,window.stop})RequireOnScreen(action);
+            Render(i==0?"ui-read.png":"ui-write.png");
+        }
+        window.ClientSize=new Size(940,640);Application.DoEvents();
+        foreach(var action in new[]{window.write,window.recover,window.stop})RequireOnScreen(action);
+        Render("ui-compact.png");
+        File.WriteAllText(Path.Combine(folder,"ui-report.json"),JsonSerializer.Serialize(new{passed=true,frontend="WindowsForms",sections=new[]{"Read & save","Write edited BIN"},hardwareAccessed=false,unpreparedWriteDisabled=true,noAdapterActionsDisabled=true,imagesRendered=3,compactActionsVisible=true,dpi=window.DeviceDpi,width=window.Width,height=window.Height,clientWidth=window.ClientSize.Width,clientHeight=window.ClientSize.Height,writeActionVisible=window.write.Visible}));
         window.Close();Console.WriteLine("UI SMOKE PASSED — two sections rendered; hardware unopened and unprepared writing disabled.");return 0;
+    }
+    private static void RequireOnScreen(Button control)
+    {
+        if(!control.Visible||control.ClientSize.Height<TextRenderer.MeasureText(control.Text,control.Font).Height+8)throw new InvalidDataException("A desktop action is hidden or vertically clipped: "+control.Name);
+        Rectangle bounds=control.RectangleToScreen(control.ClientRectangle);
+        for(Control? parent=control.Parent;parent is not null;parent=parent.Parent)
+            if(Rectangle.Intersect(bounds,parent.RectangleToScreen(parent.ClientRectangle))!=bounds)throw new InvalidDataException("A desktop action is outside its viewport: "+control.Name);
     }
     private sealed class PromptReader(Func<string> read):TextReader{public override string ReadLine()=>read();}
     private sealed class UiWriter(Action<string> line):TextWriter
