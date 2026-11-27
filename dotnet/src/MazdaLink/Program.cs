@@ -2,6 +2,33 @@ using MazdaLink.Core;
 using MazdaLink.J2534;
 using System.Reflection;
 
+namespace MazdaLink;
+internal static class Program
+{
+    [STAThread]
+    private static int Main(string[] args)
+    {
+        if(args.Length==0 || args[0]=="--ui-smoke")
+        {
+            Application.SetUnhandledExceptionMode(UnhandledExceptionMode.ThrowException);
+            ApplicationConfiguration.Initialize();
+            try
+            {
+                if(args.Length>0)return MainWindow.Smoke(args.Length==2?args[1]:Path.GetTempPath());
+                // Keep command-line mode available, but opening the EXE starts the desktop UI.
+                if(GetConsoleProcessList(new uint[2],2)==1)ShowWindow(GetConsoleWindow(),0);
+                Application.Run(new MainWindow());return 0;
+            }
+            catch(Exception error){if(args.Length>0)Console.Error.WriteLine("UI smoke stopped: "+error.GetType().Name);else MessageBox.Show("MazdaLink stopped: "+error.GetType().Name,"MazdaLink",MessageBoxButtons.OK,MessageBoxIcon.Error);return 1;}
+        }
+        if(args[0]=="--terminal")args=args[1..];
+        return RunTerminal(args);
+    }
+    [System.Runtime.InteropServices.DllImport("kernel32.dll")]private static extern nint GetConsoleWindow();
+    [System.Runtime.InteropServices.DllImport("kernel32.dll")]private static extern uint GetConsoleProcessList([System.Runtime.InteropServices.Out]uint[] processes,uint count);
+    [System.Runtime.InteropServices.DllImport("user32.dll")]private static extern bool ShowWindow(nint handle,int command);
+    private static int RunTerminal(string[] args)
+    {
 string root = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "MazdaLink");
 using var cancel = new CancellationTokenSource();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cancel.Cancel(); };
@@ -9,7 +36,7 @@ try
 {
     if (args.SequenceEqual(new[] { "license" }))
     {
-        foreach (string resource in new[] { "MazdaLink.ATTRIBUTIONS", "MazdaLink.LICENSE", "MazdaLink.Runtime.LICENSE", "MazdaLink.Runtime.NOTICES" })
+        foreach (string resource in new[] { "MazdaLink.ATTRIBUTIONS", "MazdaLink.LICENSE", "MazdaLink.Runtime.LICENSE", "MazdaLink.Runtime.NOTICES", "MazdaLink.DesktopRuntime.LICENSE" })
         {
             using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(resource)!;
             using var reader = new StreamReader(stream); Console.WriteLine(reader.ReadToEnd());
@@ -75,4 +102,7 @@ catch (Exception error)
     catch (IOException) { }
     catch (UnauthorizedAccessException) { }
     return 1;
+}
+
+    }
 }

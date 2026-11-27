@@ -5,7 +5,7 @@ $passed = @($run.TestRun.Results.UnitTestResult | Where-Object outcome -eq 'Pass
 foreach ($name in @('MazdaLink.Tests.TargetTests.RawReadsDoNotRequireAWhitelistedIdentityOrKnownRomLayout(identity: "ZYJ2EA000ZYV5050")','MazdaLink.Tests.TargetTests.KnownLookingRomFromUnknownCalibrationCannotUseTheZy87ChecksumPolicy','MazdaLink.Tests.TargetTests.RefusedReadStopsWithoutKeyRetryOrProtocolProbe','MazdaLink.Tests.TargetTests.EveryPrepareCorrectsAllRangesVerifiesDiskAndPreservesInputs','MazdaLink.Tests.TargetTests.ReadsBothPassesAt512AndExportsExactBytesWithNoOverwrite','MazdaLink.Tests.TargetTests.TransportRequiresValidIdentityBeforeSecurityEvenForDirectCalls','MazdaLink.Tests.TargetTests.MenuAndCommandsCannotOpenHardwareForFlashingOrOverrides')) {
     if ($passed -notcontains $name) { throw "Missing mandatory MazdaLink integrity/scope case: $name" }
 }
-if ([int]$run.TestRun.ResultSummary.Counters.total -lt 427) { throw 'Focused scope/integrity matrix is incomplete.' }
+if ([int]$run.TestRun.ResultSummary.Counters.total -lt 434) { throw 'Focused scope/integrity matrix is incomplete.' }
 foreach ($name in @('MazdaLink.Tests.BenchRecoveryTests.EntryStopsBeforeOneIdentificationAndNeverUploadsOrExecutes','MazdaLink.Tests.BenchRecoveryTests.CancellationStopsPeriodicTrafficBeforeAnyIdentificationRequest','MazdaLink.Tests.BenchRecoveryTests.WireGateAllowsOnlyItsTwoFixedNonProgrammingPayloads','MazdaLink.Tests.BenchRecoveryTests.SpoofingHeaderAndCalibrationDoesNotSatisfyTheBootCodeFingerprints','MazdaLink.Tests.NativeBenchTests.NativePacketsUseRawExtendedCanAndExactlyTwoFixedPayloads','MazdaLink.Tests.NativeBenchTests.FailedNativeWriteCannotBeRetried')) {
     if ($passed -notcontains $name) { throw "Missing mandatory bench-scope case: $name" }
 }
@@ -123,4 +123,8 @@ foreach ($case in @(@('UnknownCompletionNeverRetriesAndColdRecoveryReerasesBothW
 }
 foreach ($name in @('NativeModifiedTransitionRetainsOneMonitorConnectionAndRequiresBothExactBlocks','NativeModifiedTransitionRejectsIncompleteFailedAndOriginalOnlyCapabilities')) {
  if ($passed -notcontains ('MazdaLink.Tests.NativeBenchTests.'+$name)) { throw "Missing native modified capability gate: $name" }
+}
+
+foreach ($name in @('LoadingEditedBinAutomaticallyPreparesEveryChecksumAndKeepsInputsIntact','ChangedPreparedFileCannotSilentlyReplaceTheReviewedTargetEvenWithValidChecksums','ChangedOriginalCaptureCannotRemainAnAuthorizedDesktopBackup','AFailedFileLoadClearsThePreviousWriteTarget','SelectingAnotherOrInvalidBackupClearsAllPreparedAuthorization','SaveBinIsAnExactRawCopyAndNeverOverwritesAnExistingFile','MissingBackupAndUnpreparedTargetAreRejectedWithoutHardware')) {
+ if ($passed -notcontains ('MazdaLink.Tests.DesktopFilesTests.'+$name)) { throw "Missing desktop file/integrity gate: $name" }
 }

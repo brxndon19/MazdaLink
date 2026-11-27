@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><Authors>MazdaLink contributors</Authors><Product>MazdaLink</Product><RuntimeIdentifier>win-x86</RuntimeIdentifier>
+    <OutputType>Exe</OutputType><TargetFramework>net10.0-windows</TargetFramework><UseWindowsForms>true</UseWindowsForms><ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode><EnableWindowsTargeting>true</EnableWindowsTargeting><Authors>MazdaLink contributors</Authors><Product>MazdaLink</Product><RuntimeIdentifier>win-x86</RuntimeIdentifier>
     <SelfContained>true</SelfContained><PublishSingleFile>true</PublishSingleFile><IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <PublishTrimmed>false</PublishTrimmed><AssemblyName>MazdaLink</AssemblyName><RootNamespace>MazdaLink</RootNamespace>
   </PropertyGroup>
@@ -10,5 +10,6 @@
     <EmbeddedResource Include="../../../ATTRIBUTIONS.md" LogicalName="MazdaLink.ATTRIBUTIONS"/>
     <EmbeddedResource Include="$(NuGetPackageRoot)/microsoft.netcore.app.runtime.win-x86/$(RuntimeFrameworkVersion)/LICENSE.TXT" LogicalName="MazdaLink.Runtime.LICENSE"/>
     <EmbeddedResource Include="$(NuGetPackageRoot)/microsoft.netcore.app.runtime.win-x86/$(RuntimeFrameworkVersion)/THIRD-PARTY-NOTICES.TXT" LogicalName="MazdaLink.Runtime.NOTICES"/>
+    <EmbeddedResource Include="$(NuGetPackageRoot)/microsoft.windowsdesktop.app.runtime.win-x86/$(RuntimeFrameworkVersion)/LICENSE" LogicalName="MazdaLink.DesktopRuntime.LICENSE"/>
   </ItemGroup>
 </Project>

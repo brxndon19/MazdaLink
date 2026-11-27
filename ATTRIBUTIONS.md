@@ -30,3 +30,5 @@ and embedded under Help & licenses. Adapter drivers are installed separately.
 
 Mazda, Mazdaspeed and vLinker names identify the platform and supported hardware.
 SpeedLink is an independent project and is not affiliated with those vendors.
+
+The standalone Windows interface bundles Microsoft.WindowsDesktop.App runtime 10.0.14. Its license is embedded in MazdaLink.exe and included in the `license` command, alongside the .NET runtime license and notices.

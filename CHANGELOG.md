@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.0-alpha.21
+
+- Open a native Windows interface by default, with Read & save and Write edited BIN sections. Keep the console menu through --terminal and all existing CLI commands.
+- Retain complete verified ECU backups, export exact BIN copies, and automatically prepare/check all 19 checksums in a separate copy of an externally edited file. Disable Write until preparation succeeds; reject later changes to the reviewed target.
+- Run adapter operations in the background with activity/progress, explicit power/confirmation dialogs and no concurrent hardware actions. Route writing and original recovery through the unchanged dedicated detached-ZYJ2 core capability. The good ECU and active-operation power-loss recovery remain unqualified.
+- Bundle the pinned Windows Desktop runtime in the standalone EXE; test both UI sections and retain rendered screenshots without accessing hardware.
+
 ## 0.9.0-alpha.20
 
 - Add separately confirmed menu 26 modified BIN/ROM flashing for the detached ZYJ2EA000ZYV5050 / ZYC3 spare. Coordinate fixed EB14 then EB15 kernels in one powered monitor connection, with exact current-image policy, frozen preserved bytes, durable two-image journal, per-unit checks and dual full reads after each block. Restore the pointer unit last.
