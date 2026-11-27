@@ -17,8 +17,8 @@ public sealed class RestoreQualificationRunner
     {
         if(plan.ControlledStage==ControlledRecoveryStage.Prepare)throw new InvalidOperationException("A partial boundary is not a complete restoration.");
         var evidence=Execute(channel,plan,record,cancel,observeFinalRead,null);var final=evidence.Final;
-        plan.Original.RequireFullReadback(final[0]);plan.Original.RequireFullReadback(final[1]);
-        record("original-block-restore-dual-readback-and-final-monitor-passed");
+        plan.RequireFullReadback(final[0]);plan.RequireFullReadback(final[1]);
+        record(plan.Modified is null?"original-block-restore-dual-readback-and-final-monitor-passed":"intended-block-dual-readback-and-final-monitor-passed");
         return new(evidence.Commands,evidence.Units,plan.Original.OriginalSha256,RomStorage.Hash(final[0]),RomStorage.Hash(final[1]),true);
     }
     public ControlledStopResult RunToControlledStop(IOriginalRestoreChannel channel,RestoreQualificationPlan plan,Action<string> record,
@@ -78,7 +78,7 @@ public sealed class RestoreQualificationRunner
             if(entry.Phase is RestorePhase.FinalReadback1 or RestorePhase.FinalReadback2)
             {
                 int pass=entry.Phase==RestorePhase.FinalReadback1?0:1;reply.Data.CopyTo(final[pass],entry.Command.Index*512);
-                if(entry.Command.Index==2047){plan.Original.RequireFullReadback(final[pass]);observeFinalRead?.Invoke(pass+1,final[pass].ToArray());}
+                if(entry.Command.Index==2047){plan.RequireFullReadback(final[pass]);observeFinalRead?.Invoke(pass+1,final[pass].ToArray());}
             }
         }
         if(commands!=plan.Commands.Count||units!=plan.ExpectedUnits)throw new TransportException("Original restore evidence incomplete.");

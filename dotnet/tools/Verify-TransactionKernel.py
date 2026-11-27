@@ -307,5 +307,21 @@ def main():
  assert m.rom[:0xe0080]==m.original[:0xe0080] and m.rom[0xe0080:]==b'\xff'*0x1ff80;cases+=1
  assert m.command(0x11,4,2047)[4]==b'\xff'*512;cases+=1
  assert m.command(0x7f,5)[:4]==(0,0,99,1) and m.read(F)==0 and m.io[F+4]==0 and m.io[0xfffff740]==0;cases+=1
+ # Same powered model: complete EB14 cleanup, install the unchanged EB15 code/state,
+ # then initialize/erase/program EB15. No cold register reset is synthesized here.
+ m=Machine(*builds[1],True);assert m.command(0,1)[0]==0;assert m.command(0x21,2,14)[0]==0
+ data=bytearray(m.original[0xc0000:0xc0080]);data[37]^=0x20
+ assert m.command(0x22,3,0,bytes(data))[:4]==(0,0,99,1);cases+=1
+ assert m.command(0x7f,4)[:4]==(0,0,99,1);cases+=1
+ preserved=bytes(m.rom[:0xe0000]);registers=dict(m.io);pd=m.pd;pb=m.pb
+ m.code,m.symbols=builds[2];m.block=15;m.start=0xe0000
+ m.mem.update(enumerate(m.code,BASE));m.mem.update(dict.fromkeys(range(STATE,STATE+48),0))
+ assert m.io==registers and m.pd==pd and m.pb==pb
+ assert m.command(0,1,cookie=0x87654321)[:4]==(0,0,1,0);cases+=1
+ assert m.command(0x21,2,15,cookie=0x87654321)[:4]==(0,0,99,0);cases+=1
+ data=bytearray(m.original[0xe0000:0xe0080]);data[12]^=0x40
+ assert m.command(0x22,3,0,bytes(data),cookie=0x87654321)[:4]==(0,0,99,1);cases+=1
+ assert bytes(m.rom[:0xe0000])==preserved and m.rom[0xe0000:0xe0080]==data;cases+=1
+ assert m.command(0x7f,4,cookie=0x87654321)[:4]==(0,0,99,1);cases+=1
  print(f'PASS: {cases} synthetic SH-2 transaction cases; three exact binaries, ordered CRC32 streams, separate fixed EB14/EB15 operations, RAM-only busy callback, full FPFR, taint and cleanup. Offline silicon ABI model; no hardware qualification.')
 if __name__=='__main__':main()

@@ -576,6 +576,45 @@ public sealed class NativeBenchTests
         Assert.Equal(("controlled-stop",-1),journal.Entries[^1]);Assert.DoesNotContain(journal.Entries,e=>e.Stage=="complete");
         Assert.All(peer.Bytes.AsSpan(0xFFFFC,4).ToArray(),b=>Assert.Equal(255,b));Assert.Throws<TransportException>(()=>driver.SendRestoreStep(0));
     }
+    [Fact]
+    public void NativeModifiedTransitionRetainsOneMonitorConnectionAndRequiresBothExactBlocks()
+    {
+        byte[] original=ModifiedFlashTests.Original(),desired=ModifiedFlashTests.Intended(original),current=original;
+        var plan=ModifiedFlashTests.Plan(original,desired,14);using var journal=new RestoreQualificationTests.MemoryJournal();
+        var gate=new RestoreQualificationGate(plan,journal);using var driver=new Driver(restore:gate);driver.IdentifyMonitor();
+        for(int block=14;block<=15;block++)
+        {
+            if(block==15)
+            {
+                plan=ModifiedFlashTests.Plan(original,desired,15,preceding:current);gate=new(plan,journal);
+                typeof(NativeBenchMonitorChannel).GetMethod("AdvanceModifiedRestore",BindingFlags.Instance|BindingFlags.NonPublic)!.Invoke(driver.Channel,[gate]);
+            }
+            using var pj=new RestoreQualificationTests.MemoryJournal();using var peer=new RestoreQualificationTests.Peer(plan,pj,current);
+            for(int i=0;i<plan.Count;i++)
+            {
+                driver.SendRestoreStep(i);peer.SendRestoreStep(i);
+                while(peer.PendingFrames>0){var frame=peer.Read(25)!;driver.SetTrialReply(frame);driver.Channel.Read(25);}
+            }
+            Assert.True(gate.Complete);current=peer.Bytes.ToArray();
+        }
+        Assert.Equal(desired,current);Assert.Single(driver.Calls,c=>c.StartsWith("periodic:"));Assert.Single(driver.Calls,c=>c.StartsWith("stop:"));
+        Assert.Equal(4108,journal.Entries.Count);Assert.Throws<TransportException>(()=>driver.SendRestoreStep(0));
+    }
+    [Fact]
+    public void NativeModifiedTransitionRejectsIncompleteFailedAndOriginalOnlyCapabilities()
+    {
+        byte[] original=ModifiedFlashTests.Original(),desired=ModifiedFlashTests.Intended(original);
+        foreach(bool modified in new[]{false,true})
+        {
+            var plan=modified?ModifiedFlashTests.Plan(original,desired,14):RestoreQualificationTests.Plan();
+            using var j=new RestoreQualificationTests.MemoryJournal();var gate=new RestoreQualificationGate(plan,j);
+            using var driver=new Driver(restore:gate);driver.IdentifyMonitor();
+            using var j2=new RestoreQualificationTests.MemoryJournal();var next=new RestoreQualificationGate(ModifiedFlashTests.Plan(original,desired,15,preceding:original),j2);
+            var error=Assert.Throws<TargetInvocationException>(()=>typeof(NativeBenchMonitorChannel).GetMethod("AdvanceModifiedRestore",BindingFlags.Instance|BindingFlags.NonPublic)!.Invoke(driver.Channel,[next]));
+            Assert.IsType<TransportException>(error.InnerException);Assert.True(gate.Diagnostics.Failed);Assert.True(next.Diagnostics.Failed);
+            Assert.Throws<TransportException>(()=>driver.SendRestoreStep(0));
+        }
+    }
     private sealed class Driver : IDisposable
     {
         private const BindingFlags Hidden = BindingFlags.NonPublic | BindingFlags.Instance;

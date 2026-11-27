@@ -14,6 +14,8 @@ public sealed class RestoreQualificationGate
     private bool failed,eraseAttempted;
     public RestoreQualificationGate(RestoreQualificationPlan plan,IRestoreJournal journal)
     {this.plan=plan;this.journal=journal;journal.Commit("started");}
+    public bool Complete=>!failed && pending is null && next==plan.Count && units==plan.ExpectedUnits && completed==plan.Commands.Count;
+    public bool ModifiedCapability=>plan.Modified is not null;
     public RestoreCommandObservation? LastResult { get; private set; }
     public RestoreWireDiagnostics Diagnostics=>new(next,boot,kernel,state,completed,units,pending is not null,failed,eraseAttempted);
     public TransactionWireStep Begin(int index)

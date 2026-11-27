@@ -1,10 +1,10 @@
 # MazdaLink
 
-A Windows terminal application for Mazda 2 DE raw ECU backups and verified ROM-copy preparation.
+A Windows terminal application for Mazda 2 DE raw ECU backups, verified ROM-copy preparation and experimental detached-ZYJ2-spare flashing.
 
 **Raw reads have no calibration whitelist.** A reported ID such as `ZYJ2EA000ZYV5050` no longer fails merely because it differs from ZY87. MazdaLink attempts its existing fixed read-only protocol (CAN 500 kbit/s, 7E0/7E8, session 10 03, security 27 03/04, read 23 24, 512-byte blocks, 1 MiB image). Compatibility is not established for every ECU: it stops if the ECU refuses the procedure, a reply is malformed, or the two reads differ. It does not probe other protocols or retry security keys.
 
-**Checksum preparation/validation supports exact profiles `ZY87EC000ZYV5050` and `ZYJ2EA000ZYV5050`.** ZYJ2 data edits are restricted to C0100..DFFFF, preserving its header and identity; all 19 checksums are recalculated. Menu 21 reports the EB14/EB15 differences offline. Modified flashing remains unavailable. Menu 22 adds a separately selected original-only EB15 bench qualification; menu 23 is an unqualified original EB15 recovery attempt. Read [the EB15 test requirements](docs/ZYJ2_EB15_ORIGINAL_QUALIFICATION.md) first. After a completed alpha.18 original EB15 test, menus 24/25 provide a separately selected [completed-boundary EB15 cold-recovery qualification](docs/ZYJ2_EB15_CONTROLLED_RECOVERY.md). No active-operation power cut or modified flashing is enabled. See [ZYJ2 checksum preparation](docs/ZYJ2_CHECKSUM_PREPARATION.md). Reading compatibility or a matching `ZYV5050` suffix does not establish another calibration's checksum or flash procedure.
+**Checksum preparation/validation supports exact profiles `ZY87EC000ZYV5050` and `ZYJ2EA000ZYV5050`.** ZYJ2 data edits are restricted to C0100..DFFFF, preserving the header and identity; all 19 checksums are recalculated. Menu 21 remains an offline report. Menu **26** experimentally writes a prepared `.bin` or `.rom` to the **detached ZYJ2EA000ZYV5050 / ZYC3 spare**, coordinating EB14 and its EB15 correction without cycling ECU power between blocks. Menu **27** attempts fresh-cold original restoration of both complete blocks. Read [the modified-spare procedure](docs/ZYJ2_MODIFIED_SPARE_FLASH.md) before use. Single-block original writes and completed-unit cold entry were observed on one spare; combined modified flashing and active-operation power-loss recovery remain unqualified. The good ZY87 ECU is not enabled. Reading compatibility or a matching `ZYV5050` suffix does not establish another calibration's flash compatibility.
 
 [![Checks](https://github.com/brxndon19/MazdaLink/actions/workflows/checks-dotnet.yml/badge.svg)](https://github.com/brxndon19/MazdaLink/actions/workflows/checks-dotnet.yml)
 
@@ -16,17 +16,17 @@ Download **MazdaLink.exe** from [Releases](https://github.com/brxndon19/MazdaLin
 - Attempt the complete 1 MiB ROM twice using the fixed read session and 512-byte limit. Raw captures do not require a ZY87 ID, header, checksum table, or memory identity offset.
 - Save matching raw captures, an immutable `original.rom`, manifest and completed read journal recording the actual reported calibration under `Documents\MazdaLink\backups`. Keep the complete folder.
 - Export an exact `.rom` copy to your chosen local filename. Existing files are never overwritten.
-- For ZY87EC000ZYV5050 only, prepare an externally edited ROM against the complete original backup. Only calibration-region changes are accepted; all 19 checksum corrections are mandatory and verified before and after disk write. Inputs stay intact.
-- For ZY87EC000ZYV5050 only, validate a modified ROM's identity, permitted changes and checksums.
+- For ZY87EC000ZYV5050 and ZYJ2EA000ZYV5050, prepare an externally edited ROM against the complete original backup. Only calibration-region changes are accepted; all 19 checksum corrections are mandatory and verified before and after disk write. Inputs stay intact.
+- For ZY87EC000ZYV5050 and ZYJ2EA000ZYV5050, validate a modified ROM's identity, permitted changes and checksums.
 
-**ECU flashing and recovery are unavailable.** The menu explains this and refuses before opening the adapter. A correct checksum does not establish a safe tune or an ECU programming procedure. There is no Gen 1 programmer, generic editor, logger, definition import, or other-car workflow in the shipped executable. Editing maps currently requires an external editor; no unverified map labels are imported from draft research.
+**Generic and in-car flashing remain unavailable.** The separately confirmed experimental writer targets only the detached ZYJ2 spare, using two fixed kernels. A checksum pass does not establish tuning safety or guarantee recovery. Editing maps requires an external editor; no unverified map labels are imported from draft research.
 
 ## Start
 
 1. Install your Mongoose driver, connect the adapter, switch ignition ON and keep the engine OFF.
 2. Double-click `MazdaLink.exe`, choose **Identify ECU**, then **Read ECU and save backup**.
 3. Choose **Export backup as .rom** if you want a separate working copy. Keep the original backup folder intact.
-4. For the supported ZY87 checksum layout, choose **Prepare an externally edited ROM**, then **Validate modified ROM**. ZYJ2/other calibrations currently support raw read/export only. Keep their bytes unchanged; no checksum correction or flashing procedure is claimed.
+4. For the supported exact ZY87/ZYJ2 profile, choose **Prepare an externally edited ROM** (4), then **Validate modified ROM** (5). BIN and ROM are accepted as raw files. Only the detached ZYJ2/ZYC3 spare has the experimental menu 26/27 workflow; follow its linked procedure.
 
 Run `MazdaLink.exe help` for commands or `MazdaLink.exe drivers` to list registered drivers. If several are installed, the menu asks which one to use. Command-line operations accept `--driver "exact registered name"` at the end.
 

@@ -5,7 +5,7 @@ $passed = @($run.TestRun.Results.UnitTestResult | Where-Object outcome -eq 'Pass
 foreach ($name in @('MazdaLink.Tests.TargetTests.RawReadsDoNotRequireAWhitelistedIdentityOrKnownRomLayout(identity: "ZYJ2EA000ZYV5050")','MazdaLink.Tests.TargetTests.KnownLookingRomFromUnknownCalibrationCannotUseTheZy87ChecksumPolicy','MazdaLink.Tests.TargetTests.RefusedReadStopsWithoutKeyRetryOrProtocolProbe','MazdaLink.Tests.TargetTests.EveryPrepareCorrectsAllRangesVerifiesDiskAndPreservesInputs','MazdaLink.Tests.TargetTests.ReadsBothPassesAt512AndExportsExactBytesWithNoOverwrite','MazdaLink.Tests.TargetTests.TransportRequiresValidIdentityBeforeSecurityEvenForDirectCalls','MazdaLink.Tests.TargetTests.MenuAndCommandsCannotOpenHardwareForFlashingOrOverrides')) {
     if ($passed -notcontains $name) { throw "Missing mandatory MazdaLink integrity/scope case: $name" }
 }
-if ([int]$run.TestRun.ResultSummary.Counters.total -lt 407) { throw 'Focused scope/integrity matrix is incomplete.' }
+if ([int]$run.TestRun.ResultSummary.Counters.total -lt 427) { throw 'Focused scope/integrity matrix is incomplete.' }
 foreach ($name in @('MazdaLink.Tests.BenchRecoveryTests.EntryStopsBeforeOneIdentificationAndNeverUploadsOrExecutes','MazdaLink.Tests.BenchRecoveryTests.CancellationStopsPeriodicTrafficBeforeAnyIdentificationRequest','MazdaLink.Tests.BenchRecoveryTests.WireGateAllowsOnlyItsTwoFixedNonProgrammingPayloads','MazdaLink.Tests.BenchRecoveryTests.SpoofingHeaderAndCalibrationDoesNotSatisfyTheBootCodeFingerprints','MazdaLink.Tests.NativeBenchTests.NativePacketsUseRawExtendedCanAndExactlyTwoFixedPayloads','MazdaLink.Tests.NativeBenchTests.FailedNativeWriteCannotBeRetried')) {
     if ($passed -notcontains $name) { throw "Missing mandatory bench-scope case: $name" }
 }
@@ -114,3 +114,13 @@ foreach ($name in @('FixedEb15BoundaryPreservesEb14AndErasesChecksumTableAndBoot
 }
 if (@($passed | Where-Object { $_ -like 'MazdaLink.Tests.Eb15ControlledRecoveryTests.AnyUnexpectedPartialOrPreservedByteStopsBeforeRecoveryErase(*)' }).Count -ne 8) { throw 'Incomplete EB15 partial/preserved mismatch matrix.' }
 if ($passed -notcontains 'MazdaLink.Tests.NativeBenchTests.NativeEb15ControlledBoundaryStopsAtOneUnitWithNoCompleteRestorationRecord') { throw 'Missing native EB15 completed-boundary gate.' }
+
+foreach ($name in @('BothFixedBlocksProduceExactModifiedImageAndPreserveThePointerUntilItsLastUnit','SubsequentValidTuneUsesAFrozenCurrentSnapshotAndRejectsAnInvalidCurrentChecksum','FrozenOtherBlockCannotChangeAfterBindingOrBetweenBlockWrites','OriginalOnlyNativeCapabilityRejectsModifiedPlansBeforeDriverAccess','PublicFactoryRequiresExaminedBackupAndNeverAcceptsAnotherCalibration','DedicatedCommandsRejectMissingFilesAndOverridesBeforeAnyHardwareOpen','CombinedJournalBindsBothImagesLiveSnapshotBlockOrderAndHashChain')) {
+ if ($passed -notcontains ('MazdaLink.Tests.ModifiedFlashTests.'+$name)) { throw "Missing modified spare gate: $name" }
+}
+foreach ($case in @(@('UnknownCompletionNeverRetriesAndColdRecoveryReerasesBothWholeBlocks',6),@('RecoveryCannotIgnoreAnyPreservedProgramDifference',2),@('ModifiedJournalFailureStopsAllLaterDestructiveRequests',3))) {
+ if (@($passed | Where-Object { $_ -like ('MazdaLink.Tests.ModifiedFlashTests.'+$case[0]+'(*)') }).Count -ne $case[1]) { throw "Incomplete modified spare matrix: $($case[0])" }
+}
+foreach ($name in @('NativeModifiedTransitionRetainsOneMonitorConnectionAndRequiresBothExactBlocks','NativeModifiedTransitionRejectsIncompleteFailedAndOriginalOnlyCapabilities')) {
+ if ($passed -notcontains ('MazdaLink.Tests.NativeBenchTests.'+$name)) { throw "Missing native modified capability gate: $name" }
+}
